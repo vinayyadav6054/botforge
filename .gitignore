@@ -1,0 +1,13 @@
+.env
+bin/
+obj/
+node_modules/
+__pycache__/
+.venv/
+.next/
+dist/
+.vs/
+*.user
+*.suo
+.idea/
+.vscode/
