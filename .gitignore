@@ -11,3 +11,5 @@ dist/
 *.suo
 .idea/
 .vscode/
+
+storage/

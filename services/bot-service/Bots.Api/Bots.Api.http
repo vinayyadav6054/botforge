@@ -1,0 +1,6 @@
+@Bots.Api_HostAddress = http://localhost:5215
+
+GET {{Bots.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
