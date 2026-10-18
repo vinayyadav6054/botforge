@@ -43,6 +43,7 @@ public class AppDbContext : DbContext
             e.HasIndex(x => new { x.TenantId, x.BotId });
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+            e.Property(x => x.Error).HasMaxLength(500);
         });
     }
 }

@@ -80,6 +80,10 @@ namespace Bots.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("bot_id");
 
+                    b.Property<int?>("ChunkCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("chunk_count");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -89,6 +93,11 @@ namespace Bots.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
 
                     b.Property<string>("FileName")
                         .IsRequired()
