@@ -13,3 +13,8 @@ dist/
 .vscode/
 
 /storage/
+
+.logs/
+test-results/
+playwright-report/
+.pytest_cache/
