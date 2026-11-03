@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,7 @@ builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
+        o.MapInboundClaims = false;   // keep "sub", "email", "role" as-is instead of the long WS-* claim names
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -45,6 +48,12 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -58,8 +67,8 @@ app.MapPost("/auth/register-tenant", async (
     var email = (req.Email ?? "").Trim().ToLowerInvariant();
     var password = req.Password ?? "";
 
-    if (name.Length == 0 || !email.Contains('@') || password.Length < 8)
-        return Results.BadRequest(new { error = "Tenant name, a valid email and a password of 8+ characters are required." });
+    if (name.Length is 0 or > 200 || !IsValidEmail(email) || password.Length is < 8 or > 128)
+        return Results.BadRequest(new { error = "Tenant name (max 200 chars), a valid email and a password of 8-128 characters are required." });
 
     if (await db.Users.AnyAsync(u => u.Email == email))
         return Results.Conflict(new { error = "Email already registered." });
@@ -69,7 +78,15 @@ app.MapPost("/auth/register-tenant", async (
     user.PasswordHash = hasher.HashPassword(user, password);
 
     db.Users.Add(user);   // adds the tenant too (object graph)
-    await db.SaveChangesAsync();
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+    {
+        // two sign-ups with the same email raced past the AnyAsync check above
+        return Results.Conflict(new { error = "Email already registered." });
+    }
 
     return Results.Ok(new AuthResponse(tokens.Create(user), tenant.Id, tenant.Slug, user.Email, user.Role));
 });
@@ -98,12 +115,18 @@ app.MapGet("/auth/me", (ClaimsPrincipal p) => Results.Ok(new
 
 app.Run();
 
+static bool IsValidEmail(string email) =>
+    email.Length <= 256 && MailAddress.TryCreate(email, out var parsed) && parsed.Address == email && email.Contains('.');
+
 static async Task<string> MakeUniqueSlugAsync(AppDbContext db, string name)
 {
     var baseSlug = Regex.Replace(name.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+    if (baseSlug.Length > 80) baseSlug = baseSlug[..80].TrimEnd('-');
     if (baseSlug.Length == 0) baseSlug = "tenant";
     var slug = baseSlug;
     while (await db.Tenants.AnyAsync(t => t.Slug == slug))
         slug = $"{baseSlug}-{Guid.NewGuid().ToString("N")[..4]}";
     return slug;
 }
+
+public partial class Program;

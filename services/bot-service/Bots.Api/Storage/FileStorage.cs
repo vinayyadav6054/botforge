@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 namespace Bots.Api.Storage;
 
@@ -11,11 +11,14 @@ public interface IFileStorage
 {
     Task SaveAsync(string key, Stream content, CancellationToken ct = default);
     Task<Stream> OpenReadAsync(string key, CancellationToken ct = default);
+    Task DeleteAsync(string key, CancellationToken ct = default);
 }
 
 public class LocalFileStorage(IOptions<StorageOptions> options) : IFileStorage
 {
-    private readonly string _root = Path.GetFullPath(options.Value.RootPath);
+    // trailing separator so "storage-other" can never pass the "is inside the root" check
+    private readonly string _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(options.Value.RootPath))
+                                    + Path.DirectorySeparatorChar;
 
     public async Task SaveAsync(string key, Stream content, CancellationToken ct = default)
     {
@@ -27,6 +30,13 @@ public class LocalFileStorage(IOptions<StorageOptions> options) : IFileStorage
 
     public Task<Stream> OpenReadAsync(string key, CancellationToken ct = default) =>
         Task.FromResult<Stream>(File.OpenRead(Resolve(key)));
+
+    public Task DeleteAsync(string key, CancellationToken ct = default)
+    {
+        var path = Resolve(key);
+        if (File.Exists(path)) File.Delete(path);
+        return Task.CompletedTask;
+    }
 
     private string Resolve(string key)
     {

@@ -20,15 +20,27 @@ def _safe_name(name: str) -> str:
     return re.sub(r"[^\w\s\-&.']", "", name)[:80].strip() or "this business"
 
 
-def build_contents(question: str, chunks: list[tuple[str, float]]) -> str:
+def build_prompt(question: str, chunks: list[tuple[str, float]]) -> str:
     context = "\n\n".join(f"[{i}] {text}" for i, (text, _) in enumerate(chunks, 1))
     return f"CONTEXT:\n{context}\n\nVISITOR QUESTION:\n{question}"
 
 
-async def stream_answer(bot_name: str, question: str, chunks: list[tuple[str, float]]):
+def build_contents(question: str, chunks: list[tuple[str, float]],
+                   history: list[tuple[str, str]] | None = None) -> list[types.Content]:
+    """Earlier turns as plain chat turns, then the latest question together with the retrieved context."""
+    contents = [
+        types.Content(role="model" if role == "assistant" else "user", parts=[types.Part(text=text)])
+        for role, text in (history or [])
+    ]
+    contents.append(types.Content(role="user", parts=[types.Part(text=build_prompt(question, chunks))]))
+    return contents
+
+
+async def stream_answer(bot_name: str, question: str, chunks: list[tuple[str, float]],
+                        history: list[tuple[str, str]] | None = None):
     stream = await _client.aio.models.generate_content_stream(
         model=config.GEMINI_MODEL,
-        contents=build_contents(question, chunks),
+        contents=build_contents(question, chunks, history),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_TEMPLATE.format(bot_name=_safe_name(bot_name)),
             temperature=0.2,

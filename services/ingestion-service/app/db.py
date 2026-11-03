@@ -47,3 +47,25 @@ def replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors) -> Non
             rows,
         )
     conn.commit()
+
+
+def delete_document_chunks(conn, tenant_id, document_id) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM knowledge.chunks WHERE document_id = %s AND tenant_id = %s",
+            (document_id, tenant_id),
+        )
+        count = cur.rowcount
+    conn.commit()
+    return count
+
+
+def delete_bot_chunks(conn, tenant_id, bot_id) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM knowledge.chunks WHERE bot_id = %s AND tenant_id = %s",
+            (bot_id, tenant_id),
+        )
+        count = cur.rowcount
+    conn.commit()
+    return count

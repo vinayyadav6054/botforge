@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddHostedService<DocumentStatusConsumer>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKey) || jwtKey.Length < 32)
@@ -25,13 +24,19 @@ builder.Services.AddDbContext<AppDbContext>(o =>
      .UseSnakeCaseNamingConvention());
 
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Storage"));
+builder.Services.PostConfigure<StorageOptions>(o =>
+    // a relative path is relative to the project folder, not to wherever `dotnet run` was started
+    o.RootPath = Path.GetFullPath(o.RootPath, builder.Environment.ContentRootPath));
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection("RabbitMq"));
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+if (builder.Configuration.GetValue("RabbitMq:ConsumeStatusEvents", true))
+    builder.Services.AddHostedService<DocumentStatusConsumer>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
+        o.MapInboundClaims = false;
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -49,13 +54,16 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "bots" }));
-
-var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pdf", ".txt", ".md", ".docx" };
-const long maxFileBytes = 10 * 1024 * 1024;
 
 // every /bots endpoint needs a valid token that carries a tenant id
 var bots = app.MapGroup("/bots")
@@ -69,13 +77,13 @@ var bots = app.MapGroup("/bots")
 
 bots.MapPost("/", async (CreateBotRequest req, AppDbContext db, ITenantContext tenant) =>
 {
-    var name = (req.Name ?? "").Trim();
-    if (name.Length == 0) return Results.BadRequest(new { error = "Name is required." });
+    var error = BotRules.Validate(req.Name, req.WelcomeMessage);
+    if (error is not null) return Results.BadRequest(new { error });
 
     var bot = new Bot
     {
         TenantId = tenant.TenantId,
-        Name = name,
+        Name = req.Name!.Trim(),
         PublicKey = "bk_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()
     };
     if (!string.IsNullOrWhiteSpace(req.WelcomeMessage))
@@ -95,6 +103,37 @@ bots.MapGet("/{id:guid}", async (Guid id, AppDbContext db) =>
     return bot is null ? Results.NotFound() : Results.Ok(BotDto.From(bot));
 });
 
+bots.MapPut("/{id:guid}", async (Guid id, CreateBotRequest req, AppDbContext db) =>
+{
+    var bot = await db.Bots.FirstOrDefaultAsync(b => b.Id == id);
+    if (bot is null) return Results.NotFound();
+
+    var error = BotRules.Validate(req.Name, req.WelcomeMessage);
+    if (error is not null) return Results.BadRequest(new { error });
+
+    bot.Name = req.Name!.Trim();
+    if (!string.IsNullOrWhiteSpace(req.WelcomeMessage))
+        bot.WelcomeMessage = req.WelcomeMessage.Trim();
+    await db.SaveChangesAsync();
+    return Results.Ok(BotDto.From(bot));
+});
+
+bots.MapDelete("/{id:guid}", async (
+    Guid id, AppDbContext db, IFileStorage storage, IEventPublisher publisher, ILogger<Program> log) =>
+{
+    var bot = await db.Bots.FirstOrDefaultAsync(b => b.Id == id);
+    if (bot is null) return Results.NotFound();
+
+    var keys = await db.Documents.Where(d => d.BotId == id).Select(d => d.StorageKey).ToListAsync();
+    db.Bots.Remove(bot);   // documents cascade in the database
+    await db.SaveChangesAsync();
+
+    foreach (var key in keys)
+        await storage.DeleteAsync(key);
+    await TryPublishAsync(publisher, log, "bot.deleted", new BotDeleted(bot.Id, bot.TenantId));
+    return Results.NoContent();
+});
+
 bots.MapGet("/{botId:guid}/documents", async (Guid botId, AppDbContext db) =>
 {
     if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
@@ -104,50 +143,87 @@ bots.MapGet("/{botId:guid}/documents", async (Guid botId, AppDbContext db) =>
     return Results.Ok(docs);
 });
 
+bots.MapGet("/{botId:guid}/documents/{docId:guid}", async (Guid botId, Guid docId, AppDbContext db) =>
+{
+    var doc = await db.Documents.FirstOrDefaultAsync(d => d.Id == docId && d.BotId == botId);
+    return doc is null ? Results.NotFound() : Results.Ok(DocumentDto.From(doc));
+});
+
 bots.MapPost("/{botId:guid}/documents", async (
-    Guid botId, IFormFile file, AppDbContext db, ITenantContext tenant,
+    Guid botId, IFormFile? file, AppDbContext db, ITenantContext tenant,
     IFileStorage storage, IEventPublisher publisher, ILogger<Program> log) =>
 {
     // the global filter means a bot of another tenant simply "does not exist" here
     if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
 
+    if (file is null) return Results.BadRequest(new { error = "Send the file as multipart form field 'file'." });
     if (file.Length == 0) return Results.BadRequest(new { error = "File is empty." });
-    if (file.Length > maxFileBytes) return Results.BadRequest(new { error = "File is larger than 10 MB." });
+    if (file.Length > DocumentRules.MaxFileBytes) return Results.BadRequest(new { error = "File is larger than 10 MB." });
 
-    var ext = Path.GetExtension(file.FileName);
-    if (!allowedExtensions.Contains(ext))
+    var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (!DocumentRules.AllowedExtensions.Contains(ext))
         return Results.BadRequest(new { error = "Allowed types: .pdf, .txt, .md, .docx" });
 
     var doc = new BotDocument
     {
         TenantId = tenant.TenantId,
         BotId = botId,
-        FileName = Path.GetFileName(file.FileName),
-        ContentType = file.ContentType,
+        FileName = DocumentRules.SafeFileName(file.FileName),
+        ContentType = DocumentRules.Truncate(string.IsNullOrEmpty(file.ContentType) ? "application/octet-stream" : file.ContentType, 150),
         SizeBytes = file.Length
     };
-    doc.StorageKey = $"{tenant.TenantId}/{botId}/{doc.Id}{ext.ToLowerInvariant()}";
+    doc.StorageKey = $"{tenant.TenantId}/{botId}/{doc.Id}{ext}";
 
     await using (var stream = file.OpenReadStream())
         await storage.SaveAsync(doc.StorageKey, stream);
 
     db.Documents.Add(doc);
-    await db.SaveChangesAsync();
-
     try
     {
-        await publisher.PublishAsync("document.uploaded", new DocumentUploaded(
-            doc.Id, doc.TenantId, doc.BotId, doc.StorageKey, doc.FileName, doc.ContentType, DateTime.UtcNow));
+        await db.SaveChangesAsync();
     }
-    catch (Exception ex)
+    catch
     {
-        log.LogError(ex, "Could not publish document.uploaded for {DocumentId}", doc.Id);
+        await storage.DeleteAsync(doc.StorageKey);   // do not leave an orphan file behind
+        throw;
+    }
+
+    if (!await TryPublishAsync(publisher, log, "document.uploaded", DocumentUploaded.From(doc)))
+    {
         doc.Status = "UploadedUnqueued";
         await db.SaveChangesAsync();
     }
 
     return Results.Accepted($"/bots/{botId}/documents/{doc.Id}", DocumentDto.From(doc));
 }).DisableAntiforgery();
+
+// queue a document again, e.g. after a failure or when publishing to RabbitMQ did not work
+bots.MapPost("/{botId:guid}/documents/{docId:guid}/reprocess", async (
+    Guid botId, Guid docId, AppDbContext db, IEventPublisher publisher, ILogger<Program> log) =>
+{
+    var doc = await db.Documents.FirstOrDefaultAsync(d => d.Id == docId && d.BotId == botId);
+    if (doc is null) return Results.NotFound();
+
+    var queued = await TryPublishAsync(publisher, log, "document.uploaded", DocumentUploaded.From(doc));
+    doc.Status = queued ? "Uploaded" : "UploadedUnqueued";
+    doc.Error = null;
+    doc.ChunkCount = null;
+    await db.SaveChangesAsync();
+    return Results.Accepted($"/bots/{botId}/documents/{doc.Id}", DocumentDto.From(doc));
+});
+
+bots.MapDelete("/{botId:guid}/documents/{docId:guid}", async (
+    Guid botId, Guid docId, AppDbContext db, IFileStorage storage, IEventPublisher publisher, ILogger<Program> log) =>
+{
+    var doc = await db.Documents.FirstOrDefaultAsync(d => d.Id == docId && d.BotId == botId);
+    if (doc is null) return Results.NotFound();
+
+    db.Documents.Remove(doc);
+    await db.SaveChangesAsync();
+    await storage.DeleteAsync(doc.StorageKey);
+    await TryPublishAsync(publisher, log, "document.deleted", new DocumentDeleted(doc.Id, doc.TenantId, doc.BotId));
+    return Results.NoContent();
+});
 
 // Internal endpoint for other services (never expose this through the public gateway)
 app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest request, AppDbContext db, IConfiguration config) =>
@@ -168,3 +244,19 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
 });
 
 app.Run();
+
+static async Task<bool> TryPublishAsync<T>(IEventPublisher publisher, ILogger log, string routingKey, T message)
+{
+    try
+    {
+        await publisher.PublishAsync(routingKey, message);
+        return true;
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "Could not publish {RoutingKey}", routingKey);
+        return false;
+    }
+}
+
+public partial class Program;

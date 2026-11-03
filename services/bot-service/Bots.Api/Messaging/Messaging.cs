@@ -1,11 +1,19 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using RabbitMQ.Client;
 
 namespace Bots.Api.Messaging;
 
 public record DocumentUploaded(
     Guid DocumentId, Guid TenantId, Guid BotId,
-    string StorageKey, string FileName, string ContentType, DateTime UploadedAt);
+    string StorageKey, string FileName, string ContentType, DateTime UploadedAt)
+{
+    public static DocumentUploaded From(Data.BotDocument d) =>
+        new(d.Id, d.TenantId, d.BotId, d.StorageKey, d.FileName, d.ContentType, DateTime.UtcNow);
+}
+
+public record DocumentDeleted(Guid DocumentId, Guid TenantId, Guid BotId);
+
+public record BotDeleted(Guid BotId, Guid TenantId);
 
 public class RabbitMqOptions
 {

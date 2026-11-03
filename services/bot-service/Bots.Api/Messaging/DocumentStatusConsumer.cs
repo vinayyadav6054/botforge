@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Bots.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -70,14 +70,13 @@ public class DocumentStatusConsumer(
             try
             {
                 await HandleAsync(ea.RoutingKey, ea.Body.ToArray(), ct);
+                await channel.BasicAckAsync(ea.DeliveryTag, false, CancellationToken.None);
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "Could not handle {RoutingKey}", ea.RoutingKey);
-            }
-            finally
-            {
-                await channel.BasicAckAsync(ea.DeliveryTag, false, ct);
+                // retry once (e.g. the database was briefly unavailable), then drop it so the queue never blocks
+                log.LogError(ex, "Could not handle {RoutingKey} (redelivered: {Redelivered})", ea.RoutingKey, ea.Redelivered);
+                await channel.BasicNackAsync(ea.DeliveryTag, false, requeue: !ea.Redelivered, CancellationToken.None);
             }
         };
 
