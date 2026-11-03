@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/services/" />
+  <Folder Name="/services/bot-service/">
+    <Project Path="services/bot-service/Bots.Api/Bots.Api.csproj" />
+    <Project Path="services/bot-service/Bots.Tests/Bots.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/gateway/">
+    <Project Path="services/gateway/Gateway.Api/Gateway.Api.csproj" />
+    <Project Path="services/gateway/Gateway.Tests/Gateway.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/identity-service/">
+    <Project Path="services/identity-service/Identity.Api/Identity.Api.csproj" />
+    <Project Path="services/identity-service/Identity.Tests/Identity.Tests.csproj" />
+  </Folder>
+</Solution>

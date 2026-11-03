@@ -18,3 +18,4 @@ dist/
 test-results/
 playwright-report/
 .pytest_cache/
+*.tsbuildinfo

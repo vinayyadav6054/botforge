@@ -1,7 +1,5 @@
-using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
-using System.Text.RegularExpressions;
 using Identity.Api.Auth;
 using Identity.Api.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -67,7 +65,7 @@ app.MapPost("/auth/register-tenant", async (
     var email = (req.Email ?? "").Trim().ToLowerInvariant();
     var password = req.Password ?? "";
 
-    if (name.Length is 0 or > 200 || !IsValidEmail(email) || password.Length is < 8 or > 128)
+    if (name.Length is 0 or > 200 || !TenantRules.IsValidEmail(email) || password.Length is < 8 or > 128)
         return Results.BadRequest(new { error = "Tenant name (max 200 chars), a valid email and a password of 8-128 characters are required." });
 
     if (await db.Users.AnyAsync(u => u.Email == email))
@@ -115,14 +113,9 @@ app.MapGet("/auth/me", (ClaimsPrincipal p) => Results.Ok(new
 
 app.Run();
 
-static bool IsValidEmail(string email) =>
-    email.Length <= 256 && MailAddress.TryCreate(email, out var parsed) && parsed.Address == email && email.Contains('.');
-
 static async Task<string> MakeUniqueSlugAsync(AppDbContext db, string name)
 {
-    var baseSlug = Regex.Replace(name.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
-    if (baseSlug.Length > 80) baseSlug = baseSlug[..80].TrimEnd('-');
-    if (baseSlug.Length == 0) baseSlug = "tenant";
+    var baseSlug = TenantRules.Slugify(name);
     var slug = baseSlug;
     while (await db.Tenants.AnyAsync(t => t.Slug == slug))
         slug = $"{baseSlug}-{Guid.NewGuid().ToString("N")[..4]}";
