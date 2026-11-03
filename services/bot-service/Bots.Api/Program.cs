@@ -204,11 +204,18 @@ bots.MapPost("/{botId:guid}/documents/{docId:guid}/reprocess", async (
     var doc = await db.Documents.FirstOrDefaultAsync(d => d.Id == docId && d.BotId == botId);
     if (doc is null) return Results.NotFound();
 
-    var queued = await TryPublishAsync(publisher, log, "document.uploaded", DocumentUploaded.From(doc));
-    doc.Status = queued ? "Uploaded" : "UploadedUnqueued";
+    // save the new state BEFORE publishing: the worker can answer within milliseconds, and its
+    // status event must not be overwritten by this request finishing afterwards
+    doc.Status = "Uploaded";
     doc.Error = null;
     doc.ChunkCount = null;
     await db.SaveChangesAsync();
+
+    if (!await TryPublishAsync(publisher, log, "document.uploaded", DocumentUploaded.From(doc)))
+    {
+        doc.Status = "UploadedUnqueued";
+        await db.SaveChangesAsync();
+    }
     return Results.Accepted($"/bots/{botId}/documents/{doc.Id}", DocumentDto.From(doc));
 });
 

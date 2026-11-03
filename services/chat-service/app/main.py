@@ -116,7 +116,7 @@ async def chat(public_key: str, body: ChatRequest):
             yield sse("done", {})
         except Exception as ex:
             log.exception("Gemini call failed")
-            busy = getattr(ex, "code", None) == 429
+            busy = getattr(ex, "code", None) in (429, 503)
             message = ("The assistant is busy right now. Please try again in a moment."
                        if busy else "Sorry, something went wrong. Please try again.")
             yield sse("error", {"message": message})

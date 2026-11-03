@@ -22,6 +22,7 @@ public class RabbitMqOptions
     public string User { get; set; } = "";
     public string Password { get; set; } = "";
     public string Exchange { get; set; } = "botforge.events";
+    public string StatusQueue { get; set; } = "bots.document-status";
 }
 
 public interface IEventPublisher

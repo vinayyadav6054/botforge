@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import re
 
 from google import genai
@@ -5,7 +7,9 @@ from google.genai import types
 
 from . import config
 
-_client = genai.Client(api_key=config.GEMINI_API_KEY)
+# a hung request must not keep the visitor waiting forever (milliseconds)
+_client = genai.Client(api_key=config.GEMINI_API_KEY, http_options=types.HttpOptions(timeout=30_000))
+log = logging.getLogger("chat")
 
 SYSTEM_TEMPLATE = """You are the virtual assistant for "{bot_name}".
 Answer the visitor's question using ONLY the information in the CONTEXT section of the user message.
@@ -17,7 +21,9 @@ Rules:
 
 
 def _safe_name(name: str) -> str:
-    return re.sub(r"[^\w\s\-&.']", "", name)[:80].strip() or "this business"
+    # collapse all whitespace (incl. newlines) so a bot name can never add lines to the system prompt
+    cleaned = re.sub(r"\s+", " ", re.sub(r"[^\w\s\-&.']", "", name))
+    return cleaned[:80].strip() or "this business"
 
 
 def build_prompt(question: str, chunks: list[tuple[str, float]]) -> str:
@@ -36,10 +42,17 @@ def build_contents(question: str, chunks: list[tuple[str, float]],
     return contents
 
 
-async def stream_answer(bot_name: str, question: str, chunks: list[tuple[str, float]],
-                        history: list[tuple[str, str]] | None = None):
-    stream = await _client.aio.models.generate_content_stream(
-        model=config.GEMINI_MODEL,
+TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+RETRY_DELAYS = (1.0, 3.0)   # seconds before the 2nd and 3rd attempt
+
+
+def is_transient(ex: Exception) -> bool:
+    return getattr(ex, "code", None) in TRANSIENT_STATUS
+
+
+async def _open_stream(model, bot_name, question, chunks, history):
+    return await _client.aio.models.generate_content_stream(
+        model=model,
         contents=build_contents(question, chunks, history),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_TEMPLATE.format(bot_name=_safe_name(bot_name)),
@@ -47,6 +60,27 @@ async def stream_answer(bot_name: str, question: str, chunks: list[tuple[str, fl
             max_output_tokens=1024,
         ),
     )
-    async for chunk in stream:
-        if chunk.text:
-            yield chunk.text
+
+
+async def stream_answer(bot_name: str, question: str, chunks: list[tuple[str, float]],
+                        history: list[tuple[str, str]] | None = None):
+    """Streams the answer. Overload/rate-limit errors are retried, but only while nothing has been sent
+    yet, so the visitor never sees a half answer repeated."""
+    # main model with back-off retries, then each fallback model once
+    plan = [(config.GEMINI_MODEL, 0.0)] + [(config.GEMINI_MODEL, d) for d in RETRY_DELAYS]
+    plan += [(m, 0.0) for m in config.GEMINI_FALLBACK_MODELS if m != config.GEMINI_MODEL]
+    for i, (model, delay) in enumerate(plan):
+        if delay:
+            await asyncio.sleep(delay)
+        sent = False
+        try:
+            stream = await _open_stream(model, bot_name, question, chunks, history)
+            async for chunk in stream:
+                if chunk.text:
+                    sent = True
+                    yield chunk.text
+            return
+        except Exception as ex:
+            if sent or not is_transient(ex) or i == len(plan) - 1:
+                raise
+            log.warning("Gemini model %s returned %s, trying %s", model, getattr(ex, "code", "?"), plan[i + 1][0])

@@ -15,6 +15,8 @@ def _required(name: str) -> str:
 DATABASE_URL = _required("DATABASE_URL")
 GEMINI_API_KEY = _required("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+# tried in order when the main model stays overloaded/rate-limited after its retries
+GEMINI_FALLBACK_MODELS = [m.strip() for m in os.getenv("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
 BOTS_SERVICE_URL = os.getenv("BOTS_SERVICE_URL", "http://localhost:5215")
 INTERNAL_API_KEY = _required("INTERNAL_API_KEY")
 

@@ -22,11 +22,11 @@ $logs = Join-Path $root ".logs"
 $pidFile = Join-Path $logs "pids.json"
 
 $services = @(
-    @{ Name = "identity";  Port = 5120; Health = "http://localhost:5120/health"; Dir = "services/identity-service/Identity.Api"; Exe = "dotnet"; Args = "run --no-build --launch-profile http" },
-    @{ Name = "bots";      Port = 5215; Health = "http://localhost:5215/health"; Dir = "services/bot-service/Bots.Api";          Exe = "dotnet"; Args = "run --no-build --launch-profile http" },
+    @{ Name = "identity";  Port = 5120; Health = "http://localhost:5120/health"; Dir = "services/identity-service/Identity.Api"; Exe = "dotnet"; Args = "run --no-build -c Release --launch-profile http" },
+    @{ Name = "bots";      Port = 5215; Health = "http://localhost:5215/health"; Dir = "services/bot-service/Bots.Api";          Exe = "dotnet"; Args = "run --no-build -c Release --launch-profile http" },
     @{ Name = "ingestion"; Port = 0;    Health = $null;                          Dir = "services/ingestion-service";             Exe = ".venv/Scripts/python.exe"; Args = "-m app.worker" },
     @{ Name = "chat";      Port = 8000; Health = "http://localhost:8000/health"; Dir = "services/chat-service";                  Exe = ".venv/Scripts/python.exe"; Args = "-m uvicorn app.main:app --port 8000" },
-    @{ Name = "gateway";   Port = 5000; Health = "http://localhost:5000/health"; Dir = "services/gateway/Gateway.Api";           Exe = "dotnet"; Args = "run --no-build --launch-profile http" },
+    @{ Name = "gateway";   Port = 5000; Health = "http://localhost:5000/health"; Dir = "services/gateway/Gateway.Api";           Exe = "dotnet"; Args = "run --no-build -c Release --launch-profile http" },
     @{ Name = "dashboard"; Port = 3000; Health = "http://localhost:3000/login";  Dir = "apps/dashboard";                         Exe = "npm.cmd"; Args = "run start" }
 )
 
@@ -58,14 +58,24 @@ function Stop-App {
     }
 }
 
+# plain HttpClient without proxy auto-detection (Invoke-WebRequest in PowerShell 5.1 can stall on WPAD)
+Add-Type -AssemblyName System.Net.Http
+$script:http = New-Object System.Net.Http.HttpClient((New-Object System.Net.Http.HttpClientHandler -Property @{ UseProxy = $false }))
+$script:http.Timeout = [TimeSpan]::FromSeconds(3)
+
+function Test-Url([string]$url) {
+    try {
+        $r = $script:http.GetAsync($url).GetAwaiter().GetResult()
+        return [int]$r.StatusCode -lt 500
+    } catch { return $false }
+}
+
 function Wait-Healthy($s, [int]$seconds = 120) {
     if (-not $s.Health) { return $true }
     $deadline = (Get-Date).AddSeconds($seconds)
     while ((Get-Date) -lt $deadline) {
-        try {
-            $r = Invoke-WebRequest -Uri $s.Health -UseBasicParsing -TimeoutSec 3
-            if ($r.StatusCode -lt 500) { return $true }
-        } catch { Start-Sleep -Milliseconds 1000 }
+        if (Test-Url $s.Health) { return $true }
+        Start-Sleep -Milliseconds 700
     }
     return $false
 }
@@ -77,12 +87,8 @@ function Show-Status {
             Write-Host ("{0,-10} {1}" -f $s.Name, $(if ($alive) { "running" } else { "DOWN" }))
             continue
         }
-        try {
-            Invoke-WebRequest -Uri $s.Health -UseBasicParsing -TimeoutSec 3 | Out-Null
-            Write-Host ("{0,-10} up    {1}" -f $s.Name, $s.Health)
-        } catch {
-            Write-Host ("{0,-10} DOWN  {1}" -f $s.Name, $s.Health)
-        }
+        $state = if (Test-Url $s.Health) { "up  " } else { "DOWN" }
+        Write-Host ("{0,-10} {1}  {2}" -f $s.Name, $state, $s.Health)
     }
 }
 
@@ -96,7 +102,7 @@ function Start-App {
     if (-not $NoBuild) {
         Write-Host "Building .NET services, widget and dashboard..."
         foreach ($dir in "services/identity-service/Identity.Api", "services/bot-service/Bots.Api", "services/gateway/Gateway.Api") {
-            dotnet build (Join-Path $root $dir) -nologo -v q | Out-Null
+            dotnet build (Join-Path $root $dir) -c Release -nologo -v q | Out-Null
             if ($LASTEXITCODE -ne 0) { throw "Build failed: $dir" }
         }
         foreach ($dir in "apps/widget", "apps/dashboard") {

@@ -14,7 +14,6 @@ public class DocumentStatusConsumer(
     IOptions<RabbitMqOptions> options,
     ILogger<DocumentStatusConsumer> log) : BackgroundService
 {
-    private const string Queue = "bots.document-status";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -40,6 +39,7 @@ public class DocumentStatusConsumer(
     private async Task RunAsync(CancellationToken ct)
     {
         var o = options.Value;
+        var queue = o.StatusQueue;
         var factory = new ConnectionFactory
         {
             HostName = o.Host,
@@ -59,9 +59,9 @@ public class DocumentStatusConsumer(
         };
 
         await channel.ExchangeDeclareAsync(o.Exchange, ExchangeType.Topic, durable: true, cancellationToken: ct);
-        await channel.QueueDeclareAsync(Queue, durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
-        await channel.QueueBindAsync(Queue, o.Exchange, "document.processed", cancellationToken: ct);
-        await channel.QueueBindAsync(Queue, o.Exchange, "document.failed", cancellationToken: ct);
+        await channel.QueueDeclareAsync(queue, durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
+        await channel.QueueBindAsync(queue, o.Exchange, "document.processed", cancellationToken: ct);
+        await channel.QueueBindAsync(queue, o.Exchange, "document.failed", cancellationToken: ct);
         await channel.BasicQosAsync(0, 10, false, ct);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
@@ -80,15 +80,15 @@ public class DocumentStatusConsumer(
             }
         };
 
-        await channel.BasicConsumeAsync(Queue, autoAck: false, consumer: consumer, cancellationToken: ct);
-        log.LogInformation("Listening for document status events on {Queue}", Queue);
+        await channel.BasicConsumeAsync(queue, autoAck: false, consumer: consumer, cancellationToken: ct);
+        log.LogInformation("Listening for document status events on {Queue}", queue);
 
         await Task.WhenAny(closed.Task, Task.Delay(Timeout.Infinite, ct));
         ct.ThrowIfCancellationRequested();
         throw new InvalidOperationException("RabbitMQ connection was lost");
     }
 
-    private async Task HandleAsync(string routingKey, byte[] body, CancellationToken ct)
+    public async Task HandleAsync(string routingKey, byte[] body, CancellationToken ct)
     {
         var evt = JsonSerializer.Deserialize<DocumentStatusEvent>(body, JsonSerializerOptions.Web);
         if (evt is null || evt.DocumentId == Guid.Empty || evt.TenantId == Guid.Empty) return;
