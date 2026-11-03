@@ -35,4 +35,3 @@ services:
       retries: 10
 volumes:
   pgdata:
-  miniodata:

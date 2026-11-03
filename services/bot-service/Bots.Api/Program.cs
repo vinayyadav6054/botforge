@@ -149,4 +149,22 @@ bots.MapPost("/{botId:guid}/documents", async (
     return Results.Accepted($"/bots/{botId}/documents/{doc.Id}", DocumentDto.From(doc));
 }).DisableAntiforgery();
 
+// Internal endpoint for other services (never expose this through the public gateway)
+app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest request, AppDbContext db, IConfiguration config) =>
+{
+    var expected = config["Internal:ApiKey"] ?? "";
+    var provided = request.Headers["X-Internal-Key"].ToString();
+    if (expected.Length == 0 ||
+        !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected)))
+        return Results.Unauthorized();
+
+    // no tenant in context for service-to-service calls, so bypass the filter on purpose
+    var bot = await db.Bots.IgnoreQueryFilters()
+        .Where(b => b.PublicKey == publicKey)
+        .Select(b => new { botId = b.Id, tenantId = b.TenantId, name = b.Name, welcomeMessage = b.WelcomeMessage })
+        .FirstOrDefaultAsync();
+
+    return bot is null ? Results.NotFound() : Results.Ok(bot);
+});
+
 app.Run();
