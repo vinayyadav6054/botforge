@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Widget demo</title>
+</head>
+<body style="font-family: system-ui; padding: 40px;">
+  <h1>Customer website (demo)</h1>
+  <p>Open this page as <code>demo.html?key=bk_...</code>. The chat bubble appears bottom-right.</p>
+  <script>
+    // load the widget from the gateway with the bot key from the query string
+    var key = new URLSearchParams(location.search).get("key") || "";
+    var s = document.createElement("script");
+    s.src = "http://localhost:5000/widget.js";
+    s.setAttribute("data-bot-key", key);
+    document.body.appendChild(s);
+  </script>
+</body>
+</html>
