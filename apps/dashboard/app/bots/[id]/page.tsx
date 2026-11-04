@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DragEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Shell from "@/components/Shell";
-import { api, Bot, BotDocument, GATEWAY_ORIGIN } from "@/lib/api";
+import { api, Bot, BotDocument, gatewayOrigin } from "@/lib/api";
 
 const ALLOWED = [".pdf", ".txt", ".md", ".docx"];
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -66,7 +66,7 @@ function BotDetail({ id }: { id: string }) {
   useEffect(() => {
     if (!preview || !bot) return;
     const s = document.createElement("script");
-    s.src = `${GATEWAY_ORIGIN}/widget.js?v=${Date.now()}`;
+    s.src = `${gatewayOrigin()}/widget.js?v=${Date.now()}`;
     s.dataset.botKey = bot.publicKey;
     s.async = true;
     document.body.appendChild(s);
@@ -156,7 +156,7 @@ function BotDetail({ id }: { id: string }) {
   }
 
   const snippet = bot
-    ? `<script src="${GATEWAY_ORIGIN}/widget.js" data-bot-key="${bot.publicKey}" async></script>`
+    ? `<script src="${gatewayOrigin()}/widget.js" data-bot-key="${bot.publicKey}" async></script>`
     : "";
 
   async function copySnippet() {

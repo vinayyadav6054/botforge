@@ -6,6 +6,9 @@ from . import config
 
 def connect() -> psycopg.Connection:
     conn = psycopg.connect(config.DATABASE_URL)
+    # managed databases (e.g. Neon) start without pgvector; the type must exist before register_vector
+    conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    conn.commit()
     register_vector(conn)
     return conn
 

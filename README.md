@@ -27,6 +27,7 @@ See [docs/architecture.md](docs/architecture.md) for the design, data flow and s
 | `apps/widget` | Embeddable widget (TypeScript, ~4 kB gzipped, Shadow DOM) |
 | `tests/e2e`, `tests/e2e-ui` | End-to-end tests (API journeys, Playwright browser tests) |
 | `scripts/dev.ps1`, `scripts/test.ps1` | Run the whole stack / the whole test suite |
+| `deploy/huggingface` | Single-container image for free hosting |
 
 ## Prerequisites
 
@@ -112,6 +113,11 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | POST | `/bots/{id}/documents/{docId}/reprocess` | JWT | queue again |
 | GET | `/chat/{publicKey}/info` | public | `{name, welcomeMessage}` |
 | POST | `/chat/{publicKey}` | public | `{message, history?: [{role, text}]}` → SSE `meta`, `token`…, `done` \| `error` |
+
+## Deploy (free)
+
+The whole app runs in one container on a free Hugging Face Space with a free Neon database
+(no credit card needed). Step-by-step: [docs/deploy.md](docs/deploy.md).
 
 ## Production notes
 

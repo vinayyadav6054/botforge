@@ -1,5 +1,11 @@
+// absolute (gateway on another host) or relative like "/api" (dashboard served through the gateway)
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
-export const GATEWAY_ORIGIN = new URL(API_URL).origin;
+
+/** Origin that serves /widget.js; for a relative API_URL that is the site the dashboard runs on. */
+export function gatewayOrigin(): string {
+  const base = typeof window === "undefined" ? "http://localhost" : window.location.href;
+  return new URL(API_URL, base).origin;
+}
 
 const TOKEN_KEY = "botforge.session";
 

@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,7 +29,23 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("chat", ctx => PerClientIp(ctx, chatPerMinute));
 });
 
+// behind a hosting proxy (Hugging Face, Render, a load balancer) every request comes from the proxy's IP,
+// which would put all visitors into one rate-limit bucket; trust only the last hop the proxy appended
+var trustProxy = builder.Configuration.GetValue("Gateway:TrustForwardedHeaders", false);
+if (trustProxy)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.ForwardLimit = 1;
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+    });
+}
+
 var app = builder.Build();
+
+if (trustProxy) app.UseForwardedHeaders();
 
 // defense in depth: service-to-service endpoints must never be reachable from outside,
 // even if someone later adds a broad route by mistake
@@ -42,10 +59,9 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-app.UseCors();
-app.UseRateLimiter();
-
-// serve the embeddable widget bundle (apps/widget/dist) at /widget.js
+// serve the embeddable widget bundle (apps/widget/dist) at /widget.js.
+// Static files must run before routing: once a catch-all proxy route (e.g. to the dashboard) has been
+// selected, the static file middleware skips the request.
 var widgetPath = Path.GetFullPath(builder.Configuration["Gateway:WidgetPath"] ?? "widget", app.Environment.ContentRootPath);
 if (Directory.Exists(widgetPath))
 {
@@ -63,6 +79,10 @@ else
 {
     app.Logger.LogWarning("Widget bundle not found at {Path}; build apps/widget to serve /widget.js", widgetPath);
 }
+
+app.UseRouting();
+app.UseCors();          // after routing: the CORS policy comes from the matched proxy route
+app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "gateway" }));
 app.MapReverseProxy();

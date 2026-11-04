@@ -34,7 +34,7 @@ public sealed class StubBackend : IAsyncDisposable
                 await Task.Delay(50);
             }
         });
-        _app.MapFallback(async (HttpContext ctx) =>
+        _app.MapFallback("{**path}", async (HttpContext ctx) =>   // also file-like paths such as /x.js
         {
             Requests.Enqueue((ctx.Request.Path + ctx.Request.QueryString, ctx.Request.Headers.Authorization.FirstOrDefault()));
             ctx.Response.ContentType = "application/json";
@@ -47,7 +47,7 @@ public sealed class StubBackend : IAsyncDisposable
     public async ValueTask DisposeAsync() => await _app.DisposeAsync();
 }
 
-public sealed class GatewayFactory : WebApplicationFactory<Program>
+public class GatewayFactory : WebApplicationFactory<Program>
 {
     public StubBackend Backend { get; } = new();
     public string WidgetDir { get; } = Path.Combine(Path.GetTempPath(), "botforge-widget-" + Guid.NewGuid().ToString("N"));
@@ -182,5 +182,70 @@ public class GatewayTests(GatewayFactory factory) : IClassFixture<GatewayFactory
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         Assert.Equal("*", res.Headers.GetValues("Access-Control-Allow-Origin").Single());
         Assert.Contains("widget", await res.Content.ReadAsStringAsync());
+    }
+}
+
+/// <summary>The single-container deployment: the gateway also proxies every other path to the dashboard.</summary>
+public sealed class SingleHostGatewayFactory : GatewayFactory
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.UseSetting("ReverseProxy:Clusters:dashboard:Destinations:d1:Address", Backend.Url);
+        builder.UseSetting("ReverseProxy:Routes:dashboard:ClusterId", "dashboard");
+        builder.UseSetting("ReverseProxy:Routes:dashboard:Order", "1000");
+        builder.UseSetting("ReverseProxy:Routes:dashboard:Match:Path", "{**catch-all}");
+        builder.UseSetting("Gateway:TrustForwardedHeaders", "true");
+    }
+}
+
+[Trait("Level", "Integration")]
+public class SingleHostGatewayTests(SingleHostGatewayFactory factory) : IClassFixture<SingleHostGatewayFactory>
+{
+    private readonly HttpClient _client = factory.CreateClient();
+
+    [Fact]
+    public async Task Widget_script_wins_over_the_dashboard_catch_all()
+    {
+        var res = await _client.GetAsync("/widget.js");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Equal("console.log('widget');", await res.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/bots/123")]
+    [InlineData("/_next/static/chunk.js")]
+    public async Task Other_paths_go_to_the_dashboard_unchanged(string path)
+    {
+        var res = await _client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Contains(factory.Backend.Requests, r => r.Path == path);
+    }
+
+    [Fact]
+    public async Task Api_routes_and_health_still_take_precedence()
+    {
+        var res = await _client.GetAsync("/api/bots");
+        Assert.Contains("\"path\":\"/bots\"", await res.Content.ReadAsStringAsync());
+        Assert.Contains("gateway", await (await _client.GetAsync("/health")).Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Internal_endpoints_stay_blocked() =>
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/internal/bots/bk_x")).StatusCode);
+
+    [Fact]
+    public async Task Rate_limits_are_per_visitor_behind_the_hosting_proxy()
+    {
+        async Task<HttpStatusCode> Login(string ip)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login") { Content = new StringContent("{}") };
+            req.Headers.Add("X-Forwarded-For", ip);
+            return (await _client.SendAsync(req)).StatusCode;
+        }
+        for (var i = 0; i < 4; i++) await Login("203.0.113.1");
+        Assert.Equal(HttpStatusCode.TooManyRequests, await Login("203.0.113.1"));
+        Assert.Equal(HttpStatusCode.OK, await Login("203.0.113.2"));   // a different visitor is unaffected
     }
 }
