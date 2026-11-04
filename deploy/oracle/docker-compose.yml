@@ -1,0 +1,61 @@
+# BotForge on one Linux server (e.g. Oracle Cloud Always Free), with automatic HTTPS.
+#   app      the single BotForge container (same image as deploy/huggingface)
+#   postgres Postgres 16 + pgvector, data on the server's disk
+#   caddy    HTTPS certificates from Let's Encrypt + reverse proxy to the app
+# Run deploy/oracle/setup.sh once; it creates .env next to this file and starts everything.
+name: botforge-prod
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: botforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/oracle/.env}
+      POSTGRES_DB: botforge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U botforge -d botforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/huggingface/Dockerfile
+      args:
+        SOURCE: local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://botforge:${POSTGRES_PASSWORD}@postgres:5432/botforge?sslmode=disable
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY in deploy/oracle/.env}
+      JWT_KEY: ${JWT_KEY:?set JWT_KEY in deploy/oracle/.env}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      GEMINI_FALLBACK_MODELS: ${GEMINI_FALLBACK_MODELS:-gemini-flash-latest}
+    volumes:
+      - appdata:/data          # uploaded files + message queue survive restarts
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in deploy/oracle/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  appdata:
+  caddy_data:
+  caddy_config:

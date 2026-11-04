@@ -1,0 +1,8 @@
+# SITE_ADDRESS is a host name (e.g. 129-146-1-2.sslip.io or bots.example.com);
+# Caddy gets and renews the HTTPS certificate for it automatically.
+{$SITE_ADDRESS} {
+	reverse_proxy app:7860 {
+		# chat answers are streamed (server-sent events): pass every chunk through immediately
+		flush_interval -1
+	}
+}
