@@ -33,7 +33,7 @@ You don't need to create any tables. The services create schemas, tables and the
 Generate a random value and keep it. Without it, everybody is logged out whenever the Space restarts:
 
 ```powershell
-[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+$b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)
 ```
 
 ## 3. The Space: Hugging Face (10 minutes + build)
@@ -53,8 +53,9 @@ Generate a random value and keep it. Without it, everybody is logged out wheneve
    pinned: false
    ---
    ```
-4. **Files → Add file → Create a new file**: name it `Dockerfile` and paste the contents of
-   [`deploy/huggingface/Dockerfile`](../deploy/huggingface/Dockerfile). Commit it.
+4. On the **Files** tab, click **+ Contribute** (top right of the file list) → **Create a new file**. Name it
+   `Dockerfile`, paste the contents of [`deploy/huggingface/Dockerfile`](../deploy/huggingface/Dockerfile) and click
+   **Commit new file to main**. (Or **+ Contribute → Upload files** and drop in that file.)
 5. **Settings → Variables and secrets → New secret**. Add each of these:
 
    | Name | Value |

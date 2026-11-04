@@ -40,8 +40,10 @@ Docker Desktop, .NET SDK 9+, Python 3.12, Node.js 20+, a [Gemini API key](https:
 Copy-Item infra/.env.example infra/.env          # then set POSTGRES_PASSWORD, RABBITMQ_PASSWORD
 
 # 2. .NET secrets (same Jwt:Key in both services; Internal:ApiKey shared with the chat service)
-$jwt = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
-$internal = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+# (works in Windows PowerShell 5.1 and PowerShell 7)
+function New-Key($n) { $b = New-Object byte[] $n; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); $b }
+$jwt = [Convert]::ToBase64String((New-Key 48))
+$internal = -join ((New-Key 32) | ForEach-Object { $_.ToString("x2") })
 $db = "Host=localhost;Port=5432;Database=botforge;Username=botforge;Password=<POSTGRES_PASSWORD>"
 cd services/identity-service/Identity.Api
 dotnet user-secrets set Jwt:Key $jwt; dotnet user-secrets set ConnectionStrings:Default $db
