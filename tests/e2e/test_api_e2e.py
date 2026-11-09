@@ -7,7 +7,7 @@ import httpx
 import pytest
 from docx import Document
 
-from conftest import API, GATEWAY, chat
+from conftest import API, DASHBOARD, GATEWAY, chat
 
 FAQ = (
     "Sunrise Bakery FAQ\n\n"
@@ -185,9 +185,9 @@ def test_wrong_password_is_rejected(http, tenant_factory):
 def test_cors_policy(http):
     evil = http.options("/bots", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "GET"})
     assert "access-control-allow-origin" not in evil.headers
-    dash = http.options("/bots", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET",
+    dash = http.options("/bots", headers={"Origin": DASHBOARD, "Access-Control-Request-Method": "GET",
                                           "Access-Control-Request-Headers": "authorization"})
-    assert dash.headers["access-control-allow-origin"] == "http://localhost:3000"
+    assert dash.headers["access-control-allow-origin"] == DASHBOARD
     site = http.options("/chat/bk_x", headers={"Origin": "https://any-customer.example",
                                                "Access-Control-Request-Method": "POST",
                                                "Access-Control-Request-Headers": "content-type"})

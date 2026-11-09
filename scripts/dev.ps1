@@ -7,11 +7,13 @@
   ./scripts/dev.ps1 status
   ./scripts/dev.ps1 stop      # stops the app processes (infra keeps running)
   ./scripts/dev.ps1 stop -All # also stops the docker containers
+  ./scripts/dev.ps1 start -DashboardPort 3001   # when another app already uses port 3000
 #>
 param(
     [Parameter(Position = 0)][ValidateSet("start", "stop", "status", "restart")][string]$Command = "start",
     [switch]$All,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [int]$DashboardPort = 3000
 )
 
 # native tools (docker, dotnet, npm) write progress to stderr; Windows PowerShell 5.1 would turn that
@@ -27,7 +29,7 @@ $services = @(
     @{ Name = "ingestion"; Port = 0;    Health = $null;                          Dir = "services/ingestion-service";             Exe = ".venv/Scripts/python.exe"; Args = "-m app.worker" },
     @{ Name = "chat";      Port = 8000; Health = "http://localhost:8000/health"; Dir = "services/chat-service";                  Exe = ".venv/Scripts/python.exe"; Args = "-m uvicorn app.main:app --port 8000" },
     @{ Name = "gateway";   Port = 5000; Health = "http://localhost:5000/health"; Dir = "services/gateway/Gateway.Api";           Exe = "dotnet"; Args = "run --no-build -c Release --launch-profile http" },
-    @{ Name = "dashboard"; Port = 3000; Health = "http://localhost:3000/login";  Dir = "apps/dashboard";                         Exe = "npm.cmd"; Args = "run start" }
+    @{ Name = "dashboard"; Port = $DashboardPort; Health = "http://localhost:$DashboardPort/login"; Dir = "apps/dashboard"; Exe = "npm.cmd"; Args = "exec -- next start -p $DashboardPort" }
 )
 
 function Stop-Tree([int]$id) {
@@ -37,15 +39,21 @@ function Stop-Tree([int]$id) {
     Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
 }
 
+function Test-OurProcess([int]$id) {
+    $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue).CommandLine
+    return $cmd -and $cmd.IndexOf($root, [StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
 function Stop-App {
     if (Test-Path $pidFile) {
         $pids = Get-Content $pidFile | ConvertFrom-Json
         foreach ($p in $pids.PSObject.Properties) { Stop-Tree ([int]$p.Value) }
         Remove-Item $pidFile -Force
     }
-    # anything still holding our ports (e.g. started by hand)
+    # anything of ours still holding our ports (e.g. started by hand); never another project's process
     foreach ($s in $services | Where-Object { $_.Port -gt 0 }) {
         Get-NetTCPConnection -LocalPort $s.Port -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { Test-OurProcess $_.OwningProcess } |
             ForEach-Object { Stop-Tree $_.OwningProcess }
     }
     Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
@@ -115,6 +123,17 @@ function Start-App {
         }
     }
 
+    foreach ($s in $services | Where-Object { $_.Port -gt 0 }) {
+        $holder = Get-NetTCPConnection -LocalPort $s.Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($holder) {
+            $hint = if ($s.Name -eq "dashboard") { " Use -DashboardPort <port>, e.g. 3001." } else { "" }
+            throw "Port $($s.Port) ($($s.Name)) is already used by process $($holder.OwningProcess).$hint"
+        }
+    }
+
+    # the gateway only accepts dashboard calls from the dashboard's own address
+    $env:Gateway__DashboardOrigins__0 = "http://localhost:$DashboardPort"
+
     $pids = @{}
     foreach ($s in $services) {
         $dir = Join-Path $root $s.Dir
@@ -131,7 +150,7 @@ function Start-App {
         else { Write-Warning "$($s.Name) did not become healthy - see .logs/$($s.Name).log" }
     }
     Write-Host ""
-    Write-Host "Dashboard: http://localhost:3000"
+    Write-Host "Dashboard: http://localhost:$DashboardPort"
     Write-Host "Gateway:   http://localhost:5000 (widget at /widget.js)"
     Write-Host "RabbitMQ:  http://localhost:15672"
 }

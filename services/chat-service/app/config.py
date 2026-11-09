@@ -20,7 +20,13 @@ GEMINI_FALLBACK_MODELS = [m.strip() for m in os.getenv("GEMINI_FALLBACK_MODELS",
 BOTS_SERVICE_URL = os.getenv("BOTS_SERVICE_URL", "http://localhost:5215")
 INTERNAL_API_KEY = _required("INTERNAL_API_KEY")
 
+# must match the ingestion service: "local" (fastembed) or "gemini" (Gemini embedding API)
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local").strip().lower()
+if EMBEDDING_PROVIDER not in ("local", "gemini"):
+    raise RuntimeError("EMBEDDING_PROVIDER must be 'local' or 'gemini'")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "384"))
+GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
 TOP_K = int(os.getenv("RETRIEVAL_TOP_K", "5"))
 MAX_QUESTION_CHARS = 1000
 MAX_HISTORY_TURNS = 10

@@ -27,7 +27,7 @@ See [docs/architecture.md](docs/architecture.md) for the design, data flow and s
 | `apps/widget` | Embeddable widget (TypeScript, ~4 kB gzipped, Shadow DOM) |
 | `tests/e2e`, `tests/e2e-ui` | End-to-end tests (API journeys, Playwright browser tests) |
 | `scripts/dev.ps1`, `scripts/test.ps1` | Run the whole stack / the whole test suite |
-| `deploy/huggingface` | Single-container image for free hosting |
+| `deploy/` | Free hosting: `render` (Vercel + Render), `oracle` (own server), `huggingface` |
 
 ## Prerequisites
 
@@ -118,8 +118,9 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 
 ## Deploy (free)
 
-The whole app runs in one container on a free Hugging Face Space with a free Neon database
-(no credit card needed). Step-by-step: [docs/deploy.md](docs/deploy.md).
+- **Vercel + Render + Neon + CloudAMQP**, no credit card: [docs/deploy-free.md](docs/deploy-free.md)
+- Any Linux server (e.g. Oracle Cloud Always Free) with HTTPS: `deploy/oracle/setup.sh`
+- Hugging Face Spaces (single container): [docs/deploy.md](docs/deploy.md)
 
 ## Production notes
 

@@ -40,13 +40,7 @@ public class DocumentStatusConsumer(
     {
         var o = options.Value;
         var queue = o.StatusQueue;
-        var factory = new ConnectionFactory
-        {
-            HostName = o.Host,
-            Port = o.Port,
-            UserName = o.User,
-            Password = o.Password
-        };
+        var factory = o.CreateFactory();
 
         await using var connection = await factory.CreateConnectionAsync(ct);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);

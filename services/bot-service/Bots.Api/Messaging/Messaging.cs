@@ -17,12 +17,19 @@ public record BotDeleted(Guid BotId, Guid TenantId);
 
 public class RabbitMqOptions
 {
+    /// <summary>Full AMQP URL, e.g. amqps://user:pass@host/vhost (CloudAMQP). Overrides Host/Port/User/Password.</summary>
+    public string? Url { get; set; }
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 5672;
     public string User { get; set; } = "";
     public string Password { get; set; } = "";
     public string Exchange { get; set; } = "botforge.events";
     public string StatusQueue { get; set; } = "bots.document-status";
+
+    public ConnectionFactory CreateFactory() =>
+        string.IsNullOrWhiteSpace(Url)
+            ? new ConnectionFactory { HostName = Host, Port = Port, UserName = User, Password = Password }
+            : new ConnectionFactory { Uri = new Uri(Url) };   // amqps:// switches TLS on
 }
 
 public interface IEventPublisher
@@ -44,13 +51,7 @@ public sealed class RabbitMqPublisher(Microsoft.Extensions.Options.IOptions<Rabb
         try
         {
             if (_connection is { IsOpen: true }) return _connection;
-            var factory = new ConnectionFactory
-            {
-                HostName = _o.Host,
-                Port = _o.Port,
-                UserName = _o.User,
-                Password = _o.Password
-            };
+            var factory = _o.CreateFactory();
             _connection = await factory.CreateConnectionAsync(ct);
             return _connection;
         }

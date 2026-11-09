@@ -91,11 +91,14 @@ class Handler:
 
 
 def consume(handler: Handler) -> None:
-    credentials = pika.PlainCredentials(config.RABBITMQ_USER, config.RABBITMQ_PASSWORD)
-    params = pika.ConnectionParameters(
-        host=config.RABBITMQ_HOST, port=config.RABBITMQ_PORT,
-        credentials=credentials, heartbeat=600,
-    )
+    if config.RABBITMQ_URL:
+        params = pika.URLParameters(config.RABBITMQ_URL)   # amqps:// enables TLS
+        params.heartbeat = 600
+    else:
+        params = pika.ConnectionParameters(
+            host=config.RABBITMQ_HOST, port=config.RABBITMQ_PORT,
+            credentials=pika.PlainCredentials(config.RABBITMQ_USER, config.RABBITMQ_PASSWORD), heartbeat=600,
+        )
     mq = pika.BlockingConnection(params)
     try:
         channel = mq.channel()
@@ -125,7 +128,10 @@ def main() -> None:
     conn = db.connect()
     db.ensure_schema(conn)
 
-    log.info("Loading embedding model (the first run downloads it, ~100 MB)...")
+    if config.EMBEDDING_PROVIDER == "local":
+        log.info("Loading embedding model (the first run downloads it, ~100 MB)...")
+    else:
+        log.info("Using Gemini embeddings (%s)", config.GEMINI_EMBEDDING_MODEL)
     get_model()
 
     handler = Handler(conn, publish_fn=None)

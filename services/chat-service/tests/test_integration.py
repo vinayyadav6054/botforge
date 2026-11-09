@@ -22,7 +22,7 @@ def db(test_database_url, monkeypatch):
 
 
 def insert(conn, tenant, bot, texts):
-    vectors = list(retrieval.get_model().embed(texts))
+    vectors = retrieval.embed_documents(texts)
     doc = uuid.uuid4()
     with conn.cursor() as cur:
         for i, (t, v) in enumerate(zip(texts, vectors)):

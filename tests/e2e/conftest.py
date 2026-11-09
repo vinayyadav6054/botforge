@@ -9,6 +9,7 @@ import pytest
 
 GATEWAY = os.environ.get("BOTFORGE_GATEWAY", "http://localhost:5000").rstrip("/")
 API = f"{GATEWAY}/api"
+DASHBOARD = os.environ.get("BOTFORGE_DASHBOARD", "http://localhost:3000").rstrip("/")
 
 
 @pytest.fixture(scope="session", autouse=True)
