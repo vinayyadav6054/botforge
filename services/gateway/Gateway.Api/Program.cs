@@ -13,7 +13,7 @@ builder.Services.AddCors(o =>
     // the dashboard sends a bearer token, so only our own front-end may call those routes from a browser
     o.AddPolicy("dashboard", p => p.WithOrigins(dashboardOrigins)
         .AllowAnyHeader()
-        .WithMethods("GET", "POST", "PUT", "DELETE"));
+        .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE"));
     // the widget runs on customers' websites, so the public chat routes accept any origin (no cookies involved)
     o.AddPolicy("public", p => p.AllowAnyOrigin()
         .WithHeaders("Content-Type")

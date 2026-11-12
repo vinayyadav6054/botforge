@@ -183,7 +183,7 @@ test("bot settings, document deletion and bot deletion", async ({ page }) => {
   await expect(page.getByRole("cell", { name: "notes.md", exact: true })).toHaveCount(0);
 
   const settings = page.getByRole("form", { name: "Bot settings" });
-  await settings.getByLabel("Name").fill("Renamed Bot");
+  await settings.getByLabel("Name", { exact: true }).fill("Renamed Bot");
   await settings.getByRole("button", { name: "Save changes" }).click();
   await expect(page.locator(".alert.ok")).toHaveText("Settings saved.");
   await expect(page.getByRole("heading", { name: "Renamed Bot" })).toBeVisible();

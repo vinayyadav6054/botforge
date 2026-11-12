@@ -1,0 +1,168 @@
+<!doctype html>
+<!--
+  BotForge sales demo page — one file, reused for every prospect.
+
+  Usage:
+    sales-demo.html?key=bk_xxx&name=Kalrashukla%20Classes&color=%23b91c1c
+  Optional params:
+    q    = suggested questions, separated by |   e.g. q=What%20are%20the%20JEE%20fees%3F|When%20does%20the%20next%20batch%20start%3F
+    city = shown in the subtitle (default: Mumbai)
+    gw   = gateway base URL, overrides DEFAULT_GATEWAY below
+
+  Before sending links: set DEFAULT_GATEWAY and CONTACT_WHATSAPP below, and host this page over HTTPS
+  (e.g. Vercel/Netlify, or next to the dashboard). For local testing, open it from disk while dev.ps1 is
+  running: it then uses http://localhost:5000 (the gateway's public chat routes allow any origin).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Assistant Demo</title>
+  <meta name="robots" content="noindex" />
+  <style>
+    :root {
+      --bg: #f7f8fb; --card: #ffffff; --text: #151823; --muted: #5d6374; --border: #e3e6ee;
+      --accent: #4f46e5; --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0f1117; --card: #171a23; --text: #eceef4; --muted: #9ba1b3; --border: #272b38; }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 140px; }
+    .tag { display: inline-block; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: .8rem;
+           padding: 5px 12px; border-radius: 99px; margin-bottom: 16px; }
+    h1 { font-size: clamp(1.7rem, 4.5vw, 2.6rem); line-height: 1.15; letter-spacing: -.01em; }
+    h1 .name { color: var(--accent); }
+    .sub { color: var(--muted); font-size: 1.05rem; margin: 12px 0 28px; max-width: 620px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+    .card h2 { font-size: 1.05rem; margin-bottom: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip { font: inherit; font-size: .93rem; cursor: pointer; background: var(--accent-soft); color: var(--text);
+            border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 99px; padding: 8px 14px; text-align: left; }
+    .chip:hover { border-color: var(--accent); }
+    .hint { color: var(--muted); font-size: .85rem; margin-top: 12px; }
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .grid h3 { font-size: .98rem; margin-bottom: 4px; }
+    .grid p { color: var(--muted); font-size: .92rem; }
+    .offer { border: 2px solid var(--accent); }
+    .offer p { color: var(--muted); margin-bottom: 14px; }
+    .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none;
+           padding: 11px 20px; border-radius: 10px; }
+    .warn { display: none; background: #fff4e5; color: #8a4b00; border: 1px solid #f5c98b; border-radius: 10px;
+            padding: 12px 14px; margin-bottom: 20px; font-size: .92rem; }
+    footer { color: var(--muted); font-size: .82rem; margin-top: 28px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="warn" id="warn"></div>
+
+    <span class="tag">Live demo · built for you</span>
+    <h1>AI admissions assistant for <span class="name" id="name">your institute</span></h1>
+    <p class="sub" id="sub">Trained only on your own brochure and fee details. It answers parents' and students' questions 24/7, right on your website.</p>
+
+    <section class="card">
+      <h2>Try asking 👇</h2>
+      <div class="chips" id="chips"></div>
+      <p class="hint">Or type your own question in the chat window (bottom-right).</p>
+    </section>
+
+    <section class="card">
+      <h2>What it does for your institute</h2>
+      <div class="grid">
+        <div><h3>Answers at 11 pm</h3><p>Parents research late at night. The assistant replies instantly about fees, batches and eligibility.</p></div>
+        <div><h3>Fewer repeat calls</h3><p>Your front desk stops answering the same 20 questions every day.</p></div>
+        <div><h3>Only your information</h3><p>It answers strictly from your documents and says so when it doesn't know.</p></div>
+        <div><h3>One line to install</h3><p>A single snippet on your website. No app, no changes to your site.</p></div>
+      </div>
+    </section>
+
+    <section class="card offer">
+      <h2>Live on your website in 48 hours</h2>
+      <p>₹9,999 one-time setup (first month included), then ₹1,999/month. Early-bird ₹7,999 for the first 5 Mumbai institutes. I load your full course and fee details and install it on your website for you.</p>
+      <a class="btn" id="cta" href="#" target="_blank" rel="noopener">Chat with me on WhatsApp</a>
+    </section>
+
+    <footer>Demo built with BotForge using publicly available information. Answers may be incomplete until your full documents are added.</footer>
+  </main>
+
+  <script>
+    // ===== EDIT THESE TWO BEFORE SENDING DEMOS =====
+    var DEFAULT_GATEWAY = "https://YOUR-GATEWAY.example.com"; // deployed BotForge gateway (serves /widget.js and /api)
+    var CONTACT_WHATSAPP = "910000000000";                    // your number, country code + number, digits only
+    // ===============================================
+
+    var DEFAULT_QUESTIONS = [
+      "What courses do you offer?",
+      "What are the fees?",
+      "When does the next batch start?",
+      "What is the eligibility?"
+    ];
+
+    var p = new URLSearchParams(location.search);
+    var key = (p.get("key") || "").trim();
+    var name = (p.get("name") || "").trim().slice(0, 80);
+    var city = (p.get("city") || "Mumbai").trim().slice(0, 40);
+    var color = p.get("color") || "";
+    var isLocal = location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    var gateway = (p.get("gw") || (isLocal ? "http://localhost:5000" : DEFAULT_GATEWAY)).replace(/\/+$/, "");
+    var questions = (p.get("q") || "").split("|").map(function (s) { return s.trim().slice(0, 120); }).filter(Boolean);
+    if (!questions.length) questions = DEFAULT_QUESTIONS;
+    var accent = /^#[0-9a-f]{3,8}$/i.test(color) ? color : "#4f46e5";
+
+    function warn(msg) { var w = document.getElementById("warn"); w.textContent = msg; w.style.display = "block"; }
+
+    // --- personalise the page (textContent only: params come from the URL) ---
+    document.documentElement.style.setProperty("--accent", accent);
+    if (name) {
+      document.getElementById("name").textContent = name;
+      document.title = name + " – AI Assistant Demo";
+    }
+    document.getElementById("sub").textContent =
+      "Trained only on " + (name ? name + "'s" : "your") + " brochure and fee details. It answers parents' and students' questions 24/7, right on your website" +
+      (city ? " (built for " + city + " institutes)." : ".");
+    var waText = "Hi Vinay, I saw the AI assistant demo" + (name ? " for " + name : "") + ". I'd like to know more.";
+    document.getElementById("cta").href = "https://wa.me/" + CONTACT_WHATSAPP + "?text=" + encodeURIComponent(waText);
+
+    // --- suggested question chips ---
+    var chips = document.getElementById("chips");
+    questions.forEach(function (q) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = q;
+      b.addEventListener("click", function () { ask(q); });
+      chips.appendChild(b);
+    });
+
+    // Opens the chat and sends the question through the widget's public API (BotForge.ask).
+    // If the widget has not loaded yet, copy the question so the visitor can paste it.
+    function ask(q) {
+      if (window.BotForge && typeof window.BotForge.ask === "function") {
+        window.BotForge.ask(q);
+        return;
+      }
+      if (navigator.clipboard) navigator.clipboard.writeText(q).catch(function () {});
+      warn("The chat is still loading. Your question was copied, so paste it into the chat window.");
+    }
+
+    // --- load the widget ---
+    if (!key) {
+      warn("Missing bot key. Open this page as sales-demo.html?key=bk_...&name=Institute%20Name");
+    } else if (!isLocal && gateway.indexOf("YOUR-GATEWAY") !== -1) {
+      warn("DEFAULT_GATEWAY is not set. Edit it at the bottom of sales-demo.html, or add &gw=https://your-gateway to the link.");
+    } else {
+      var s = document.createElement("script");
+      s.src = gateway + "/widget.js";
+      s.async = true;
+      s.setAttribute("data-bot-key", key);
+      s.setAttribute("data-color", accent);
+      s.onload = function () {
+        // open the chat automatically on desktop; on phones leave the page readable first
+        if (window.innerWidth > 700 && window.BotForge && window.BotForge.open) window.BotForge.open();
+      };
+      s.onerror = function () { warn("Could not load the chat widget from " + gateway + ". Is the gateway running?"); };
+      document.body.appendChild(s);
+    }
+  </script>
+</body>
+</html>

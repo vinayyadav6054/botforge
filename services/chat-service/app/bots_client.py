@@ -14,3 +14,12 @@ async def resolve_bot(public_key: str) -> dict | None:
         return None
     response.raise_for_status()
     return response.json()
+
+
+async def create_lead(public_key: str, lead: dict) -> httpx.Response:
+    """Forwards a visitor's details; the caller maps the status code (201/200, 400, 404, 409)."""
+    return await _client.post(
+        f"{config.BOTS_SERVICE_URL}/internal/bots/{public_key}/leads",
+        headers={"X-Internal-Key": config.INTERNAL_API_KEY},
+        json=lead,
+    )

@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Bot> Bots => Set<Bot>();
     public DbSet<BotDocument> Documents => Set<BotDocument>();
+    public DbSet<Lead> Leads => Set<Lead>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -30,6 +31,8 @@ public class AppDbContext : DbContext
             e.Property(x => x.PublicKey).HasMaxLength(64).IsRequired();
             e.HasIndex(x => x.PublicKey).IsUnique();
             e.HasIndex(x => x.TenantId);
+            e.Property(x => x.LeadPrompt).HasMaxLength(300).IsRequired();
+            e.Property(x => x.SuggestedQuestions).IsRequired();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
 
@@ -44,6 +47,22 @@ public class AppDbContext : DbContext
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
             e.Property(x => x.Error).HasMaxLength(500);
+        });
+
+        b.Entity<Lead>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(200);
+            e.Property(x => x.Course).HasMaxLength(150);
+            e.Property(x => x.PageUrl).HasMaxLength(500);
+            e.Property(x => x.Transcript).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.BotId, x.CreatedAt });
+            e.HasIndex(x => new { x.BotId, x.Phone, x.CreatedAt });   // duplicate check
+            e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }
 }

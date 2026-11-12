@@ -48,6 +48,9 @@ class Tenant:
     def put(self, path, **kw):
         return self.http.put(path, headers=self.headers, **kw)
 
+    def patch(self, path, **kw):
+        return self.http.patch(path, headers=self.headers, **kw)
+
     def delete(self, path, **kw):
         return self.http.delete(path, headers=self.headers, **kw)
 

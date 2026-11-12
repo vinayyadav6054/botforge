@@ -1,8 +1,25 @@
 import { SseParser } from "./sse";
 
+export interface LeadCapture {
+  enabled: boolean;
+  prompt: string;
+  afterMessages: number;
+}
+
 export interface BotInfo {
   name: string;
   welcomeMessage: string;
+  leadCapture?: LeadCapture;
+  suggestedQuestions?: string[];
+}
+
+export interface LeadInput {
+  name: string;
+  phone: string;
+  course?: string;
+  pageUrl?: string;
+  transcript: Turn[];
+  website?: string; // honeypot
 }
 
 export interface Turn {
@@ -27,6 +44,32 @@ export class ChatApi {
     const res = await fetch(this.url("/info"));
     if (!res.ok) throw new Error(`info failed: ${res.status}`);
     return res.json();
+  }
+
+  /** Saves the visitor's details. Resolves to null on success, or a message to show. */
+  async submitLead(lead: LeadInput): Promise<string | null> {
+    let res: Response;
+    try {
+      res = await fetch(this.url("/lead"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lead),
+      });
+    } catch {
+      return "Could not send your details. Check your connection and try again.";
+    }
+    if (res.ok) return null;
+    if (res.status === 429) return "Please wait a moment and try again.";
+    if (res.status === 400) {
+      try {
+        const body = await res.json();
+        if (typeof body?.detail === "string") return body.detail;
+      } catch {
+        /* no JSON body */
+      }
+      return "Please check your details.";
+    }
+    return "Sorry, we could not save your details. Please try again.";
   }
 
   /** Sends a message and streams the answer. Always ends with exactly one onDone or onError. */

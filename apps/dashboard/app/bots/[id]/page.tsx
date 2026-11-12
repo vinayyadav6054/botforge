@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DragEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import LeadsSection from "@/components/LeadsSection";
 import Shell from "@/components/Shell";
 import { api, Bot, BotDocument, gatewayOrigin } from "@/lib/api";
 
@@ -31,6 +32,10 @@ function BotDetail({ id }: { id: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [welcome, setWelcome] = useState("");
+  const [leadEnabled, setLeadEnabled] = useState(false);
+  const [leadPrompt, setLeadPrompt] = useState("");
+  const [leadAfter, setLeadAfter] = useState(2);
+  const [questions, setQuestions] = useState<string[]>(["", "", "", ""]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -48,6 +53,10 @@ function BotDetail({ id }: { id: string }) {
         setBot(b);
         setName(b.name);
         setWelcome(b.welcomeMessage);
+        setLeadEnabled(b.leadCaptureEnabled);
+        setLeadPrompt(b.leadPrompt);
+        setLeadAfter(b.leadAfterMessages);
+        setQuestions(padQuestions(b.suggestedQuestions));
         return loadDocs();
       })
       .catch((e: Error & { status?: number }) =>
@@ -81,8 +90,18 @@ function BotDetail({ id }: { id: string }) {
     setSaving(true);
     setError(null);
     try {
-      const b = await api.updateBot(id, name.trim(), welcome.trim());
+      const b = await api.updateBot(id, {
+        name: name.trim(),
+        welcomeMessage: welcome.trim(),
+        leadCaptureEnabled: leadEnabled,
+        leadPrompt: leadPrompt.trim(),
+        leadAfterMessages: Math.min(20, Math.max(0, Math.round(leadAfter) || 0)),
+        suggestedQuestions: questions.map((q) => q.trim()).filter(Boolean),
+      });
       setBot(b);
+      setLeadPrompt(b.leadPrompt);
+      setLeadAfter(b.leadAfterMessages);
+      setQuestions(padQuestions(b.suggestedQuestions));
       flash("Settings saved.");
     } catch (err) {
       setError((err as Error).message);
@@ -263,6 +282,8 @@ function BotDetail({ id }: { id: string }) {
         )}
       </section>
 
+      <LeadsSection botId={id} enabled={bot.leadCaptureEnabled} />
+
       <section className="card">
         <h2>Add to your website</h2>
         <p className="muted small">Paste this just before the closing <code>&lt;/body&gt;</code> tag of your site.</p>
@@ -282,6 +303,44 @@ function BotDetail({ id }: { id: string }) {
           <label htmlFor="welcomeMessage">Welcome message</label>
           <textarea id="welcomeMessage" maxLength={500} value={welcome} onChange={(e) => setWelcome(e.target.value)} />
         </div>
+
+        <fieldset className="field questions">
+          <legend>Suggested questions <span className="muted small">(optional, up to 4)</span></legend>
+          <p className="small muted" style={{ margin: "0 0 8px" }}>
+            Shown as buttons under the welcome message, so visitors can ask with one tap.
+          </p>
+          {questions.map((q, i) => (
+            <input key={i} type="text" maxLength={120} value={q} aria-label={`Suggested question ${i + 1}`}
+              placeholder={QUESTION_EXAMPLES[i]}
+              onChange={(e) => setQuestions((qs) => qs.map((x, j) => (j === i ? e.target.value : x)))} />
+          ))}
+        </fieldset>
+
+        <h3 style={{ fontSize: 15, margin: "20px 0 10px" }}>Lead capture</h3>
+        <div className="field">
+          <label className="check" htmlFor="leadEnabled">
+            <input id="leadEnabled" type="checkbox" checked={leadEnabled} onChange={(e) => setLeadEnabled(e.target.checked)} />
+            Ask visitors for their name and phone number
+          </label>
+          <p className="small muted" style={{ margin: "4px 0 0" }}>
+            Adds a call-back button to the chat and collects enquiries in the Leads list above.
+          </p>
+        </div>
+        {leadEnabled && (
+          <>
+            <div className="field">
+              <label htmlFor="leadPrompt">Invitation text</label>
+              <textarea id="leadPrompt" maxLength={300} value={leadPrompt} onChange={(e) => setLeadPrompt(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="leadAfter">Show the form automatically after this many answers</label>
+              <input id="leadAfter" type="number" min={0} max={20} value={leadAfter}
+                onChange={(e) => setLeadAfter(Number(e.target.value))} />
+              <p className="small muted" style={{ margin: "4px 0 0" }}>0 = only when the visitor taps the call-back button.</p>
+            </div>
+          </>
+        )}
+
         <button className="btn" type="submit" disabled={saving || !name.trim()}>
           {saving ? "Saving..." : "Save changes"}
         </button>
@@ -294,6 +353,18 @@ function BotDetail({ id }: { id: string }) {
       </section>
     </>
   );
+}
+
+const QUESTION_EXAMPLES = [
+  "e.g. What are the fees?",
+  "e.g. When does the next batch start?",
+  "e.g. Is there a scholarship test?",
+  "e.g. Do you offer a free demo class?",
+];
+
+/** Always four boxes in the form; the bot keeps only the filled ones. */
+function padQuestions(qs: string[] | undefined): string[] {
+  return [...(qs ?? []), "", "", "", ""].slice(0, 4);
 }
 
 export default function BotPage() {

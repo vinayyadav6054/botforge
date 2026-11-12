@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Bots.Api;
 using Bots.Api.Data;
@@ -77,7 +77,7 @@ var bots = app.MapGroup("/bots")
 
 bots.MapPost("/", async (CreateBotRequest req, AppDbContext db, ITenantContext tenant) =>
 {
-    var error = BotRules.Validate(req.Name, req.WelcomeMessage);
+    var error = BotRules.Validate(req.Name, req.WelcomeMessage) ?? BotRules.ValidateQuestions(req.SuggestedQuestions);
     if (error is not null) return Results.BadRequest(new { error });
 
     var bot = new Bot
@@ -88,6 +88,8 @@ bots.MapPost("/", async (CreateBotRequest req, AppDbContext db, ITenantContext t
     };
     if (!string.IsNullOrWhiteSpace(req.WelcomeMessage))
         bot.WelcomeMessage = req.WelcomeMessage.Trim();
+    if (req.SuggestedQuestions is not null)
+        bot.SuggestedQuestions = BotRules.NormalizeQuestions(req.SuggestedQuestions);
 
     db.Bots.Add(bot);
     await db.SaveChangesAsync();
@@ -108,12 +110,20 @@ bots.MapPut("/{id:guid}", async (Guid id, CreateBotRequest req, AppDbContext db)
     var bot = await db.Bots.FirstOrDefaultAsync(b => b.Id == id);
     if (bot is null) return Results.NotFound();
 
-    var error = BotRules.Validate(req.Name, req.WelcomeMessage);
+    var error = BotRules.Validate(req.Name, req.WelcomeMessage)
+                ?? LeadRules.ValidateSettings(req.LeadPrompt, req.LeadAfterMessages)
+                ?? BotRules.ValidateQuestions(req.SuggestedQuestions);
     if (error is not null) return Results.BadRequest(new { error });
 
     bot.Name = req.Name!.Trim();
     if (!string.IsNullOrWhiteSpace(req.WelcomeMessage))
         bot.WelcomeMessage = req.WelcomeMessage.Trim();
+    if (req.LeadCaptureEnabled is { } enabled) bot.LeadCaptureEnabled = enabled;
+    if (req.LeadPrompt is not null)
+        bot.LeadPrompt = string.IsNullOrWhiteSpace(req.LeadPrompt) ? LeadRules.DefaultPrompt : req.LeadPrompt.Trim();
+    if (req.LeadAfterMessages is { } after) bot.LeadAfterMessages = after;
+    if (req.SuggestedQuestions is not null)
+        bot.SuggestedQuestions = BotRules.NormalizeQuestions(req.SuggestedQuestions);
     await db.SaveChangesAsync();
     return Results.Ok(BotDto.From(bot));
 });
@@ -232,25 +242,102 @@ bots.MapDelete("/{botId:guid}/documents/{docId:guid}", async (
     return Results.NoContent();
 });
 
-// Internal endpoint for other services (never expose this through the public gateway)
+// ---------- leads (dashboard) ----------
+
+bots.MapGet("/{botId:guid}/leads", async (Guid botId, AppDbContext db) =>
+{
+    if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
+    var leads = await db.Leads.Where(l => l.BotId == botId)
+        .OrderByDescending(l => l.CreatedAt).Take(1000)
+        .Select(l => LeadDto.From(l)).ToListAsync();
+    return Results.Ok(leads);
+});
+
+bots.MapPatch("/{botId:guid}/leads/{leadId:guid}", async (Guid botId, Guid leadId, UpdateLeadRequest req, AppDbContext db) =>
+{
+    var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == leadId && l.BotId == botId);
+    if (lead is null) return Results.NotFound();
+    if (req.Status is null || !LeadStatus.All.Contains(req.Status))
+        return Results.BadRequest(new { error = $"Status must be one of: {string.Join(", ", LeadStatus.All)}." });
+    lead.Status = req.Status;
+    await db.SaveChangesAsync();
+    return Results.Ok(LeadDto.From(lead));
+});
+
+// a visitor may ask for their data to be removed
+bots.MapDelete("/{botId:guid}/leads/{leadId:guid}", async (Guid botId, Guid leadId, AppDbContext db) =>
+{
+    var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == leadId && l.BotId == botId);
+    if (lead is null) return Results.NotFound();
+    db.Leads.Remove(lead);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+bots.MapGet("/{botId:guid}/leads/export", async (Guid botId, AppDbContext db) =>
+{
+    var bot = await db.Bots.FirstOrDefaultAsync(b => b.Id == botId);
+    if (bot is null) return Results.NotFound();
+    var leads = await db.Leads.Where(l => l.BotId == botId).OrderByDescending(l => l.CreatedAt).ToListAsync();
+    var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(LeadCsv.Build(leads))).ToArray(); // BOM: Excel reads UTF-8
+    return Results.File(bytes, "text/csv; charset=utf-8", $"leads-{DateTime.UtcNow:yyyy-MM-dd}.csv");
+});
+
+// ---------- internal endpoints for other services (never expose these through the public gateway) ----------
+
 app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest request, AppDbContext db, IConfiguration config) =>
 {
-    var expected = config["Internal:ApiKey"] ?? "";
-    var provided = request.Headers["X-Internal-Key"].ToString();
-    if (expected.Length == 0 ||
-        !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected)))
-        return Results.Unauthorized();
+    if (!HasInternalKey(request, config)) return Results.Unauthorized();
 
     // no tenant in context for service-to-service calls, so bypass the filter on purpose
     var bot = await db.Bots.IgnoreQueryFilters()
         .Where(b => b.PublicKey == publicKey)
-        .Select(b => new { botId = b.Id, tenantId = b.TenantId, name = b.Name, welcomeMessage = b.WelcomeMessage })
+        .Select(b => new
+        {
+            botId = b.Id, tenantId = b.TenantId, name = b.Name, welcomeMessage = b.WelcomeMessage,
+            leadCapture = new { enabled = b.LeadCaptureEnabled, prompt = b.LeadPrompt, afterMessages = b.LeadAfterMessages },
+            suggestedQuestions = b.SuggestedQuestions
+        })
         .FirstOrDefaultAsync();
 
     return bot is null ? Results.NotFound() : Results.Ok(bot);
 });
 
+// a website visitor left their details in the widget (forwarded by the chat service)
+app.MapPost("/internal/bots/{publicKey}/leads", async (
+    string publicKey, CreateLeadRequest req, HttpRequest request, AppDbContext db, IConfiguration config) =>
+{
+    if (!HasInternalKey(request, config)) return Results.Unauthorized();
+
+    var bot = await db.Bots.IgnoreQueryFilters().FirstOrDefaultAsync(b => b.PublicKey == publicKey);
+    if (bot is null) return Results.NotFound();
+    if (!bot.LeadCaptureEnabled) return Results.Conflict(new { error = "This assistant is not collecting details." });
+
+    var error = LeadRules.Validate(req, out var lead);
+    if (error is not null) return Results.BadRequest(new { error });
+
+    // the same person submitting twice (double click, page reload) must not create two leads
+    var since = DateTime.UtcNow - LeadRules.DuplicateWindow;
+    var existing = await db.Leads.IgnoreQueryFilters()
+        .FirstOrDefaultAsync(l => l.BotId == bot.Id && l.Phone == lead.Phone && l.CreatedAt >= since);
+    if (existing is not null) return Results.Ok(new { id = existing.Id, duplicate = true });
+
+    lead.TenantId = bot.TenantId;
+    lead.BotId = bot.Id;
+    db.Leads.Add(lead);
+    await db.SaveChangesAsync();
+    return Results.Created($"/bots/{bot.Id}/leads/{lead.Id}", new { id = lead.Id, duplicate = false });
+});
+
 app.Run();
+
+static bool HasInternalKey(HttpRequest request, IConfiguration config)
+{
+    var expected = config["Internal:ApiKey"] ?? "";
+    var provided = request.Headers["X-Internal-Key"].ToString();
+    return expected.Length > 0 &&
+           CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected));
+}
 
 static async Task<bool> TryPublishAsync<T>(IEventPublisher publisher, ILogger log, string routingKey, T message)
 {

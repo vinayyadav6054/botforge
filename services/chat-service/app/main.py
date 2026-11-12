@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from . import config
-from .bots_client import resolve_bot
+from .bots_client import create_lead, resolve_bot
 from .llm import stream_answer
 from .retrieval import get_model, retrieve
 
@@ -55,6 +55,17 @@ class ChatRequest(BaseModel):
     history: list[Turn] = Field(default_factory=list, max_length=config.MAX_HISTORY_TURNS)
 
 
+class LeadRequest(BaseModel):
+    name: str = Field(max_length=200)
+    phone: str = Field(max_length=40)
+    email: str | None = Field(default=None, max_length=300)
+    course: str | None = Field(default=None, max_length=300)
+    pageUrl: str | None = Field(default=None, max_length=2000)
+    transcript: list[Turn] = Field(default_factory=list, max_length=config.MAX_HISTORY_TURNS)
+    # honeypot: hidden in the widget, so only bots fill it in
+    website: str | None = Field(default=None, max_length=500)
+
+
 def retrieval_query(question: str, history: list[tuple[str, str]]) -> str:
     """Follow-ups like "and on Saturday?" only make sense with the previous question, so search with both."""
     previous = next((text for role, text in reversed(history) if role == "user"), None)
@@ -87,7 +98,53 @@ async def _get_bot(public_key: str) -> dict:
 async def bot_info(public_key: str):
     """Public data the widget needs before the first message."""
     bot = await _get_bot(public_key)
-    return {"name": bot["name"], "welcomeMessage": bot["welcomeMessage"]}
+    lead = bot.get("leadCapture") or {}
+    return {
+        "name": bot["name"],
+        "welcomeMessage": bot["welcomeMessage"],
+        "leadCapture": {
+            "enabled": bool(lead.get("enabled")),
+            "prompt": lead.get("prompt") or "",
+            "afterMessages": int(lead.get("afterMessages") or 0),
+        },
+        "suggestedQuestions": _questions(bot.get("suggestedQuestions")),
+    }
+
+
+def _questions(raw) -> list[str]:
+    """Defensive copy of the owner's suggested questions: strings only, at most 4, each short."""
+    if not isinstance(raw, list):
+        return []
+    return [q.strip()[:120] for q in raw if isinstance(q, str) and q.strip()][:4]
+
+
+@app.post("/chat/{public_key}/lead")
+async def submit_lead(public_key: str, body: LeadRequest):
+    """A visitor left their details. Validation and storage happen in the bot service."""
+    if not PUBLIC_KEY.match(public_key):
+        raise HTTPException(status_code=404, detail="Unknown bot")
+    if body.website:
+        log.info("Lead honeypot triggered for a bot; dropped")
+        return {"ok": True}  # look successful so spam bots learn nothing
+
+    try:
+        response = await create_lead(public_key, body.model_dump(exclude={"website"}))
+    except httpx.HTTPError:
+        log.exception("Bot service unavailable")
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+
+    if response.status_code in (200, 201):
+        return {"ok": True}
+    if response.status_code in (400, 409):
+        try:
+            error = response.json().get("error") or "Please check your details."
+        except ValueError:
+            error = "Please check your details."
+        raise HTTPException(status_code=response.status_code, detail=error)
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="Unknown bot")
+    log.error("Unexpected status %s from bot service when saving a lead", response.status_code)
+    raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
 
 @app.post("/chat/{public_key}")

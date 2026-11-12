@@ -22,6 +22,35 @@ export interface Bot {
   welcomeMessage: string;
   publicKey: string;
   createdAt: string;
+  leadCaptureEnabled: boolean;
+  leadPrompt: string;
+  leadAfterMessages: number;
+  suggestedQuestions: string[];
+}
+
+export interface BotSettings {
+  name: string;
+  welcomeMessage: string;
+  leadCaptureEnabled: boolean;
+  leadPrompt: string;
+  leadAfterMessages: number;
+  suggestedQuestions: string[];
+}
+
+export type LeadStatus = "New" | "Contacted" | "Converted" | "Junk";
+export const LEAD_STATUSES: LeadStatus[] = ["New", "Contacted", "Converted", "Junk"];
+
+export interface Lead {
+  id: string;
+  botId: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  course: string | null;
+  pageUrl: string | null;
+  transcript: string; // JSON array of {role, text}
+  status: LeadStatus | string;
+  createdAt: string;
 }
 
 export interface BotDocument {
@@ -71,7 +100,7 @@ function isExpired(token: string): boolean {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, auth = true): Promise<T> {
+async function send(path: string, init: RequestInit = {}, auth = true): Promise<Response> {
   const headers = new Headers(init.headers);
   if (auth) {
     const s = getSession();
@@ -102,6 +131,11 @@ async function request<T>(path: string, init: RequestInit = {}, auth = true): Pr
     }
     throw new ApiError(res.status, message);
   }
+  return res;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, auth = true): Promise<T> {
+  const res = await send(path, init, auth);
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
@@ -131,8 +165,8 @@ export const api = {
   getBot: (id: string) => request<Bot>(`/bots/${id}`),
   createBot: (name: string, welcomeMessage: string) =>
     request<Bot>("/bots", { method: "POST", body: JSON.stringify({ name, welcomeMessage }) }),
-  updateBot: (id: string, name: string, welcomeMessage: string) =>
-    request<Bot>(`/bots/${id}`, { method: "PUT", body: JSON.stringify({ name, welcomeMessage }) }),
+  updateBot: (id: string, settings: BotSettings) =>
+    request<Bot>(`/bots/${id}`, { method: "PUT", body: JSON.stringify(settings) }),
   deleteBot: (id: string) => request<void>(`/bots/${id}`, { method: "DELETE" }),
 
   listDocuments: (botId: string) => request<BotDocument[]>(`/bots/${botId}/documents`),
@@ -145,4 +179,11 @@ export const api = {
     request<BotDocument>(`/bots/${botId}/documents/${docId}/reprocess`, { method: "POST" }),
   deleteDocument: (botId: string, docId: string) =>
     request<void>(`/bots/${botId}/documents/${docId}`, { method: "DELETE" }),
+
+  listLeads: (botId: string) => request<Lead[]>(`/bots/${botId}/leads`),
+  updateLeadStatus: (botId: string, leadId: string, status: LeadStatus) =>
+    request<Lead>(`/bots/${botId}/leads/${leadId}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteLead: (botId: string, leadId: string) =>
+    request<void>(`/bots/${botId}/leads/${leadId}`, { method: "DELETE" }),
+  exportLeads: async (botId: string) => (await send(`/bots/${botId}/leads/export`)).blob(),
 };

@@ -48,7 +48,8 @@ def test_full_journey_signup_to_grounded_answers_to_cleanup(http, tenant_factory
 
     # public widget endpoints (no token)
     info = http.get(f"/chat/{bot['publicKey']}/info").json()
-    assert info == {"name": "Bakery Bot", "welcomeMessage": "Welcome to Sunrise Bakery!"}
+    assert info["name"] == "Bakery Bot" and info["welcomeMessage"] == "Welcome to Sunrise Bakery!"
+    assert info["leadCapture"]["enabled"] is False
 
     answer = chat(http, bot["publicKey"], "What is the members discount code?")
     assert answer["done"] and not answer["error"]
@@ -149,9 +150,51 @@ def test_damaged_file_fails_with_a_readable_reason(tenant_factory):
 def test_bot_settings_update_reaches_the_widget(http, tenant_factory):
     owner = tenant_factory()
     bot = owner.create_bot("Old Name", "Old welcome")
-    res = owner.put(f"/bots/{bot['id']}", json={"name": "New Name", "welcomeMessage": "New welcome"})
+    res = owner.put(f"/bots/{bot['id']}", json={"name": "New Name", "welcomeMessage": "New welcome",
+                                                "suggestedQuestions": [" Fees? ", "", "Timings?"]})
     assert res.status_code == 200
-    assert http.get(f"/chat/{bot['publicKey']}/info").json() == {"name": "New Name", "welcomeMessage": "New welcome"}
+    assert http.get(f"/chat/{bot['publicKey']}/info").json() == {
+        "name": "New Name", "welcomeMessage": "New welcome",
+        "leadCapture": {"enabled": False, "prompt": bot["leadPrompt"], "afterMessages": 2},
+        "suggestedQuestions": ["Fees?", "Timings?"],
+    }
+
+
+def test_lead_journey_widget_to_dashboard(http, tenant_factory):
+    owner = tenant_factory()
+    bot = owner.create_bot("Admissions")
+    key = bot["publicKey"]
+    lead = {"name": "Asha", "phone": "+91 98200 12345", "course": "JEE",
+            "pageUrl": "https://inst.example/fees", "transcript": [{"role": "user", "text": "Fees?"}]}
+
+    # off by default: the public endpoint refuses
+    assert http.post(f"/chat/{key}/lead", json=lead).status_code == 409
+
+    res = owner.put(f"/bots/{bot['id']}", json={"name": "Admissions", "leadCaptureEnabled": True,
+                                                "leadPrompt": "Call back?", "leadAfterMessages": 1})
+    assert res.status_code == 200, res.text
+    assert http.get(f"/chat/{key}/info").json()["leadCapture"] == {"enabled": True, "prompt": "Call back?", "afterMessages": 1}
+
+    # a website visitor (any origin) submits; a double submit is not saved twice
+    assert http.post(f"/chat/{key}/lead", json=lead, headers={"Origin": "https://inst.example"}).status_code == 200
+    assert http.post(f"/chat/{key}/lead", json=lead).status_code == 200
+    bad = http.post(f"/chat/{key}/lead", json={**lead, "phone": "12"})
+    assert bad.status_code == 400 and "phone" in bad.json()["detail"]
+    # honeypot: looks fine to the bot, nothing is stored
+    assert http.post(f"/chat/{key}/lead", json={**lead, "phone": "9820099999", "website": "x"}).status_code == 200
+
+    leads = owner.get(f"/bots/{bot['id']}/leads").json()
+    assert [(l["name"], l["phone"], l["status"]) for l in leads] == [("Asha", "+919820012345", "New")]
+
+    # another tenant cannot see them
+    assert tenant_factory().get(f"/bots/{bot['id']}/leads").status_code == 404
+
+    lead_id = leads[0]["id"]
+    assert owner.patch(f"/bots/{bot['id']}/leads/{lead_id}", json={"status": "Contacted"}).json()["status"] == "Contacted"
+    csv = owner.get(f"/bots/{bot['id']}/leads/export")
+    assert csv.status_code == 200 and "Asha" in csv.text and "Contacted" in csv.text
+    assert owner.delete(f"/bots/{bot['id']}/leads/{lead_id}").status_code == 204
+    assert owner.get(f"/bots/{bot['id']}/leads").json() == []
 
 
 def test_bot_without_documents_says_it_has_no_information(http, tenant_factory):
@@ -166,6 +209,7 @@ def test_bot_without_documents_says_it_has_no_information(http, tenant_factory):
     "/api/internal/bots/bk_x",
     "/api/bots/../internal/bots/bk_x",
     "/api/chat/%2e%2e/internal/bots/bk_x",
+    "/api/chat/%2e%2e/internal/bots/bk_x/leads",
 ])
 def test_internal_endpoints_are_not_reachable_from_outside(path):
     assert httpx.get(f"{GATEWAY}{path}", headers={"X-Internal-Key": "guess"}).status_code == 404
@@ -188,6 +232,9 @@ def test_cors_policy(http):
     dash = http.options("/bots", headers={"Origin": DASHBOARD, "Access-Control-Request-Method": "GET",
                                           "Access-Control-Request-Headers": "authorization"})
     assert dash.headers["access-control-allow-origin"] == DASHBOARD
+    patch = http.options("/bots/x/leads/y", headers={"Origin": DASHBOARD, "Access-Control-Request-Method": "PATCH",
+                                                     "Access-Control-Request-Headers": "authorization,content-type"})
+    assert "PATCH" in patch.headers.get("access-control-allow-methods", "")
     site = http.options("/chat/bk_x", headers={"Origin": "https://any-customer.example",
                                                "Access-Control-Request-Method": "POST",
                                                "Access-Control-Request-Headers": "content-type"})

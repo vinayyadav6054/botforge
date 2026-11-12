@@ -65,7 +65,95 @@ def test_health(client):
 
 def test_info_returns_public_bot_data_only(client):
     body = client.get(f"/chat/{KEY}/info").json()
-    assert body == {"name": "Bakery Bot", "welcomeMessage": "Hi!"}   # no tenant or bot ids leak
+    assert body == {   # no tenant or bot ids leak
+        "name": "Bakery Bot", "welcomeMessage": "Hi!",
+        "leadCapture": {"enabled": False, "prompt": "", "afterMessages": 0},
+        "suggestedQuestions": [],
+    }
+
+
+def test_info_includes_suggested_questions_cleaned(client, fakes):
+    fakes["bot"] = {**BOT, "suggestedQuestions": [" Fees? ", "", 7, None, "a", "b", "c", "d"]}
+    assert client.get(f"/chat/{KEY}/info").json()["suggestedQuestions"] == ["Fees?", "a", "b", "c"]
+
+
+def test_info_includes_lead_capture_settings(client, fakes):
+    fakes["bot"] = {**BOT, "leadCapture": {"enabled": True, "prompt": "Call back?", "afterMessages": 2}}
+    body = client.get(f"/chat/{KEY}/info").json()
+    assert body["leadCapture"] == {"enabled": True, "prompt": "Call back?", "afterMessages": 2}
+
+
+# ---------- leads ----------
+
+LEAD = {"name": "Asha", "phone": "98200 12345", "course": "JEE",
+        "pageUrl": "https://example.com/fees", "transcript": [{"role": "user", "text": "fees?"}]}
+
+
+@pytest.fixture
+def lead_calls(monkeypatch):
+    """Fake bot service for lead submissions: set state["response"] to the reply it should give."""
+    state = {"calls": [], "response": httpx.Response(201, json={"id": "x", "duplicate": False})}
+
+    async def create_lead(key, lead):
+        state["calls"].append((key, lead))
+        if isinstance(state["response"], Exception):
+            raise state["response"]
+        return state["response"]
+
+    monkeypatch.setattr(main, "create_lead", create_lead)
+    return state
+
+
+def test_lead_is_forwarded_without_the_honeypot_field(client, lead_calls):
+    res = client.post(f"/chat/{KEY}/lead", json={**LEAD, "website": ""})
+    assert res.status_code == 200 and res.json() == {"ok": True}
+    key, sent = lead_calls["calls"][0]
+    assert key == KEY
+    assert "website" not in sent
+    assert sent["phone"] == "98200 12345" and sent["transcript"] == [{"role": "user", "text": "fees?"}]
+
+
+def test_filled_honeypot_looks_successful_but_is_dropped(client, lead_calls):
+    res = client.post(f"/chat/{KEY}/lead", json={**LEAD, "website": "http://spam"})
+    assert res.status_code == 200
+    assert lead_calls["calls"] == []
+
+
+@pytest.mark.parametrize("status,error", [(400, "Please enter a valid phone number."),
+                                          (409, "This assistant is not collecting details.")])
+def test_validation_errors_from_bot_service_are_passed_on(client, lead_calls, status, error):
+    lead_calls["response"] = httpx.Response(status, json={"error": error})
+    res = client.post(f"/chat/{KEY}/lead", json=LEAD)
+    assert res.status_code == status
+    assert res.json()["detail"] == error
+
+
+def test_lead_for_unknown_bot_is_404(client, lead_calls):
+    lead_calls["response"] = httpx.Response(404)
+    assert client.post(f"/chat/{KEY}/lead", json=LEAD).status_code == 404
+
+
+def test_lead_with_malformed_key_is_404_without_forwarding(client, lead_calls):
+    assert client.post("/chat/nope/lead", json=LEAD).status_code == 404
+    assert lead_calls["calls"] == []
+
+
+@pytest.mark.parametrize("response", [httpx.ConnectError("refused"), httpx.Response(500)])
+def test_lead_when_bot_service_fails_is_503(client, lead_calls, response):
+    lead_calls["response"] = response
+    assert client.post(f"/chat/{KEY}/lead", json=LEAD).status_code == 503
+
+
+@pytest.mark.parametrize("body", [
+    {},
+    {"name": "A"},
+    {**LEAD, "name": "x" * 201},
+    {**LEAD, "transcript": [{"role": "system", "text": "x"}]},
+    {**LEAD, "transcript": [{"role": "user", "text": "x"}] * 11},
+])
+def test_invalid_lead_requests_are_422(client, lead_calls, body):
+    assert client.post(f"/chat/{KEY}/lead", json=body).status_code == 422
+    assert lead_calls["calls"] == []
 
 
 @pytest.mark.parametrize("key", ["nope", "bk_short", "bk_" + "G" * 32, "bk_" + "a" * 33])

@@ -24,7 +24,7 @@ See [docs/architecture.md](docs/architecture.md) for the design, data flow and s
 | `services/chat-service` | Public chat API: retrieval + streamed Gemini answers (SSE) |
 | `services/gateway` | Single public entry point: routing, CORS, rate limits, serves `widget.js` |
 | `apps/dashboard` | Tenant dashboard (Next.js) |
-| `apps/widget` | Embeddable widget (TypeScript, ~4 kB gzipped, Shadow DOM) |
+| `apps/widget` | Embeddable widget (TypeScript, ~8 kB gzipped, Shadow DOM), plus `sales-demo.html` for prospect demos |
 | `tests/e2e`, `tests/e2e-ui` | End-to-end tests (API journeys, Playwright browser tests) |
 | `scripts/dev.ps1`, `scripts/test.ps1` | Run the whole stack / the whole test suite |
 | `deploy/` | Free hosting: `render` (Vercel + Render), `oracle` (own server), `huggingface` |
@@ -81,7 +81,10 @@ To put the bot on a website, paste the snippet from the bot page:
 ```
 
 Optional attributes: `data-color="#0f766e"` (accent colour), `data-api="https://.../api"` (API base;
-defaults to the script's origin + `/api`). See `apps/widget/demo.html`.
+defaults to the script's origin + `/api`), `data-greeting="..."` (text of the bubble shown next to the
+chat button after a few seconds, once per visit; `data-greeting="off"` hides it). Suggested questions
+(up to 4 tappable buttons under the welcome message) are set per bot in the dashboard Settings.
+See `apps/widget/demo.html`.
 
 ## Test
 
@@ -115,6 +118,10 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | POST | `/bots/{id}/documents/{docId}/reprocess` | JWT | queue again |
 | GET | `/chat/{publicKey}/info` | public | `{name, welcomeMessage}` |
 | POST | `/chat/{publicKey}` | public | `{message, history?: [{role, text}]}` → SSE `meta`, `token`…, `done` \| `error` |
+| POST | `/chat/{publicKey}/lead` | public | `{name, phone, course?, email?, pageUrl?, transcript?}` → `{ok}`; 400 invalid, 409 lead capture off |
+| GET | `/bots/{id}/leads` | JWT | enquiries, newest first (max 1000) |
+| PATCH/DELETE | `/bots/{id}/leads/{leadId}` | JWT | `{status: New\|Contacted\|Converted\|Junk}` / delete (data removal requests) |
+| GET | `/bots/{id}/leads/export` | JWT | CSV (UTF-8 with BOM, formula-safe) |
 
 ## Deploy (free)
 
