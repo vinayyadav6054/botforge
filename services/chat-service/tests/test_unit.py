@@ -38,8 +38,9 @@ def fakes(monkeypatch):
         state["retrieve_calls"].append((tenant_id, bot_id, query, top_k))
         return state["chunks"]
 
-    async def stream_answer(name, question, chunks, history=None):
+    async def stream_answer(name, question, chunks, history=None, style=None):
         state["llm_calls"].append((name, question, chunks, history))
+        state["style"] = style
         for t in state["tokens"]:
             yield t
         if state["error"]:
@@ -83,12 +84,13 @@ def test_health(client):
 
 def test_info_returns_public_bot_data_only(client):
     body = client.get(f"/chat/{KEY}/info").json()
-    assert body == {   # no tenant or bot ids leak
-        "name": "Bakery Bot", "welcomeMessage": "Hi!",
-        "leadCapture": {"enabled": False, "prompt": "", "afterMessages": 0},
-        "suggestedQuestions": [],
-        "branding": {"show": True, "url": ""},
-    }
+    assert set(body) == {"name", "welcomeMessage", "leadCapture", "suggestedQuestions", "branding", "appearance", "hours"}
+    assert "tenantId" not in str(body) and "botId" not in str(body)   # no ids leak
+    assert body["leadCapture"] == {"enabled": False, "prompt": "", "afterMessages": 0, "timing": "after",
+                                   "askEmail": False, "askCourse": True, "courseLabel": "Course / interest"}
+    assert body["appearance"] == {"color": None, "position": "right", "avatar": None}
+    assert body["hours"]["enabled"] is False
+    assert body["branding"] == {"show": True, "url": ""}
 
 
 def test_info_includes_suggested_questions_cleaned(client, fakes):
@@ -99,7 +101,8 @@ def test_info_includes_suggested_questions_cleaned(client, fakes):
 def test_info_includes_lead_capture_settings(client, fakes):
     fakes["bot"] = {**BOT, "leadCapture": {"enabled": True, "prompt": "Call back?", "afterMessages": 2}}
     body = client.get(f"/chat/{KEY}/info").json()
-    assert body["leadCapture"] == {"enabled": True, "prompt": "Call back?", "afterMessages": 2}
+    assert {k: body["leadCapture"][k] for k in ("enabled", "prompt", "afterMessages")} == {
+        "enabled": True, "prompt": "Call back?", "afterMessages": 2}
 
 
 # ---------- leads ----------
@@ -508,3 +511,85 @@ def test_ai_saying_it_does_not_know_is_stored_as_unanswered(client, fakes):
     fakes["tokens"] = ["I don't have that ", "information. Please contact us."]
     chat(client)
     assert fakes["turns"][0]["answered"] is False
+
+
+# ---------- phase 2: sources, style and playground ----------
+
+from app import retrieval  # noqa: E402
+
+
+def test_keyword_query_keeps_meaningful_words_only():
+    assert retrieval.keyword_query("What is the fee for JEE?") == "fee | jee"
+    assert retrieval.keyword_query("Kya hai?") is None
+    assert retrieval.keyword_query("x'); drop table--") == "drop | table"
+
+
+def test_citations_are_distinct_and_skip_owner_answers():
+    R = retrieval.Retrieved
+    chunks = [R("a", 0.9, "Q&A", None, None, "qa"), R("b", 0.8, "fees.pdf", "page 2"), R("c", 0.7, "fees.pdf", "page 2"),
+              R("d", 0.6, "Website", "Admissions", "https://x.example/adm", "website"), R("e", 0.5, "other.pdf")]
+    assert retrieval.citations(chunks) == [
+        {"name": "fees.pdf", "location": "page 2", "url": None},
+        {"name": "Website", "location": "Admissions", "url": "https://x.example/adm"},
+    ]
+
+
+def test_sources_are_sent_after_the_answer_when_enabled(client, fakes):
+    fakes["bot"] = {**BOT, "showSources": True}
+    fakes["chunks"] = [retrieval.Retrieved("We are closed on Sundays.", 0.9, "timings.pdf", "page 1")]
+    events = chat(client)
+    assert events[-2] == ("sources", {"items": [{"name": "timings.pdf", "location": "page 1", "url": None}]})
+    assert events[-1][0] == "done"
+
+
+def test_no_sources_when_disabled_or_unanswered(client, fakes):
+    fakes["chunks"] = [retrieval.Retrieved("x", 0.9, "timings.pdf", "page 1")]
+    assert "sources" not in [e for e, _ in chat(client)]
+    fakes["bot"] = {**BOT, "showSources": True}
+    fakes["tokens"] = ["I don't have that information."]
+    assert "sources" not in [e for e, _ in chat(client)]
+
+
+def test_playground_answers_are_not_stored_but_counted(client, fakes):
+    chat(client, playground=True)
+    assert fakes["turns"] == [] and fakes["consumed"] == 1
+
+
+def test_owner_style_reaches_the_model(client, fakes):
+    fakes["bot"] = {**BOT, "style": {"tone": "professional"}}
+    chat(client)
+    assert fakes["style"] == {"tone": "professional"}
+
+
+def test_system_prompt_applies_style_but_keeps_rules_first():
+    prompt = llm.build_system("Bot", {"tone": "casual", "answerLength": "short", "topicsToAvoid": "politics,\nreligion",
+                                      "customInstructions": "Always mention our free demo class."})
+    assert prompt.index("ONLY the information") < prompt.index("free demo class")
+    assert "relaxed and casual" in prompt and "one or two sentences" in prompt
+    assert "politics, religion" in prompt
+    assert "unless they conflict with the rules" in prompt
+
+
+def test_system_prompt_defaults_and_unknown_values():
+    prompt = llm.build_system("Bot", {"tone": "rude", "answerLength": "endless"})
+    assert "warm and friendly" in prompt and "at most about four sentences" in prompt
+    assert "Additional instructions" not in prompt
+
+
+def test_owner_answers_are_marked_in_the_context():
+    prompt = llm.build_prompt("q", [retrieval.Retrieved("Question: x\nAnswer: y", 1.0, "Q&A", kind="qa")])
+    assert "[1] (verified answer from the business) Question: x" in prompt
+
+
+def test_info_passes_only_safe_appearance_values(client, fakes):
+    fakes["bot"] = {**BOT, "appearance": {"color": "red;}", "position": "top", "avatar": "javascript:alert(1)"},
+                    "hours": {"enabled": True, "days": [1, 9, "x"], "message": "Closed"},
+                    "leadCapture": {"enabled": True, "timing": "start", "askEmail": True, "courseLabel": "Property"}}
+    body = client.get(f"/chat/{KEY}/info").json()
+    assert body["appearance"] == {"color": None, "position": "right", "avatar": None}
+    assert body["hours"]["days"] == [1]
+    assert body["leadCapture"]["timing"] == "start" and body["leadCapture"]["courseLabel"] == "Property"
+
+    fakes["bot"] = {**BOT, "appearance": {"color": "#1d4ed8", "position": "left", "avatar": "data:image/png;base64,iVBO="}}
+    assert client.get(f"/chat/{KEY}/info").json()["appearance"] == {
+        "color": "#1d4ed8", "position": "left", "avatar": "data:image/png;base64,iVBO="}

@@ -36,6 +36,8 @@ builder.Services.AddScoped<SubscriptionService>();
 builder.Services.Configure<RazorpayOptions>(builder.Configuration.GetSection("Razorpay"));
 builder.Services.AddHttpClient<IRazorpayClient, RazorpayClient>(c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHostedService<ConversationCleanup>();
+if (builder.Configuration.GetValue("Sources:AutoSync", true))
+    builder.Services.AddHostedService<SourceSync>();
 if (builder.Configuration.GetValue("RabbitMq:ConsumeStatusEvents", true))
     builder.Services.AddHostedService<DocumentStatusConsumer>();
 
@@ -113,16 +115,18 @@ bots.MapGet("/{id:guid}", async (Guid id, AppDbContext db) =>
     return bot is null ? Results.NotFound() : Results.Ok(BotDto.From(bot));
 });
 
-bots.MapPut("/{id:guid}", async (Guid id, CreateBotRequest req, AppDbContext db) =>
+bots.MapPut("/{id:guid}", async (Guid id, UpdateBotRequest req, AppDbContext db) =>
 {
     var bot = await db.Bots.FirstOrDefaultAsync(b => b.Id == id);
     if (bot is null) return Results.NotFound();
 
     var error = BotRules.Validate(req.Name, req.WelcomeMessage)
                 ?? LeadRules.ValidateSettings(req.LeadPrompt, req.LeadAfterMessages)
-                ?? BotRules.ValidateQuestions(req.SuggestedQuestions);
+                ?? BotRules.ValidateQuestions(req.SuggestedQuestions)
+                ?? BotSettingsRules.Validate(req);
     if (error is not null) return Results.BadRequest(new { error });
 
+    BotSettingsRules.Apply(bot, req);
     bot.Name = req.Name!.Trim();
     if (!string.IsNullOrWhiteSpace(req.WelcomeMessage))
         bot.WelcomeMessage = req.WelcomeMessage.Trim();
@@ -182,7 +186,7 @@ bots.MapPost("/{botId:guid}/documents", async (
 
     var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
     if (!DocumentRules.AllowedExtensions.Contains(ext))
-        return Results.BadRequest(new { error = "Allowed types: .pdf, .txt, .md, .docx" });
+        return Results.BadRequest(new { error = "Allowed types: .pdf, .txt, .md, .docx, .xlsx, .csv" });
 
     var doc = new BotDocument
     {
@@ -219,10 +223,11 @@ bots.MapPost("/{botId:guid}/documents", async (
 
 // queue a document again, e.g. after a failure or when publishing to RabbitMQ did not work
 bots.MapPost("/{botId:guid}/documents/{docId:guid}/reprocess", async (
-    Guid botId, Guid docId, AppDbContext db, IEventPublisher publisher, ILogger<Program> log) =>
+    Guid botId, Guid docId, AppDbContext db, IEventPublisher publisher, SubscriptionService subs, ILogger<Program> log) =>
 {
     var doc = await db.Documents.FirstOrDefaultAsync(d => d.Id == docId && d.BotId == botId);
     if (doc is null) return Results.NotFound();
+    if (doc.Kind == "website") doc.MaxPages = Math.Max(1, (await subs.EffectivePlanAsync(doc.TenantId)).WebsitePages);
 
     // save the new state BEFORE publishing: the worker can answer within milliseconds, and its
     // status event must not be overwritten by this request finishing afterwards
@@ -325,6 +330,7 @@ bots.MapDelete("/{botId:guid}/conversations/{conversationId:guid}", async (Guid 
     return removed == 0 ? Results.NotFound() : Results.NoContent();
 });
 
+bots.MapKnowledgeEndpoints();
 app.MapAccountEndpoints();
 
 // ---------- internal endpoints for other services (never expose these through the public gateway) ----------
@@ -340,8 +346,20 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
         .Select(b => new
         {
             botId = b.Id, tenantId = b.TenantId, name = b.Name, welcomeMessage = b.WelcomeMessage,
-            leadCapture = new { enabled = b.LeadCaptureEnabled, prompt = b.LeadPrompt, afterMessages = b.LeadAfterMessages },
-            suggestedQuestions = b.SuggestedQuestions
+            leadCapture = new
+            {
+                enabled = b.LeadCaptureEnabled, prompt = b.LeadPrompt, afterMessages = b.LeadAfterMessages,
+                timing = b.LeadTiming, askEmail = b.LeadAskEmail, askCourse = b.LeadAskCourse, courseLabel = b.LeadCourseLabel
+            },
+            suggestedQuestions = b.SuggestedQuestions,
+            style = new { tone = b.Tone, answerLength = b.AnswerLength, topicsToAvoid = b.TopicsToAvoid, customInstructions = b.CustomInstructions },
+            b.ShowSources,
+            appearance = new { color = b.WidgetColor, position = b.WidgetPosition, avatar = b.AvatarDataUrl },
+            hours = new
+            {
+                enabled = b.HoursEnabled, start = b.HoursStart, end = b.HoursEnd, days = b.HoursDays,
+                timeZone = b.TimeZone, message = b.OfflineMessage
+            }
         })
         .FirstOrDefaultAsync();
     if (bot is null) return Results.NotFound();
@@ -350,6 +368,7 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
     return Results.Ok(new
     {
         bot.botId, bot.tenantId, bot.name, bot.welcomeMessage, bot.leadCapture, bot.suggestedQuestions,
+        bot.style, showSources = bot.ShowSources, bot.appearance, bot.hours,
         showBranding = !plan.RemoveBranding,
         active = plan.AnswersPerMonth > 0
     });

@@ -7,12 +7,6 @@ public record CreateBotRequest(string? Name, string? WelcomeMessage,
     bool? LeadCaptureEnabled = null, string? LeadPrompt = null, int? LeadAfterMessages = null,
     List<string>? SuggestedQuestions = null);
 
-public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicKey, DateTime CreatedAt,
-    bool LeadCaptureEnabled, string LeadPrompt, int LeadAfterMessages, List<string> SuggestedQuestions)
-{
-    public static BotDto From(Bot b) => new(b.Id, b.Name, b.WelcomeMessage, b.PublicKey, b.CreatedAt,
-        b.LeadCaptureEnabled, b.LeadPrompt, b.LeadAfterMessages, b.SuggestedQuestions);
-}
 
 public record TranscriptTurn(string? Role, string? Text);
 
@@ -30,10 +24,13 @@ public record LeadDto(Guid Id, Guid BotId, string Name, string Phone, string? Em
 }
 
 public record DocumentDto(Guid Id, Guid BotId, string FileName, string ContentType, long SizeBytes,
-    string Status, int? ChunkCount, string? Error, DateTime CreatedAt)
+    string Status, int? ChunkCount, string? Error, DateTime CreatedAt,
+    string Kind, string? SourceUrl, int SyncIntervalDays, DateTime? LastSyncedAt)
 {
+    // SourceSecret is never returned
     public static DocumentDto From(BotDocument d) =>
-        new(d.Id, d.BotId, d.FileName, d.ContentType, d.SizeBytes, d.Status, d.ChunkCount, d.Error, d.CreatedAt);
+        new(d.Id, d.BotId, d.FileName, d.ContentType, d.SizeBytes, d.Status, d.ChunkCount, d.Error, d.CreatedAt,
+            d.Kind, d.SourceUrl, d.SyncIntervalDays, d.LastSyncedAt);
 }
 
 public static class BotRules
@@ -79,7 +76,7 @@ public static class DocumentRules
     public const int MaxFileNameLength = 300;
 
     public static readonly IReadOnlySet<string> AllowedExtensions =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pdf", ".txt", ".md", ".docx" };
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pdf", ".txt", ".md", ".docx", ".xlsx", ".csv" };
 
     // keep only the last path segment (browsers on Windows may send "C:\fakepath\x.pdf")
     // and shorten long names while keeping the extension

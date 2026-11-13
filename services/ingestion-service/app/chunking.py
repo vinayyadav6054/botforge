@@ -1,4 +1,12 @@
 import re
+from dataclasses import dataclass
+
+
+@dataclass
+class Chunk:
+    content: str
+    location: str | None = None
+    url: str | None = None
 
 
 def chunk_text(text: str, size: int = 800, overlap: int = 100) -> list[str]:
@@ -25,3 +33,8 @@ def chunk_text(text: str, size: int = 800, overlap: int = 100) -> list[str]:
             break
         start = max(end - overlap, start + 1)
     return chunks
+
+
+def chunk_sections(sections, size: int = 800, overlap: int = 100) -> list[Chunk]:
+    """Chunks every section on its own, so a chunk never mixes two pages and keeps its page/URL."""
+    return [Chunk(piece, s.location, s.url) for s in sections for piece in chunk_text(s.text, size, overlap)]

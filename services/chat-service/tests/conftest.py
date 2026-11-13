@@ -35,5 +35,7 @@ def test_database_url():
         c.execute("""CREATE TABLE knowledge.chunks (
             id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL, bot_id uuid NOT NULL,
             document_id uuid NOT NULL, chunk_index int NOT NULL, content text NOT NULL,
-            embedding vector(384) NOT NULL, created_at timestamptz NOT NULL DEFAULT now())""")
+            embedding vector(384) NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
+            source_name text, location text, source_url text, kind text NOT NULL DEFAULT 'file',
+            tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED)""")
     return url

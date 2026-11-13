@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<BotDocument> Documents => Set<BotDocument>();
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<QaEntry> QaEntries => Set<QaEntry>();
     public DbSet<UsageCounter> Usage => Set<UsageCounter>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationMessage> ConversationMessages => Set<ConversationMessage>();
@@ -37,6 +38,19 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.TenantId);
             e.Property(x => x.LeadPrompt).HasMaxLength(300).IsRequired();
             e.Property(x => x.SuggestedQuestions).IsRequired();
+            e.Property(x => x.LeadCourseLabel).HasMaxLength(60).IsRequired();
+            e.Property(x => x.LeadTiming).HasMaxLength(10).IsRequired();
+            e.Property(x => x.Tone).HasMaxLength(20).IsRequired();
+            e.Property(x => x.AnswerLength).HasMaxLength(20).IsRequired();
+            e.Property(x => x.TopicsToAvoid).HasMaxLength(500).IsRequired();
+            e.Property(x => x.CustomInstructions).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.WidgetColor).HasMaxLength(7);
+            e.Property(x => x.WidgetPosition).HasMaxLength(5).IsRequired();
+            e.Property(x => x.HoursStart).HasMaxLength(5).IsRequired();
+            e.Property(x => x.HoursEnd).HasMaxLength(5).IsRequired();
+            e.Property(x => x.HoursDays).IsRequired();
+            e.Property(x => x.TimeZone).HasMaxLength(60).IsRequired();
+            e.Property(x => x.OfflineMessage).HasMaxLength(300).IsRequired();
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
 
@@ -51,6 +65,10 @@ public class AppDbContext : DbContext
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
             e.Property(x => x.Error).HasMaxLength(500);
+            e.Property(x => x.Kind).HasMaxLength(20).IsRequired();
+            e.Property(x => x.SourceUrl).HasMaxLength(1000);
+            e.Property(x => x.SourceSecret).HasMaxLength(500);
+            e.HasIndex(x => new { x.Kind, x.LastSyncedAt });
         });
 
         b.Entity<Lead>(e =>
@@ -95,6 +113,16 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.LastMessageAt);
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Messages).WithOne().HasForeignKey(m => m.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+
+        b.Entity<QaEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Question).HasMaxLength(300).IsRequired();
+            e.Property(x => x.Answer).HasMaxLength(2000).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.BotId });
+            e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
 

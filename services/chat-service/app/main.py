@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from . import config
 from .bots_client import consume_answer, create_lead, record_turn, refund_answer, resolve_bot
 from .llm import stream_answer
-from .retrieval import get_model, retrieve
+from .retrieval import citations, get_model, retrieve
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("chat")
@@ -69,6 +69,8 @@ class ChatRequest(BaseModel):
     # the widget's id for this visitor session, so the owner sees the whole conversation together
     conversationId: str | None = Field(default=None, pattern=CONVERSATION_ID)
     pageUrl: str | None = Field(default=None, max_length=2000)
+    # the dashboard's test playground: answers normally but is not stored as a visitor conversation
+    playground: bool = False
 
 
 class LeadRequest(BaseModel):
@@ -115,6 +117,11 @@ async def bot_info(public_key: str):
     """Public data the widget needs before the first message."""
     bot = await _get_bot(public_key)
     lead = bot.get("leadCapture") or {}
+    look = bot.get("appearance") or {}
+    hours = bot.get("hours") or {}
+    timing = lead.get("timing") if lead.get("timing") in ("after", "start", "button") else "after"
+    color = look.get("color")
+    avatar = look.get("avatar")
     return {
         "name": bot["name"],
         "welcomeMessage": bot["welcomeMessage"],
@@ -122,9 +129,28 @@ async def bot_info(public_key: str):
             "enabled": bool(lead.get("enabled")),
             "prompt": lead.get("prompt") or "",
             "afterMessages": int(lead.get("afterMessages") or 0),
+            "timing": timing,
+            "askEmail": bool(lead.get("askEmail")),
+            "askCourse": lead.get("askCourse", True) is not False,
+            "courseLabel": str(lead.get("courseLabel") or "Course / interest")[:60],
         },
         "suggestedQuestions": _questions(bot.get("suggestedQuestions")),
         "branding": {"show": bot.get("showBranding", True) is not False, "url": config.BRANDING_URL},
+        # defensive: only values the widget can use safely (the bot service validates them too)
+        "appearance": {
+            "color": color if isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", color) else None,
+            "position": "left" if look.get("position") == "left" else "right",
+            "avatar": avatar if isinstance(avatar, str) and re.fullmatch(
+                r"data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}", avatar) else None,
+        },
+        "hours": {
+            "enabled": bool(hours.get("enabled")),
+            "start": hours.get("start") or "09:00",
+            "end": hours.get("end") or "18:00",
+            "days": [d for d in hours.get("days") or [] if isinstance(d, int) and 1 <= d <= 7],
+            "timeZone": hours.get("timeZone") or "Asia/Kolkata",
+            "message": str(hours.get("message") or "")[:300],
+        },
     }
 
 
@@ -182,6 +208,8 @@ async def chat(public_key: str, body: ChatRequest):
 
     async def record(answer: str, answered: bool):
         # best effort: the visitor's answer must never fail because the history could not be saved
+        if body.playground:
+            return
         try:
             await record_turn(public_key, {"conversationId": conversation_id, "question": question,
                                            "answer": answer, "answered": answered, "pageUrl": body.pageUrl})
@@ -211,7 +239,7 @@ async def chat(public_key: str, body: ChatRequest):
             return
         answer = []
         try:
-            async for token in stream_answer(bot["name"], question, chunks, history):
+            async for token in stream_answer(bot["name"], question, chunks, history, style=bot.get("style")):
                 answer.append(token)
                 yield sse("token", {"text": token})
         except Exception as ex:
@@ -226,7 +254,13 @@ async def chat(public_key: str, body: ChatRequest):
             yield sse("error", {"message": message})
             return
         text = "".join(answer)
-        await record(text, answered=not says_no_information(text))
+        answered = not says_no_information(text)
+        await record(text, answered=answered)
+        # where the answer came from: shown under it when the owner enables it (playground always gets them)
+        if answered and (bot.get("showSources") or body.playground):
+            sources = citations(chunks)
+            if sources:
+                yield sse("sources", {"items": sources})
         yield sse("done", {})
 
     return StreamingResponse(

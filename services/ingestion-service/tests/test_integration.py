@@ -135,3 +135,26 @@ def test_handler_recovers_after_a_database_error(db_conn, storage, ids):
     h.publish = lambda k, p: published.append(k)
     h.handle("document.uploaded", _msg(ids, _write_doc(storage, ids, "Still works.")))
     assert published == ["document.processed"]
+
+
+def test_source_details_and_keyword_index_are_stored(db_conn, storage, ids):
+    key = _write_doc(storage, ids, "Our members discount code is ORCHID-42.")
+    worker.Handler(db_conn, lambda k, p: None).handle("document.uploaded", _msg(ids, key))
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT source_name, kind, tsv @@ to_tsquery('simple', 'orchid') FROM knowledge.chunks WHERE document_id = %s",
+                    (ids["doc"],))
+        assert cur.fetchone() == ("faq.txt", "file", True)
+
+
+def test_qa_entries_are_stored_as_one_chunk_and_replaced(db_conn, ids):
+    qa_id = uuid.uuid4()
+    msg = {"qaId": str(qa_id), "tenantId": str(ids["tenant"]), "botId": str(ids["bot"]),
+           "question": "Is parking free?", "answer": "Yes, after 7 PM."}
+    h = worker.Handler(db_conn, lambda k, p: None)
+    h.handle("qa.upserted", json.dumps(msg).encode())
+    h.handle("qa.upserted", json.dumps({**msg, "answer": "Yes, all day."}).encode())
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT content, kind, source_name FROM knowledge.chunks WHERE document_id = %s", (qa_id,))
+        assert cur.fetchall() == [("Question: Is parking free?\nAnswer: Yes, all day.", "qa", "Q&A")]
+    h.handle("qa.deleted", json.dumps(msg).encode())
+    assert _count(db_conn, document_id=qa_id) == 0

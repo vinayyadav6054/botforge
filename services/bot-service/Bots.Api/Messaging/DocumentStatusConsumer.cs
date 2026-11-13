@@ -104,11 +104,13 @@ public class DocumentStatusConsumer(
             doc.Status = "Ready";
             doc.ChunkCount = evt.ChunkCount;
             doc.Error = null;
+            doc.LastSyncedAt = DateTime.UtcNow;
         }
         else
         {
             doc.Status = "Failed";
             doc.Error = evt.Error;
+            if (doc.Kind != "file") doc.LastSyncedAt = DateTime.UtcNow;   // retried at the next interval, not every hour
         }
 
         await db.SaveChangesAsync(ct);

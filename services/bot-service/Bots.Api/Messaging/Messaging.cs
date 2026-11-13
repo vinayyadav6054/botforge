@@ -5,11 +5,16 @@ namespace Bots.Api.Messaging;
 
 public record DocumentUploaded(
     Guid DocumentId, Guid TenantId, Guid BotId,
-    string StorageKey, string FileName, string ContentType, DateTime UploadedAt)
+    string StorageKey, string FileName, string ContentType, DateTime UploadedAt,
+    string Kind = "file", string? SourceUrl = null, string? SourceSecret = null, int MaxPages = 0)
 {
     public static DocumentUploaded From(Data.BotDocument d) =>
-        new(d.Id, d.TenantId, d.BotId, d.StorageKey, d.FileName, d.ContentType, DateTime.UtcNow);
+        new(d.Id, d.TenantId, d.BotId, d.StorageKey, d.FileName, d.ContentType, DateTime.UtcNow,
+            d.Kind, d.SourceUrl, d.SourceSecret, d.MaxPages);
 }
+
+public record QaUpserted(Guid QaId, Guid TenantId, Guid BotId, string Question, string Answer);
+public record QaDeleted(Guid QaId, Guid TenantId, Guid BotId);
 
 public record DocumentDeleted(Guid DocumentId, Guid TenantId, Guid BotId);
 

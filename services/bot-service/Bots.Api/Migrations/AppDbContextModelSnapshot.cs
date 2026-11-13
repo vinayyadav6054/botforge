@@ -31,17 +31,68 @@ namespace Bots.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AnswerLength")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("answer_length");
+
+                    b.Property<string>("AvatarDataUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("avatar_data_url");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CustomInstructions")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("custom_instructions");
+
+                    b.PrimitiveCollection<List<int>>("HoursDays")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("hours_days");
+
+                    b.Property<bool>("HoursEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("hours_enabled");
+
+                    b.Property<string>("HoursEnd")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("hours_end");
+
+                    b.Property<string>("HoursStart")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("hours_start");
 
                     b.Property<int>("LeadAfterMessages")
                         .HasColumnType("integer")
                         .HasColumnName("lead_after_messages");
 
+                    b.Property<bool>("LeadAskCourse")
+                        .HasColumnType("boolean")
+                        .HasColumnName("lead_ask_course");
+
+                    b.Property<bool>("LeadAskEmail")
+                        .HasColumnType("boolean")
+                        .HasColumnName("lead_ask_email");
+
                     b.Property<bool>("LeadCaptureEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("lead_capture_enabled");
+
+                    b.Property<string>("LeadCourseLabel")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("lead_course_label");
 
                     b.Property<string>("LeadPrompt")
                         .IsRequired()
@@ -49,17 +100,33 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("lead_prompt");
 
+                    b.Property<string>("LeadTiming")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("lead_timing");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("OfflineMessage")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("offline_message");
+
                     b.Property<string>("PublicKey")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("public_key");
+
+                    b.Property<bool>("ShowSources")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_sources");
 
                     b.PrimitiveCollection<List<string>>("SuggestedQuestions")
                         .IsRequired()
@@ -70,11 +137,40 @@ namespace Bots.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("time_zone");
+
+                    b.Property<string>("Tone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tone");
+
+                    b.Property<string>("TopicsToAvoid")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("topics_to_avoid");
+
                     b.Property<string>("WelcomeMessage")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("welcome_message");
+
+                    b.Property<string>("WidgetColor")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("widget_color");
+
+                    b.Property<string>("WidgetPosition")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("widget_position");
 
                     b.HasKey("Id")
                         .HasName("pk_bots");
@@ -125,9 +221,33 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("file_name");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTime?>("LastSyncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_synced_at");
+
+                    b.Property<int>("MaxPages")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_pages");
+
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
+
+                    b.Property<string>("SourceSecret")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("source_secret");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("source_url");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -141,6 +261,10 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("storage_key");
 
+                    b.Property<int>("SyncIntervalDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("sync_interval_days");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -150,6 +274,9 @@ namespace Bots.Api.Migrations
 
                     b.HasIndex("BotId")
                         .HasDatabaseName("ix_documents_bot_id");
+
+                    b.HasIndex("Kind", "LastSyncedAt")
+                        .HasDatabaseName("ix_documents_kind_last_synced_at");
 
                     b.HasIndex("TenantId", "BotId")
                         .HasDatabaseName("ix_documents_tenant_id_bot_id");
@@ -324,6 +451,53 @@ namespace Bots.Api.Migrations
                     b.ToTable("leads", "bots");
                 });
 
+            modelBuilder.Entity("Bots.Api.Data.QaEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("answer");
+
+                    b.Property<Guid>("BotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bot_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("question");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_qa_entries");
+
+                    b.HasIndex("BotId")
+                        .HasDatabaseName("ix_qa_entries_bot_id");
+
+                    b.HasIndex("TenantId", "BotId")
+                        .HasDatabaseName("ix_qa_entries_tenant_id_bot_id");
+
+                    b.ToTable("qa_entries", "bots");
+                });
+
             modelBuilder.Entity("Bots.Api.Data.Subscription", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -437,6 +611,16 @@ namespace Bots.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_leads_bots_bot_id");
+                });
+
+            modelBuilder.Entity("Bots.Api.Data.QaEntry", b =>
+                {
+                    b.HasOne("Bots.Api.Data.Bot", null)
+                        .WithMany()
+                        .HasForeignKey("BotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_qa_entries_bots_bot_id");
                 });
 
             modelBuilder.Entity("Bots.Api.Data.Conversation", b =>

@@ -1,4 +1,4 @@
-﻿using Bots.Api;
+using Bots.Api;
 
 namespace Bots.Api.Data;
 
@@ -18,6 +18,47 @@ public class Bot
 
     // shown as tappable buttons under the welcome message in the widget
     public List<string> SuggestedQuestions { get; set; } = new();
+
+    // lead form: which fields and when it opens ("after" N answers, "start" of the chat, or only the "button")
+    public bool LeadAskEmail { get; set; }
+    public bool LeadAskCourse { get; set; } = true;
+    public string LeadCourseLabel { get; set; } = "Course / interest";
+    public string LeadTiming { get; set; } = "after";
+
+    // personality and rules (added to the AI's instructions, below the grounding rules)
+    public string Tone { get; set; } = "friendly";
+    public string AnswerLength { get; set; } = "medium";
+    public string TopicsToAvoid { get; set; } = "";
+    public string CustomInstructions { get; set; } = "";
+    /// <summary>Show "Source: Fees.pdf, page 2" under answers.</summary>
+    public bool ShowSources { get; set; } = true;
+
+    // widget look; WidgetColor null = the snippet's data-color or the default
+    public string? WidgetColor { get; set; }
+    public string WidgetPosition { get; set; } = "right";
+    /// <summary>Small logo as a data: URL (resized in the dashboard), shown as the bot's avatar.</summary>
+    public string? AvatarDataUrl { get; set; }
+
+    // opening hours: outside them the widget shows OfflineMessage (the AI still answers)
+    public bool HoursEnabled { get; set; }
+    public string HoursStart { get; set; } = "09:00";
+    public string HoursEnd { get; set; } = "18:00";
+    /// <summary>ISO weekdays, 1 = Monday ... 7 = Sunday.</summary>
+    public List<int> HoursDays { get; set; } = [1, 2, 3, 4, 5, 6];
+    public string TimeZone { get; set; } = "Asia/Kolkata";
+    public string OfflineMessage { get; set; } = "We're closed right now. Ask me anything, or leave your number and we'll call you back.";
+}
+
+/// <summary>An answer written by the owner; the bot prefers it when a visitor asks a matching question.</summary>
+public class QaEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid BotId { get; set; }
+    public string Question { get; set; } = default!;
+    public string Answer { get; set; } = default!;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class BotDocument
@@ -33,6 +74,16 @@ public class BotDocument
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? ChunkCount { get; set; }
     public string? Error { get; set; }
+
+    /// <summary>"file" (uploaded) or an online source: "website", "google", "notion", "youtube".</summary>
+    public string Kind { get; set; } = "file";
+    public string? SourceUrl { get; set; }
+    /// <summary>Access token for the source (Notion integration). Never returned by the API.</summary>
+    public string? SourceSecret { get; set; }
+    public int MaxPages { get; set; }
+    /// <summary>Fetch online sources again every N days (0 = only when the owner clicks Sync).</summary>
+    public int SyncIntervalDays { get; set; }
+    public DateTime? LastSyncedAt { get; set; }
 }
 
 public class Lead

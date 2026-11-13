@@ -3,14 +3,15 @@ using Bots.Api.Data;
 namespace Bots.Api.Billing;
 
 /// <summary>What a plan allows. Keep in sync with the prices on the website (apps/dashboard/lib/site.ts).</summary>
-public record Plan(string Id, string Name, int Bots, int Documents, int AnswersPerMonth, bool RemoveBranding, int PriceInr);
+public record Plan(string Id, string Name, int Bots, int Documents, int AnswersPerMonth, bool RemoveBranding, int PriceInr,
+    int WebsitePages = 0);
 
 public static class Plans
 {
-    public static readonly Plan Trial = new("trial", "Free trial", 3, 20, 300, false, 0);
-    public static readonly Plan Starter = new("starter", "Starter", 1, 10, 500, false, 499);
-    public static readonly Plan Business = new("business", "Business", 3, 50, 3000, true, 1499);
-    public static readonly Plan Pro = new("pro", "Pro", 10, 200, 15000, true, 3999);
+    public static readonly Plan Trial = new("trial", "Free trial", 3, 20, 300, false, 0, 30);
+    public static readonly Plan Starter = new("starter", "Starter", 1, 10, 500, false, 499, 25);
+    public static readonly Plan Business = new("business", "Business", 3, 50, 3000, true, 1499, 100);
+    public static readonly Plan Pro = new("pro", "Pro", 10, 200, 15000, true, 3999, 300);
     /// <summary>Trial over or subscription ended: data stays, but the bots stop answering.</summary>
     public static readonly Plan Expired = new("expired", "No active plan", 0, 0, 0, false, 0);
 

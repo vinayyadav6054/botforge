@@ -46,7 +46,7 @@ def test_returns_most_relevant_chunks_first(db):
     assert len(results) == 2
     assert "sourdough" in results[0][0]
     assert results[0][1] >= results[1][1]
-    assert all(-1.0 <= score <= 1.0 for _, score in results)
+    assert all(0.0 < r.score <= 1.0 for r in results)
 
     assert "Sundays" in retrieval.retrieve(tenant, bot, "Are you open on Sunday?", top_k=1)[0][0]
 
@@ -113,3 +113,35 @@ async def test_bot_client_sends_internal_key_and_maps_responses(bot_service):
     with pytest.raises(httpx.HTTPStatusError):
         await bots_client.resolve_bot("bk_boom")
     assert set(_FakeBotService.seen_keys) == {"shared-secret"}
+
+
+def _insert_meta(db, tenant, bot, rows):
+    """rows: (content, source_name, location, kind)"""
+    vectors = retrieval.embed_documents([r[0] for r in rows])
+    with db.cursor() as cur:
+        for i, ((content, name, location, kind), v) in enumerate(zip(rows, vectors)):
+            cur.execute("INSERT INTO knowledge.chunks (tenant_id, bot_id, document_id, chunk_index, content, embedding,"
+                        " source_name, location, kind) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (tenant, bot, uuid.uuid4(), i, content, v, name, location, kind))
+    db.commit()
+
+
+def test_exact_codes_are_found_by_the_keyword_search(db):
+    tenant, bot = uuid.uuid4(), uuid.uuid4()
+    filler = [(f"General information paragraph number {i} about the shop and its friendly staff.", "faq.txt", None, "file")
+              for i in range(25)]
+    _insert_meta(db, tenant, bot, filler + [("Form ZX-4471 is needed for the hostel refund.", "rules.pdf", "page 7", "file")])
+    top = retrieval.retrieve(tenant, bot, "ZX-4471", top_k=3)
+    assert "ZX-4471" in top[0].content
+    assert (top[0].source_name, top[0].location) == ("rules.pdf", "page 7")
+
+
+def test_owner_answers_win_and_are_not_cited(db):
+    tenant, bot = uuid.uuid4(), uuid.uuid4()
+    _insert_meta(db, tenant, bot, [
+        ("Parking is available near the building.", "faq.txt", None, "file"),
+        ("Question: Is parking free?\nAnswer: Yes, parking is free after 7 PM.", "Q&A", None, "qa"),
+    ])
+    top = retrieval.retrieve(tenant, bot, "Is parking free?", top_k=2)
+    assert top[0].kind == "qa"
+    assert retrieval.citations(top) == [{"name": "faq.txt", "location": None, "url": None}]

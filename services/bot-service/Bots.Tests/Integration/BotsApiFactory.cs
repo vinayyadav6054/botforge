@@ -46,6 +46,7 @@ public class BotsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Storage:RootPath", StorageRoot);
         builder.UseSetting("RabbitMq:ConsumeStatusEvents", "false");
         builder.UseSetting("Admin:ApiKey", AdminKey);
+        builder.UseSetting("Sources:AutoSync", "false");   // tests call SourceSync.RunOnceAsync directly
         builder.UseSetting("Razorpay:WebhookSecret", WebhookSecret);
         builder.ConfigureTestServices(s =>
         {

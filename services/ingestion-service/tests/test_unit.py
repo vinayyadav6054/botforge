@@ -217,3 +217,74 @@ def test_encrypted_pdf_is_reported_as_unreadable(storage):
         writer.write(f)
     with pytest.raises(UnreadableDocumentError):
         extract_text(storage / "locked.pdf")
+
+
+# ---------- tables, spreadsheets and source locations ----------
+
+from app.chunking import chunk_sections  # noqa: E402
+from app.parsing import Section, extract_sections, rows_to_text  # noqa: E402
+
+
+def test_table_rows_keep_their_column_names():
+    rows = [["Course", "Fee", "Duration"], ["JEE", "68,000", "2 years"], ["NEET", "", "2 years"], ["", "", ""]]
+    assert rows_to_text(rows) == "Course: JEE; Fee: 68,000; Duration: 2 years\nCourse: NEET; Duration: 2 years"
+
+
+def test_tables_without_a_proper_header_are_kept_as_rows():
+    assert rows_to_text([["Fees", ""], ["JEE", "68,000"]]) == "Fees\nJEE | 68,000"
+    assert rows_to_text([]) == ""
+
+
+def test_docx_tables_are_read_in_order(storage):
+    from docx import Document
+
+    d = Document()
+    d.add_paragraph("Fee list")
+    t = d.add_table(rows=2, cols=2)
+    t.cell(0, 0).text, t.cell(0, 1).text = "Course", "Fee"
+    t.cell(1, 0).text, t.cell(1, 1).text = "JEE", "68,000"
+    d.add_paragraph("GST extra")
+    d.save(storage / "fees.docx")
+    assert extract_text(storage / "fees.docx") == "Fee list\n\nCourse: JEE; Fee: 68,000\n\nGST extra"
+
+
+def test_reads_xlsx_sheets(storage):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fees"
+    ws.append(["Course", "Fee"])
+    ws.append(["JEE", 68000])
+    wb.create_sheet("Empty")
+    wb.save(storage / "prices.xlsx")
+    sections = extract_sections(storage / "prices.xlsx")
+    assert [(s.location, s.text) for s in sections] == [("sheet Fees", "Fees\nCourse: JEE; Fee: 68000")]
+
+
+def test_reads_csv_with_semicolons(storage):
+    (storage / "menu.csv").write_text("Dish;Price\nDosa;120\n", encoding="utf-8")
+    assert extract_text(storage / "menu.csv") == "Dish: Dosa; Price: 120"
+
+
+def test_pdf_pages_become_locations(storage):
+    (storage / "menu.pdf").write_bytes(_minimal_pdf("Sourdough costs 6 dollars"))
+    assert extract_sections(storage / "menu.pdf")[0].location == "page 1"
+
+
+def test_chunks_never_mix_sections():
+    chunks = chunk_sections([Section("Page one text.", "page 1"), Section("Page two text.", "page 2", "https://x.example")])
+    assert [(c.content, c.location, c.url) for c in chunks] == [
+        ("Page one text.", "page 1", None), ("Page two text.", "page 2", "https://x.example")]
+
+
+def test_qa_messages_are_routed(monkeypatch):
+    calls = []
+    monkeypatch.setattr(worker, "upsert_qa", lambda conn, msg: calls.append(("up", msg["qaId"])))
+    monkeypatch.setattr(worker.db, "delete_document_chunks", lambda conn, t, d: calls.append(("del", str(d))) or 1)
+    h = worker.Handler(FakeConn(), Recorder())
+    qa = {"qaId": str(uuid.uuid4()), "tenantId": str(uuid.uuid4()), "botId": str(uuid.uuid4()), "question": "Q", "answer": "A"}
+    h.handle("qa.upserted", json.dumps(qa).encode())
+    h.handle("qa.deleted", json.dumps(qa).encode())
+    assert calls == [("up", qa["qaId"]), ("del", qa["qaId"])]
+    assert h.publish.published == []   # Q&A never reports document status

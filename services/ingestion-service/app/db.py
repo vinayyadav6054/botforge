@@ -30,13 +30,25 @@ def ensure_schema(conn: psycopg.Connection) -> None:
         cur.execute("CREATE INDEX IF NOT EXISTS ix_chunks_tenant_bot ON knowledge.chunks (tenant_id, bot_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS ix_chunks_document ON knowledge.chunks (document_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS ix_chunks_embedding ON knowledge.chunks USING hnsw (embedding vector_cosine_ops)")
+        # where an answer came from (shown to visitors) and what kind of knowledge it is ("file", "website", "qa", ...)
+        cur.execute("ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS source_name text")
+        cur.execute("ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS location text")
+        cur.execute("ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS source_url text")
+        cur.execute("ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'file'")
+        # keyword search next to the vector search ("simple": no language-specific stemming, works for Hinglish too)
+        cur.execute("""ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS tsv tsvector
+                       GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED""")
+        cur.execute("CREATE INDEX IF NOT EXISTS ix_chunks_tsv ON knowledge.chunks USING gin (tsv)")
     conn.commit()
 
 
-def replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors) -> None:
+def replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors,
+                   source_name: str | None = None, kind: str = "file") -> None:
+    """chunks: plain strings or Chunk objects (with location/url)."""
     rows = [
-        (tenant_id, bot_id, document_id, i, content, vector)
-        for i, (content, vector) in enumerate(zip(chunks, vectors))
+        (tenant_id, bot_id, document_id, i, getattr(c, "content", c), vector, source_name,
+         getattr(c, "location", None), getattr(c, "url", None), kind)
+        for i, (c, vector) in enumerate(zip(chunks, vectors))
     ]
     with conn.cursor() as cur:
         cur.execute(
@@ -45,8 +57,8 @@ def replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors) -> Non
         )
         cur.executemany(
             """INSERT INTO knowledge.chunks
-               (tenant_id, bot_id, document_id, chunk_index, content, embedding)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
+               (tenant_id, bot_id, document_id, chunk_index, content, embedding, source_name, location, source_url, kind)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             rows,
         )
     conn.commit()

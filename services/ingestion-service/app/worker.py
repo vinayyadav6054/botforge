@@ -7,14 +7,14 @@ import pika
 from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker, StreamLostError
 
 from . import config, db
-from .chunking import chunk_text
+from .chunking import chunk_sections
 from .embedder import embed, get_model
-from .parsing import extract_text, resolve_storage_path
+from .parsing import extract_sections, resolve_storage_path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("ingestion")
 
-ROUTING_KEYS = ("document.uploaded", "document.deleted", "bot.deleted")
+ROUTING_KEYS = ("document.uploaded", "document.deleted", "bot.deleted", "qa.upserted", "qa.deleted")
 
 
 def publish(channel, routing_key: str, payload: dict) -> None:
@@ -31,17 +31,31 @@ def process(conn, msg: dict) -> int:
     bot_id = uuid.UUID(msg["botId"])
     document_id = uuid.UUID(msg["documentId"])
 
-    path = resolve_storage_path(msg["storageKey"])
-    if not path.is_file():
-        raise FileNotFoundError("The uploaded file could not be found in storage")
-    text = extract_text(path)
-    chunks = chunk_text(text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
+    kind = msg.get("kind") or "file"
+    if kind == "file":
+        path = resolve_storage_path(msg["storageKey"])
+        if not path.is_file():
+            raise FileNotFoundError("The uploaded file could not be found in storage")
+        sections = extract_sections(path)
+    else:
+        from .sources import fetch_sections   # online sources: website, Google, Notion, YouTube
+        sections = fetch_sections(kind, msg)
+    chunks = chunk_sections(sections, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
     if not chunks:
         raise ValueError("No text could be extracted from the document")
 
-    vectors = embed(chunks)
-    db.replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors)
+    vectors = embed([c.content for c in chunks])
+    db.replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors,
+                      source_name=msg.get("fileName"), kind=kind)
     return len(chunks)
+
+
+def upsert_qa(conn, msg: dict) -> None:
+    """An owner-written answer becomes one chunk that retrieval prefers when the question matches."""
+    question, answer = msg["question"].strip(), msg["answer"].strip()
+    content = f"Question: {question}\nAnswer: {answer}"
+    db.replace_chunks(conn, uuid.UUID(msg["tenantId"]), uuid.UUID(msg["botId"]), uuid.UUID(msg["qaId"]),
+                      [content], embed([content]), source_name="Q&A", kind="qa")
 
 
 class Handler:
@@ -58,6 +72,11 @@ class Handler:
             if routing_key == "document.deleted":
                 n = db.delete_document_chunks(self.conn, uuid.UUID(msg["tenantId"]), uuid.UUID(msg["documentId"]))
                 log.info("Deleted %d chunk(s) of document %s", n, msg["documentId"])
+            elif routing_key == "qa.upserted":
+                upsert_qa(self.conn, msg)
+                log.info("Stored Q&A %s", msg["qaId"])
+            elif routing_key == "qa.deleted":
+                db.delete_document_chunks(self.conn, uuid.UUID(msg["tenantId"]), uuid.UUID(msg["qaId"]))
             elif routing_key == "bot.deleted":
                 n = db.delete_bot_chunks(self.conn, uuid.UUID(msg["tenantId"]), uuid.UUID(msg["botId"]))
                 log.info("Deleted %d chunk(s) of bot %s", n, msg["botId"])
