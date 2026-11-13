@@ -13,7 +13,8 @@ on its website. Visitors chat with a widget that answers **only** from those doc
                                                               └──────  (Python) parse → chunk → embed
 ```
 
-See [docs/architecture.md](docs/architecture.md) for the design, data flow and security model.
+See [docs/architecture.md](docs/architecture.md) for the design, data flow and security model,
+and [docs/roadmap.md](docs/roadmap.md) for future scope.
 
 | Path | What it is |
 |---|---|
