@@ -8,7 +8,7 @@ function when(iso: string) {
 }
 
 /** Every visitor chat with this bot, newest first; unanswered questions are marked so the owner can fill the gaps. */
-export default function ConversationsSection({ botId }: { botId: string }) {
+export default function ConversationsSection({ botId, onCorrect }: { botId: string; onCorrect?: (question: string, answer: string) => void }) {
   const [items, setItems] = useState<ConversationSummary[] | null>(null);
   const [more, setMore] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -121,6 +121,11 @@ export default function ConversationsSection({ botId }: { botId: string }) {
                           {m.text}
                           {m.role === "user" && !m.answered && (
                             <span className="unanswered-tag">not in documents</span>
+                          )}
+                          {m.role === "assistant" && onCorrect && i > 0 && (
+                            <button className="link-btn correct-btn" onClick={() => onCorrect(thread.messages[i - 1].text, m.text)}>
+                              Correct this answer
+                            </button>
                           )}
                         </div>
                       ))}

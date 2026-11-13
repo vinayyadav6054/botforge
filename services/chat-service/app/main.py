@@ -26,7 +26,11 @@ CONVERSATION_ID = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 
 NO_INFORMATION = "I don't have any information to answer that yet."
 # the system prompt tells the model to say this when the documents do not cover the question
-_NO_INFO = re.compile(r"(don['’]t|do not) have (that|this|any|the) information", re.IGNORECASE)
+_NO_INFO = re.compile(
+    r"(don['’]t|do not|doesn['’]t|does not) (have|contain|include|mention)\b[^.!?]{0,40}\b(information|details)"
+    r"|\bno (information|details) (about|on|regarding|for)\b"
+    r"|\b(isn['’]t|is not|not) mentioned in\b",
+    re.IGNORECASE)
 
 
 def says_no_information(answer: str) -> bool:

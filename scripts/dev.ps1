@@ -136,6 +136,8 @@ function Start-App {
     # email links and the widget badge point at the local dashboard
     $env:App__DashboardUrl = "http://localhost:$DashboardPort"
     $env:BRANDING_URL = "http://localhost:$DashboardPort"
+    # local only: let the website source read pages on this machine (e.g. the demo site); production blocks them
+    $env:ALLOW_PRIVATE_SOURCES = "true"
     # identity calls the bot service (account deletion, monthly reports) with the bot service's internal key
     $botsSecrets = dotnet user-secrets list --project (Join-Path $root "services/bot-service/Bots.Api") 2>$null
     $internal = ($botsSecrets | Where-Object { $_ -like "Internal:ApiKey = *" }) -replace '^Internal:ApiKey = ', ''

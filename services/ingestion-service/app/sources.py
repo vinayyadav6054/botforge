@@ -69,7 +69,9 @@ def fetch(client: httpx.Client, url: str, headers: dict | None = None) -> httpx.
                 body += chunk
                 if len(body) > MAX_BYTES:
                     raise SourceError("A page or file is larger than 5 MB.")
-            return httpx.Response(res.status_code, headers=res.headers, content=bytes(body), request=res.request)
+            # iter_bytes() already undid gzip/brotli: drop the encoding headers or the copy would be decoded twice
+            headers = [(k, v) for k, v in res.headers.items() if k.lower() not in ("content-encoding", "content-length")]
+            return httpx.Response(res.status_code, headers=headers, content=bytes(body), request=res.request)
     raise SourceError("The address redirects too many times.")
 
 

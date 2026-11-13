@@ -27,7 +27,7 @@ class PatientTransport(httpx.HTTPTransport):
     def handle_request(self, request):
         for _ in range(4):
             response = super().handle_request(request)
-            if response.status_code != 429 or not request.url.path.startswith("/api/auth/"):
+            if response.status_code != 429 or not request.url.path.startswith(("/api/auth/", "/api/admin/")):
                 return response
             response.close()
             time.sleep(20)
@@ -93,12 +93,13 @@ def tenant_factory(http):
     return lambda name="E2E Co": Tenant(http, name)
 
 
-def chat(http: httpx.Client, public_key: str, message: str, history=None, conversation_id=None) -> dict:
+def chat(http: httpx.Client, public_key: str, message: str, history=None, conversation_id=None, extra=None) -> dict:
     """Sends a chat message and collects the SSE stream into {meta, text, error, done}."""
-    result = {"meta": None, "text": "", "error": None, "done": False}
+    result = {"meta": None, "text": "", "error": None, "done": False, "sources": []}
     body = {"message": message, "history": history or []}
     if conversation_id:
         body["conversationId"] = conversation_id
+    body.update(extra or {})
     with http.stream("POST", f"/chat/{public_key}", json=body) as res:
         assert res.status_code == 200, res.read()
         assert res.headers["content-type"].startswith("text/event-stream")
@@ -114,6 +115,8 @@ def chat(http: httpx.Client, public_key: str, message: str, history=None, conver
                     result["text"] += data["text"]
                 elif event == "error":
                     result["error"] = data["message"]
+                elif event == "sources":
+                    result["sources"] = data["items"]
                 elif event == "done":
                     result["done"] = True
     return result

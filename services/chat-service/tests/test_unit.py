@@ -501,6 +501,12 @@ def test_failed_answers_are_given_back(client, fakes):
     ("I don't have that information. Please contact the business directly.", True),
     ("Sorry, I do not have this information.", True),
     ("I don’t have that information in my documents.", True),
+    ("I'm sorry, but I don't have information regarding a canteen.", True),
+    ("I don't have any details about a swimming pool.", True),
+    ("The documents do not mention any information about hostels.", True),
+    ("There is no information about parking in my documents.", True),
+    ("We don't have a hostel, but partner PGs are nearby.", False),
+    ("Yes! We have detailed information sessions every Sunday.", False),
     ("The fee is ₹68,000 per year.", False),
 ])
 def test_no_information_answers_are_detected(answer, expected):

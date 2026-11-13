@@ -114,11 +114,14 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | GET | `/auth/me` | JWT | current user claims |
 | GET/POST | `/bots` | JWT | list / create `{name, welcomeMessage?}` |
 | GET/PUT/DELETE | `/bots/{id}` | JWT | read / update / delete (also removes documents and vectors) |
-| GET/POST | `/bots/{id}/documents` | JWT | list / upload (`multipart` field `file`; pdf, docx, txt, md; ≤ 10 MB) |
+| GET/POST | `/bots/{id}/documents` | JWT | list / upload (`multipart` field `file`; pdf, docx, xlsx, csv, txt, md; ≤ 10 MB) |
+| POST/PATCH | `/bots/{id}/sources[/{docId}]` | JWT | `{kind: website\|google\|notion\|youtube, url, token?, syncIntervalDays?}` / `{syncIntervalDays}` |
+| GET/POST/PUT/DELETE | `/bots/{id}/qa[/{qaId}]` | JWT | owner answers `{question, answer, fromQuestion?}` |
+| GET/POST | `/bots/{id}/unanswered`, `/bots/{id}/unanswered/dismiss` | JWT | questions the knowledge did not answer (90 days) / `{question}` |
 | GET/DELETE | `/bots/{id}/documents/{docId}` | JWT | status (`Uploaded`, `Ready`, `Failed`, `UploadedUnqueued`) / delete |
 | POST | `/bots/{id}/documents/{docId}/reprocess` | JWT | queue again |
 | GET | `/chat/{publicKey}/info` | public | `{name, welcomeMessage}` |
-| POST | `/chat/{publicKey}` | public | `{message, history?: [{role, text}]}` → SSE `meta`, `token`…, `done` \| `error` |
+| POST | `/chat/{publicKey}` | public | `{message, history?, conversationId?, pageUrl?, playground?}` → SSE `meta`, `token`…, `sources`?, `done` \| `error` |
 | POST | `/chat/{publicKey}/lead` | public | `{name, phone, course?, email?, pageUrl?, transcript?}` → `{ok}`; 400 invalid, 409 lead capture off |
 | GET | `/bots/{id}/leads` | JWT | enquiries, newest first (max 1000) |
 | PATCH/DELETE | `/bots/{id}/leads/{leadId}` | JWT | `{status: New\|Contacted\|Converted\|Junk}` / delete (data removal requests) |

@@ -26,15 +26,52 @@ export interface Bot {
   leadPrompt: string;
   leadAfterMessages: number;
   suggestedQuestions: string[];
+  leadAskEmail: boolean;
+  leadAskCourse: boolean;
+  leadCourseLabel: string;
+  leadTiming: "after" | "start" | "button";
+  tone: "friendly" | "professional" | "casual" | "enthusiastic";
+  answerLength: "short" | "medium" | "detailed";
+  topicsToAvoid: string;
+  customInstructions: string;
+  showSources: boolean;
+  widgetColor: string | null;
+  widgetPosition: "right" | "left";
+  avatarDataUrl: string | null;
+  hoursEnabled: boolean;
+  hoursStart: string;
+  hoursEnd: string;
+  hoursDays: number[];
+  timeZone: string;
+  offlineMessage: string;
 }
 
-export interface BotSettings {
+/** PUT /bots/{id}: any subset; "" clears widgetColor / avatarDataUrl. */
+export type BotSettings = Partial<Omit<Bot, "id" | "publicKey" | "createdAt" | "widgetColor" | "avatarDataUrl">> & {
   name: string;
-  welcomeMessage: string;
-  leadCaptureEnabled: boolean;
-  leadPrompt: string;
-  leadAfterMessages: number;
-  suggestedQuestions: string[];
+  widgetColor?: string;
+  avatarDataUrl?: string;
+};
+
+export type SourceKind = "website" | "google" | "notion" | "youtube";
+
+export interface QaEntry {
+  id: string;
+  question: string;
+  answer: string;
+  updatedAt: string;
+}
+
+export interface Unanswered {
+  question: string;
+  count: number;
+  lastAskedAt: string;
+}
+
+export interface SourceRef {
+  name: string;
+  location?: string | null;
+  url?: string | null;
 }
 
 export type LeadStatus = "New" | "Contacted" | "Converted" | "Junk";
@@ -63,6 +100,10 @@ export interface BotDocument {
   chunkCount: number | null;
   error: string | null;
   createdAt: string;
+  kind: "file" | SourceKind;
+  sourceUrl: string | null;
+  syncIntervalDays: number;
+  lastSyncedAt: string | null;
 }
 
 export class ApiError extends Error {
@@ -187,6 +228,21 @@ export const api = {
     request<void>(`/bots/${botId}/leads/${leadId}`, { method: "DELETE" }),
   exportLeads: async (botId: string) => (await send(`/bots/${botId}/leads/export`)).blob(),
 
+  // online sources, owner answers, unanswered questions
+  addSource: (botId: string, body: { kind: SourceKind; url: string; token?: string; syncIntervalDays?: number }) =>
+    request<BotDocument>(`/bots/${botId}/sources`, { method: "POST", body: JSON.stringify(body) }),
+  setSyncInterval: (botId: string, docId: string, syncIntervalDays: number) =>
+    request<BotDocument>(`/bots/${botId}/sources/${docId}`, { method: "PATCH", body: JSON.stringify({ syncIntervalDays }) }),
+  listQa: (botId: string) => request<QaEntry[]>(`/bots/${botId}/qa`),
+  createQa: (botId: string, question: string, answer: string, fromQuestion?: string) =>
+    request<QaEntry>(`/bots/${botId}/qa`, { method: "POST", body: JSON.stringify({ question, answer, fromQuestion }) }),
+  updateQa: (botId: string, id: string, question: string, answer: string) =>
+    request<QaEntry>(`/bots/${botId}/qa/${id}`, { method: "PUT", body: JSON.stringify({ question, answer }) }),
+  deleteQa: (botId: string, id: string) => request<void>(`/bots/${botId}/qa/${id}`, { method: "DELETE" }),
+  listUnanswered: (botId: string) => request<Unanswered[]>(`/bots/${botId}/unanswered`),
+  dismissUnanswered: (botId: string, question: string) =>
+    request<object>(`/bots/${botId}/unanswered/dismiss`, { method: "POST", body: JSON.stringify({ question }) }),
+
   // conversations
   listConversations: (botId: string, before?: string) =>
     request<ConversationSummary[]>(`/bots/${botId}/conversations?take=20${before ? `&before=${encodeURIComponent(before)}` : ""}`),
@@ -293,4 +349,50 @@ export interface AdminSubscription {
   provider: string | null;
   answersThisMonth: number;
   bots: number;
+}
+
+
+export interface PlaygroundHandlers {
+  onToken: (text: string) => void;
+  onSources: (items: SourceRef[]) => void;
+  onMeta: (meta: { sources: number }) => void;
+}
+
+/** The dashboard's test chat: the real public chat API in playground mode (answers count, nothing is stored). */
+export async function playgroundAsk(publicKey: string, message: string, history: { role: string; text: string }[],
+  handlers: PlaygroundHandlers): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/chat/${publicKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, history, playground: true }),
+    });
+  } catch {
+    throw new ApiError(0, "Cannot reach the server.");
+  }
+  if (!res.ok || !res.body) throw new ApiError(res.status, res.status === 429 ? "Too many messages. Wait a moment." : "The chat failed.");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    buffer += done ? "\n\n" : decoder.decode(value, { stream: true });
+    let cut;
+    while ((cut = buffer.indexOf("\n\n")) >= 0) {
+      const block = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      const event = /^event: (.*)$/m.exec(block)?.[1];
+      const raw = /^data: (.*)$/m.exec(block)?.[1];
+      if (!event || !raw) continue;
+      let data: Record<string, unknown> = {};
+      try { data = JSON.parse(raw); } catch { /* ignore */ }
+      if (event === "token" && typeof data.text === "string") handlers.onToken(data.text);
+      else if (event === "sources" && Array.isArray(data.items)) handlers.onSources(data.items as SourceRef[]);
+      else if (event === "meta") handlers.onMeta({ sources: Number(data.sources) || 0 });
+      else if (event === "error") throw new ApiError(500, typeof data.message === "string" ? data.message : "The chat failed.");
+      else if (event === "done") return;
+    }
+    if (done) return;
+  }
 }

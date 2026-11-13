@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -19,7 +19,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "file");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "last_synced_at",
@@ -67,7 +67,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "medium");
 
             migrationBuilder.AddColumn<string>(
                 name: "avatar_data_url",
@@ -90,7 +90,8 @@ namespace Bots.Api.Migrations
                 schema: "bots",
                 table: "bots",
                 type: "integer[]",
-                nullable: false);
+                nullable: false,
+                defaultValue: new[] { 1, 2, 3, 4, 5, 6 });
 
             migrationBuilder.AddColumn<bool>(
                 name: "hours_enabled",
@@ -107,7 +108,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(5)",
                 maxLength: 5,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "18:00");
 
             migrationBuilder.AddColumn<string>(
                 name: "hours_start",
@@ -116,7 +117,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(5)",
                 maxLength: 5,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "09:00");
 
             migrationBuilder.AddColumn<bool>(
                 name: "lead_ask_course",
@@ -124,7 +125,7 @@ namespace Bots.Api.Migrations
                 table: "bots",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<bool>(
                 name: "lead_ask_email",
@@ -141,7 +142,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(60)",
                 maxLength: 60,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "Course / interest");
 
             migrationBuilder.AddColumn<string>(
                 name: "lead_timing",
@@ -150,7 +151,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(10)",
                 maxLength: 10,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "after");
 
             migrationBuilder.AddColumn<string>(
                 name: "offline_message",
@@ -159,7 +160,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(300)",
                 maxLength: 300,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "We're closed right now. Ask me anything, or leave your number and we'll call you back.");
 
             migrationBuilder.AddColumn<bool>(
                 name: "show_sources",
@@ -167,7 +168,7 @@ namespace Bots.Api.Migrations
                 table: "bots",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "time_zone",
@@ -176,7 +177,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(60)",
                 maxLength: 60,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "Asia/Kolkata");
 
             migrationBuilder.AddColumn<string>(
                 name: "tone",
@@ -185,7 +186,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "friendly");
 
             migrationBuilder.AddColumn<string>(
                 name: "topics_to_avoid",
@@ -211,7 +212,7 @@ namespace Bots.Api.Migrations
                 type: "character varying(5)",
                 maxLength: 5,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "right");
 
             migrationBuilder.CreateTable(
                 name: "qa_entries",

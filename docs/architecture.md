@@ -70,6 +70,26 @@ widget through `/chat/{key}/info`. `lead_after_messages = 0` means the form only
 Leads are personal data: the form shows a consent line, the owner can delete single leads, and
 CSV cells that start with `= + - @` are prefixed with `'` so spreadsheets do not run them as formulas.
 
+## Knowledge sources and search
+
+- Files (pdf, docx, xlsx, csv, txt, md) and online sources share one pipeline: a `bots.documents` row (`kind` =
+  `file`, `website`, `google`, `notion`, `youtube`) and a `document.uploaded` message. For online sources the worker
+  fetches the content itself (`ingestion-service/app/sources.py`).
+- Every request of an online source goes to a **public** address only: the host is resolved and private, loopback,
+  link-local (cloud metadata) and reserved addresses are refused, redirects are followed by hand and checked again,
+  bodies are capped at 5 MB. `ALLOW_PRIVATE_SOURCES=true` lifts this for local development only.
+- Websites: breadth-first crawl of the same host from the start page and `sitemap.xml`, respecting `robots.txt`,
+  up to the plan's page limit and 4 minutes. Google links must be shared "Anyone with the link"; Notion uses the
+  owner's integration secret (stored in `source_secret`, never returned by the API); YouTube reads captions.
+- `SourceSync` re-queues online sources whose `sync_interval_days` has passed (checked every 30 minutes).
+- Chunks keep `source_name`, `location` (page, sheet, page title, video time) and `source_url`; a generated
+  `tsvector` column (`simple` configuration) adds keyword search. Retrieval runs vector and keyword search (20
+  candidates each) and merges them with reciprocal rank fusion; owner Q&A chunks get a bonus when they are among
+  the 3 closest by meaning, and are marked as verified answers in the prompt.
+- Owner answers (`bots.qa_entries`) are sent as `qa.upserted` / `qa.deleted` and stored as one chunk each.
+- After a grounded answer the chat service sends a `sources` event (distinct documents/pages, not Q&A) when the bot
+  has `show_sources` on. Answers where the model says it lacks the information are logged as unanswered.
+
 ## Plans, usage and billing
 
 - `bots.subscriptions` has one row per tenant, created on first use with a 14-day trial. `Plans.Effective` turns it

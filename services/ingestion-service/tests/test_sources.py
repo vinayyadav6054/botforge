@@ -218,3 +218,14 @@ def test_worker_reports_source_errors_to_the_owner(monkeypatch):
     worker.Handler(Conn(), lambda k, p: published.append((k, p))).handle("document.uploaded", json.dumps(msg).encode())
     assert published[0][0] == "document.failed"
     assert "not reachable from the internet" in published[0][1]["error"]
+
+
+def test_compressed_pages_are_read():
+    """Most real sites send gzip; the body must be decoded exactly once."""
+    import gzip
+
+    page = gzip.compress(HOME.encode())
+    c = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(
+        200, headers={"content-type": "text/html", "content-encoding": "gzip"}, content=page)))
+    res = sources.fetch(c, "https://site.example/")
+    assert "Welcome to Sunrise Academy" in res.text

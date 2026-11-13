@@ -173,7 +173,7 @@ test("bot settings, document deletion and bot deletion", async ({ page }) => {
 
   // rejected file type is reported in the UI, nothing uploaded
   await page.getByLabel("Upload documents").setInputFiles({ name: "x.exe", mimeType: "application/octet-stream", buffer: Buffer.from("MZ") });
-  await expect(page.locator(".alert.error")).toContainText("only .pdf, .txt, .md, .docx files are supported");
+  await expect(page.locator(".alert.error")).toContainText("only .pdf, .txt, .md, .docx, .xlsx, .csv files are supported");
 
   await page.getByLabel("Upload documents").setInputFiles({ name: "notes.md", mimeType: "text/markdown", buffer: Buffer.from("# Notes\nHello") });
   await expect(page.getByText(/Ready · \d+ chunks?/)).toBeVisible({ timeout: 90_000 });

@@ -12,6 +12,12 @@ What BotForge does today, and what can be added, ordered by how much each item h
 - Password reset, email verification, monthly report email; conversation history with unanswered questions
 - "Powered by BotForge" badge (removed on Business and Pro), Privacy Policy, Terms, data export, account deletion
 - Landing page with live demo, demo website
+- Knowledge from websites (crawler), Google Docs/Sheets/Slides/Drive links, Notion, YouTube captions, Excel/CSV,
+  with scheduled re-sync; table rows keep their column names
+- Hybrid search (keyword + meaning), owner-written answers that take priority, unanswered-questions list,
+  sources under answers, test playground
+- Personality (tone, length, topics to avoid, extra instructions), lead form options, widget colour/side/logo,
+  opening-hours message
 - Gateway with rate limits and CORS; free hosting guides (Render + Vercel, own server, Hugging Face)
 
 ## Phase 1: needed before charging customers (done)
@@ -27,7 +33,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
 | **Privacy Policy, Terms, data deletion and export** | Required for storing customer data (India DPDP Act 2023) |
 | **Landing page** with pricing, demo bot and WhatsApp contact | Trust and self-service sign-ups |
 
-## Phase 2: better answers and easier setup
+## Phase 2: better answers and easier setup (done)
 
 - **Website crawler**: enter the website URL and the bot learns every page, with no file uploads
 - **More sources**: Google Docs/Drive, Notion, Excel/CSV price lists, YouTube transcripts

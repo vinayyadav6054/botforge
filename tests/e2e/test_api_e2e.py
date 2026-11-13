@@ -154,12 +154,10 @@ def test_bot_settings_update_reaches_the_widget(http, tenant_factory):
                                                 "suggestedQuestions": [" Fees? ", "", "Timings?"]})
     assert res.status_code == 200
     info = http.get(f"/chat/{bot['publicKey']}/info").json()
-    assert info.pop("branding")["show"] is True   # trial plan keeps the badge
-    assert info == {
-        "name": "New Name", "welcomeMessage": "New welcome",
-        "leadCapture": {"enabled": False, "prompt": bot["leadPrompt"], "afterMessages": 2},
-        "suggestedQuestions": ["Fees?", "Timings?"],
-    }
+    assert info["branding"]["show"] is True   # trial plan keeps the badge
+    assert (info["name"], info["welcomeMessage"], info["suggestedQuestions"]) == ("New Name", "New welcome", ["Fees?", "Timings?"])
+    lead = info["leadCapture"]
+    assert (lead["enabled"], lead["prompt"], lead["afterMessages"]) == (False, bot["leadPrompt"], 2)
 
 
 def test_lead_journey_widget_to_dashboard(http, tenant_factory):
@@ -175,7 +173,8 @@ def test_lead_journey_widget_to_dashboard(http, tenant_factory):
     res = owner.put(f"/bots/{bot['id']}", json={"name": "Admissions", "leadCaptureEnabled": True,
                                                 "leadPrompt": "Call back?", "leadAfterMessages": 1})
     assert res.status_code == 200, res.text
-    assert http.get(f"/chat/{key}/info").json()["leadCapture"] == {"enabled": True, "prompt": "Call back?", "afterMessages": 1}
+    capture = http.get(f"/chat/{key}/info").json()["leadCapture"]
+    assert (capture["enabled"], capture["prompt"], capture["afterMessages"]) == (True, "Call back?", 1)
 
     # a website visitor (any origin) submits; a double submit is not saved twice
     assert http.post(f"/chat/{key}/lead", json=lead, headers={"Origin": "https://inst.example"}).status_code == 200
