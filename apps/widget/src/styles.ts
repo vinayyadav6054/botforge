@@ -140,6 +140,9 @@ textarea:focus-visible { outline: none; }
 .send:hover:not(:disabled) { transform: scale(1.06); }
 .send:disabled { opacity: .45; cursor: default; }
 .footer { text-align: center; font-size: 10.5px; color: #a3a9b5; padding: 7px 0 9px; background: #fff; }
+.footer[hidden] { display: none; }
+.footer a { color: inherit; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
 
 /* ---------- lead card ---------- */
 .lead {

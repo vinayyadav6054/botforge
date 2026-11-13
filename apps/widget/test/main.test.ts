@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { initials, mount, readOptions } from "../src/main";
+import { conversationId, initials, mount, readOptions } from "../src/main";
 import { hex6 } from "../src/styles";
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -324,5 +324,37 @@ describe("redesign", () => {
     root.querySelector("form.lead")!.dispatchEvent(new Event("submit", { cancelable: true }));
     await settle();
     expect(root.querySelector(".msg.bot.success")!.textContent).toBe("Thank you, Asha! Our team will contact you soon.");
+  });
+});
+
+describe("plans and conversation history", () => {
+  const infoWith = (extra: object) =>
+    new Response(JSON.stringify({ name: "Bot", welcomeMessage: "Hi!", ...extra }), { status: 200 });
+
+  it("shows the badge unless the plan removes it, and only links to http(s)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(infoWith({ branding: { show: true, url: "javascript:alert(1)" } })));
+    const w = mount({ botKey: "bk_badge1", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
+    w.open();
+    const root = document.querySelectorAll("[data-botforge]")[document.querySelectorAll("[data-botforge]").length - 1].shadowRoot!;
+    await vi.waitFor(() => expect(root.querySelector<HTMLElement>(".footer")!.hidden).toBe(false));
+    expect(root.querySelector(".footer a")).toBeNull();
+    expect(root.querySelector(".footer")!.textContent).toContain("Powered by BotForge");
+  });
+
+  it("hides the badge on plans without it", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(infoWith({ branding: { show: false } })));
+    const w = mount({ botKey: "bk_badge2", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
+    w.open();
+    const root = document.querySelectorAll("[data-botforge]")[document.querySelectorAll("[data-botforge]").length - 1].shadowRoot!;
+    await vi.waitFor(() => expect(root.querySelector(".title")!.textContent).toBe("Bot"));
+    expect(root.querySelector<HTMLElement>(".footer")!.hidden).toBe(true);
+  });
+
+  it("keeps one conversation id per session and bot", () => {
+    sessionStorage.clear();
+    const a = conversationId("botforge:bk_1:conversation");
+    expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(conversationId("botforge:bk_1:conversation")).toBe(a);
+    expect(conversationId("botforge:bk_2:conversation")).not.toBe(a);
   });
 });

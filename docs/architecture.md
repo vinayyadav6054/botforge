@@ -5,10 +5,10 @@
 | Service | Stack | Owns | Talks to |
 |---|---|---|---|
 | gateway | ASP.NET + YARP | public surface, CORS, rate limits, `/widget.js` | identity, bots, chat |
-| identity | ASP.NET minimal API, EF Core | schema `identity` (tenants, users) | Postgres |
-| bots | ASP.NET minimal API, EF Core | schema `bots` (bots, documents), file storage | Postgres, RabbitMQ, storage |
+| identity | ASP.NET minimal API, EF Core | schema `identity` (tenants, users, email tokens, report log) | Postgres, SMTP, bots `/internal` (account deletion, report numbers) |
+| bots | ASP.NET minimal API, EF Core | schema `bots` (bots, documents, leads, conversations, subscriptions, usage), file storage | Postgres, RabbitMQ, storage, Razorpay |
 | ingestion | Python worker, pika, fastembed | schema `knowledge` (chunks + vectors) | RabbitMQ, Postgres, storage |
-| chat | FastAPI | nothing (stateless) | bots `/internal`, Postgres (read `knowledge`), Gemini |
+| chat | FastAPI | nothing (stateless) | bots `/internal` (bot lookup, answer quota, conversation log), Postgres (read `knowledge`), Gemini |
 | dashboard | Next.js | – | gateway |
 | widget | TypeScript bundle | conversation history in `sessionStorage` | gateway |
 
@@ -69,6 +69,37 @@ widget through `/chat/{key}/info`. `lead_after_messages = 0` means the form only
 "Talk to us" button. The widget remembers "done"/"dismissed" per bot in `sessionStorage`.
 Leads are personal data: the form shows a consent line, the owner can delete single leads, and
 CSV cells that start with `= + - @` are prefixed with `'` so spreadsheets do not run them as formulas.
+
+## Plans, usage and billing
+
+- `bots.subscriptions` has one row per tenant, created on first use with a 14-day trial. `Plans.Effective` turns it
+  into the limits that apply now (trial; paid plan until `current_period_end`, +3 days grace while active; or expired).
+- Bot and document creation return **402** with `code: plan_limit` when the plan is full or has ended.
+- Before every AI answer the chat service calls `POST /internal/bots/{key}/answers`, which counts it in
+  `bots.usage_counters` with one atomic `INSERT ... ON CONFLICT DO UPDATE ... WHERE answers < limit`. Over the limit
+  the visitor gets a polite fixed message and Gemini is not called. Questions without matching documents are not
+  counted. If the bot service cannot be reached the answer is given anyway (fail open).
+- Razorpay: `POST /account/checkout` creates a subscription (notes carry the tenant id and plan) and returns its hosted
+  payment page. The webhook (HMAC-SHA256 of the raw body) sets the plan; a newly activated subscription replaces and
+  cancels the previous one, and late events about older subscriptions are ignored.
+- Without Razorpay, the platform owner activates plans on `/admin` (`X-Admin-Key`, `PUT /admin/subscriptions/{tenant}`).
+
+## Conversations
+
+The widget keeps a conversation id per bot in `sessionStorage` and sends it (and the page address without query
+string) with every message. After answering, the chat service stores the question and answer through
+`POST /internal/bots/{key}/conversations` (best effort; failures never reach the visitor). Questions with no matching
+document chunks are stored with `answered = false`, so the owner sees what the documents are missing.
+Conversations are deleted after `Retention:ConversationDays` (180) by a background job and cascade with their bot.
+
+## Accounts and email
+
+Identity stores one-time tokens (`user_tokens`, SHA-256 hash only) for email verification (24 h) and password reset
+(1 h; using one invalidates the other open reset links). At most one email of each kind per user per minute;
+`forgot-password` always answers 200, so it does not reveal which emails have an account. Emails go through SMTP when
+`Email:Smtp:Host` is set, otherwise to the log. A background job sends the previous month's report to verified owners,
+once per tenant and month (`report_logs`). `POST /auth/delete-account` checks the password, asks the bot service to
+delete everything of the tenant (including cancelling a Razorpay subscription), then deletes the tenant and its users.
 
 ## Security model
 

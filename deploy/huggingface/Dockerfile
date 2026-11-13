@@ -67,11 +67,12 @@ COPY --from=web /apps/dashboard/.next/standalone /app/dashboard
 COPY --from=src /src/services/chat-service/app /app/chat/app
 COPY --from=src /src/services/ingestion-service/app /app/ingestion/app
 COPY --from=src /src/deploy/huggingface /app/deploy
+COPY --from=src /src/deploy/common/env.sh /app/deploy/common-env.sh
 
 # Hugging Face runs the container as uid 1000
 RUN useradd -m -u 1000 user \
  && mkdir -p /data \
- && sed -i 's/\r$//' /app/deploy/start.sh \
+ && sed -i 's/\r$//' /app/deploy/start.sh /app/deploy/common-env.sh \
  && chmod +x /app/deploy/start.sh \
  && chown -R user:user /data /opt/models /home/user
 USER user

@@ -273,6 +273,8 @@ export default function Landing() {
           </span>
           <nav className="small" aria-label="Footer">
             <Link href="/demo">Demo</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
             <Link href="/login">Log in</Link>
             <Link href="/register">Sign up</Link>
           </nav>

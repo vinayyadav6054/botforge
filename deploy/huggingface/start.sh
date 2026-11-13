@@ -46,6 +46,13 @@ export \
   RABBITMQ_LOGS=- \
   RABBITMQ_ENABLED_PLUGINS_FILE=/data/rabbitmq/enabled_plugins
 
+# dashboard and API share one address here: the Space URL (or SITE_ADDRESS on your own server)
+if [ -z "${PUBLIC_URL:-}" ]; then
+  if [ -n "${SITE_ADDRESS:-}" ]; then PUBLIC_URL="https://${SITE_ADDRESS}"
+  elif [ -n "${SPACE_HOST:-}" ]; then PUBLIC_URL="https://${SPACE_HOST}"; fi
+fi
+. /app/deploy/common-env.sh
+
 mkdir -p /data/storage /data/rabbitmq/mnesia /data/rabbitmq/log
 echo "[]." > /data/rabbitmq/enabled_plugins
 

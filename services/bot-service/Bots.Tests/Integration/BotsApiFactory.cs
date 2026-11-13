@@ -23,6 +23,8 @@ public class BotsApiFactory : WebApplicationFactory<Program>
 {
     public const string JwtKey = "integration-tests-signing-key-0123456789abcdef";
     public const string InternalKey = "integration-internal-key";
+    public const string AdminKey = "integration-admin-key";
+    public const string WebhookSecret = "integration-webhook-secret";
 
     public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "botforge-it-" + Guid.NewGuid().ToString("N"));
     public FakePublisher Publisher { get; } = new();
@@ -43,6 +45,8 @@ public class BotsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Internal:ApiKey", InternalKey);
         builder.UseSetting("Storage:RootPath", StorageRoot);
         builder.UseSetting("RabbitMq:ConsumeStatusEvents", "false");
+        builder.UseSetting("Admin:ApiKey", AdminKey);
+        builder.UseSetting("Razorpay:WebhookSecret", WebhookSecret);
         builder.ConfigureTestServices(s =>
         {
             s.RemoveAll<IEventPublisher>();

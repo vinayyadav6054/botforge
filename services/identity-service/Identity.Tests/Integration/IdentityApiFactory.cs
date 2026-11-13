@@ -1,6 +1,12 @@
+using System.Collections.Concurrent;
+using Identity.Api.Accounts;
+using Identity.Api.Email;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 
 namespace Identity.Tests.Integration;
@@ -15,6 +21,10 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
     public const string JwtKey = "integration-tests-signing-key-0123456789abcdef";
     public const string Issuer = "botforge-identity";
     public const string Audience = "botforge";
+    public const string AdminKey = "integration-admin-key";
+
+    public FakeEmailSender Emails { get; } = new();
+    public FakeBotsClient Bots { get; } = new();
 
     private readonly string _connectionString;
 
@@ -30,7 +40,57 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Key", JwtKey);
         builder.UseSetting("Jwt:Issuer", Issuer);
         builder.UseSetting("Jwt:Audience", Audience);
+        builder.UseSetting("Admin:ApiKey", AdminKey);
+        builder.UseSetting("App:DashboardUrl", "https://dash.example");
+        builder.UseSetting("Reports:Enabled", "false");   // tests call MonthlyReportService.SendDueAsync directly
+        builder.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<IEmailSender>();
+            s.AddSingleton<IEmailSender>(Emails);
+            s.RemoveAll<IBotsClient>();
+            s.AddSingleton<IBotsClient>(Bots);
+        });
     }
+}
+
+public class FakeEmailSender : IEmailSender
+{
+    public ConcurrentQueue<EmailMessage> Sent { get; } = new();
+    public bool Fail { get; set; }
+
+    public Task SendAsync(EmailMessage message, CancellationToken ct = default)
+    {
+        if (Fail) throw new InvalidOperationException("SMTP down (simulated)");
+        Sent.Enqueue(message);
+        return Task.CompletedTask;
+    }
+
+    public List<EmailMessage> To(string address) => Sent.Where(m => m.To == address).ToList();
+
+    /// <summary>The token from the last link of this kind sent to the address.</summary>
+    public string LastToken(string address, string path)
+    {
+        var text = To(address).Last(m => m.Text.Contains(path)).Text;
+        var start = text.IndexOf(path + "?token=", StringComparison.Ordinal) + path.Length + 7;
+        var end = text.IndexOfAny(['\n', '\r', ' '], start);
+        return Uri.UnescapeDataString(end < 0 ? text[start..] : text[start..end]);
+    }
+}
+
+public class FakeBotsClient : IBotsClient
+{
+    public ConcurrentBag<Guid> Deleted { get; } = new();
+    public bool Fail { get; set; }
+    public List<MonthlyStats> Stats { get; set; } = new();
+
+    public Task DeleteTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        if (Fail) throw new HttpRequestException("bot service down (simulated)");
+        Deleted.Add(tenantId);
+        return Task.CompletedTask;
+    }
+
+    public Task<List<MonthlyStats>> MonthlyReportAsync(string period, CancellationToken ct = default) => Task.FromResult(Stats);
 }
 
 public static class TestDatabase
@@ -54,4 +114,11 @@ public static class TestDatabase
 
         return new NpgsqlConnectionStringBuilder(baseConnection) { Database = databaseName }.ConnectionString;
     }
+}
+
+/// <summary>All integration classes share one API instance and one test database.</summary>
+[CollectionDefinition(Name)]
+public class IdentityApiCollection : ICollectionFixture<IdentityApiFactory>
+{
+    public const string Name = "identity-api";
 }

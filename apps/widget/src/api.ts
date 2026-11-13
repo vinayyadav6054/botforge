@@ -11,6 +11,14 @@ export interface BotInfo {
   welcomeMessage: string;
   leadCapture?: LeadCapture;
   suggestedQuestions?: string[];
+  /** "Powered by BotForge": shown unless the business's plan removes it */
+  branding?: { show?: boolean; url?: string };
+}
+
+/** Sent with every message so the owner sees the whole visit as one conversation. */
+export interface SendContext {
+  conversationId?: string;
+  pageUrl?: string;
 }
 
 export interface LeadInput {
@@ -73,13 +81,13 @@ export class ChatApi {
   }
 
   /** Sends a message and streams the answer. Always ends with exactly one onDone or onError. */
-  async send(message: string, history: Turn[], handlers: StreamHandlers, signal?: AbortSignal): Promise<void> {
+  async send(message: string, history: Turn[], handlers: StreamHandlers, context: SendContext = {}, signal?: AbortSignal): Promise<void> {
     let res: Response;
     try {
       res = await fetch(this.url(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, history }),
+        body: JSON.stringify({ message, history, ...withoutEmpty(context) }),
         signal,
       });
     } catch {
@@ -134,4 +142,8 @@ function safeJson(s: string): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+function withoutEmpty(o: SendContext): SendContext {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => typeof v === "string" && v.length > 0));
 }

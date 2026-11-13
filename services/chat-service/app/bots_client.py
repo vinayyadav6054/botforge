@@ -23,3 +23,34 @@ async def create_lead(public_key: str, lead: dict) -> httpx.Response:
         headers={"X-Internal-Key": config.INTERNAL_API_KEY},
         json=lead,
     )
+
+
+async def consume_answer(public_key: str) -> tuple[bool, str | None]:
+    """Asks the bot service to count one AI answer against the plan. (allowed, reason: "limit" | "inactive")."""
+    response = await _client.post(
+        f"{config.BOTS_SERVICE_URL}/internal/bots/{public_key}/answers",
+        headers={"X-Internal-Key": config.INTERNAL_API_KEY},
+    )
+    response.raise_for_status()
+    body = response.json()
+    return bool(body.get("allowed")), body.get("reason")
+
+
+async def record_turn(public_key: str, turn: dict) -> None:
+    """Stores a question and its answer for the owner's conversation history."""
+    response = await _client.post(
+        f"{config.BOTS_SERVICE_URL}/internal/bots/{public_key}/conversations",
+        headers={"X-Internal-Key": config.INTERNAL_API_KEY},
+        json=turn,
+    )
+    if response.status_code >= 500:
+        response.raise_for_status()
+
+
+async def refund_answer(public_key: str) -> None:
+    """The AI call failed after the answer was counted; give it back."""
+    response = await _client.post(
+        f"{config.BOTS_SERVICE_URL}/internal/bots/{public_key}/answers/refund",
+        headers={"X-Internal-Key": config.INTERNAL_API_KEY},
+    )
+    response.raise_for_status()

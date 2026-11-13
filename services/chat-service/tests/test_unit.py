@@ -26,7 +26,8 @@ def parse_sse(text: str) -> list[tuple[str, dict]]:
 def fakes(monkeypatch):
     """Replace the bot lookup, retrieval and Gemini; record what they were called with."""
     state = {"bot": BOT, "chunks": [("We are closed on Sundays.", 0.9)], "tokens": ["Closed ", "on Sundays."],
-             "error": None, "retrieve_calls": [], "llm_calls": []}
+             "error": None, "retrieve_calls": [], "llm_calls": [],
+             "allowed": (True, None), "consumed": 0, "turns": []}
 
     async def resolve_bot(key):
         if isinstance(state["bot"], Exception):
@@ -44,6 +45,23 @@ def fakes(monkeypatch):
         if state["error"]:
             raise state["error"]
 
+    async def consume_answer(key):
+        if isinstance(state["allowed"], Exception):
+            raise state["allowed"]
+        state["consumed"] += 1
+        return state["allowed"]
+
+    async def record_turn(key, turn):
+        if isinstance(state.get("record_error"), Exception):
+            raise state["record_error"]
+        state["turns"].append(turn)
+
+    async def refund_answer(key):
+        state["consumed"] -= 1
+
+    monkeypatch.setattr(main, "refund_answer", refund_answer)
+    monkeypatch.setattr(main, "consume_answer", consume_answer)
+    monkeypatch.setattr(main, "record_turn", record_turn)
     monkeypatch.setattr(main, "resolve_bot", resolve_bot)
     monkeypatch.setattr(main, "retrieve", retrieve)
     monkeypatch.setattr(main, "stream_answer", stream_answer)
@@ -69,6 +87,7 @@ def test_info_returns_public_bot_data_only(client):
         "name": "Bakery Bot", "welcomeMessage": "Hi!",
         "leadCapture": {"enabled": False, "prompt": "", "afterMessages": 0},
         "suggestedQuestions": [],
+        "branding": {"show": True, "url": ""},
     }
 
 
@@ -194,7 +213,8 @@ def test_streams_meta_tokens_and_done(client, fakes):
     assert res.status_code == 200
     assert res.headers["content-type"].startswith("text/event-stream")
     events = parse_sse(res.text)
-    assert events[0] == ("meta", {"botName": "Bakery Bot", "sources": 1})
+    assert events[0][0] == "meta"
+    assert {k: v for k, v in events[0][1].items() if k != "conversationId"} == {"botName": "Bakery Bot", "sources": 1}
     assert "".join(d["text"] for e, d in events if e == "token") == "Closed on Sundays."
     assert events[-1] == ("done", {})
 
@@ -391,3 +411,100 @@ async def test_falls_back_to_other_models_when_main_model_stays_overloaded(monke
     assert await collect(llm.stream_answer("Bot", "q", [])) == ["answer"]
     assert tried == ["main", "main", "main", "backup-1", "backup-2"]   # duplicate "main" skipped
     assert no_sleep == [1.0, 3.0]
+
+
+# ---------- plans, usage and conversation history ----------
+
+def test_badge_follows_the_plan(client, fakes):
+    fakes["bot"] = {**BOT, "showBranding": False}
+    assert client.get(f"/chat/{KEY}/info").json()["branding"]["show"] is False
+
+
+def chat(client, **extra):
+    res = client.post(f"/chat/{KEY}", json={"message": "Open on Sunday?", **extra})
+    assert res.status_code == 200
+    return parse_sse(res.text)
+
+
+def test_each_ai_answer_is_counted_and_stored(client, fakes):
+    cid = str(uuid.uuid4())
+    events = chat(client, conversationId=cid, pageUrl="https://shop.example/contact")
+    assert events[0][1]["conversationId"] == cid
+    assert fakes["consumed"] == 1
+    assert fakes["turns"] == [{"conversationId": cid, "question": "Open on Sunday?", "answer": "Closed on Sundays.",
+                               "answered": True, "pageUrl": "https://shop.example/contact"}]
+
+
+def test_monthly_limit_reached_answers_politely_without_the_llm(client, fakes):
+    fakes["allowed"] = (False, "limit")
+    events = chat(client)
+    assert [e for e, _ in events] == ["meta", "token", "done"]
+    assert "limit" in events[1][1]["text"]
+    assert fakes["llm_calls"] == []
+    assert fakes["turns"] == []
+
+
+def test_inactive_plan_says_the_assistant_is_unavailable(client, fakes):
+    fakes["allowed"] = (False, "inactive")
+    events = chat(client)
+    assert "not available" in events[1][1]["text"]
+    assert fakes["llm_calls"] == []
+
+
+def test_usage_check_failure_does_not_block_visitors(client, fakes):
+    fakes["allowed"] = httpx.ConnectError("down")
+    events = chat(client)
+    assert [e for e, _ in events][-1] == "done"
+    assert len(fakes["llm_calls"]) == 1
+
+
+def test_unanswerable_questions_are_stored_as_unanswered_and_not_counted(client, fakes):
+    fakes["chunks"] = []
+    chat(client)
+    assert fakes["consumed"] == 0
+    assert fakes["turns"][0]["answered"] is False
+
+
+def test_history_storage_failure_does_not_break_the_answer(client, fakes):
+    fakes["record_error"] = httpx.ConnectError("down")
+    events = chat(client)
+    assert [e for e, _ in events][-1] == "done"
+
+
+def test_missing_conversation_id_gets_a_fresh_one(client, fakes):
+    events = chat(client)
+    assert uuid.UUID(events[0][1]["conversationId"])
+
+
+@pytest.mark.parametrize("cid", ["not-a-uuid", "x" * 36, "'; drop table"])
+def test_malformed_conversation_ids_are_422(client, cid):
+    assert client.post(f"/chat/{KEY}", json={"message": "hi", "conversationId": cid}).status_code == 422
+
+
+def test_failed_answers_are_not_stored(client, fakes):
+    fakes["error"] = RuntimeError("boom")
+    events = chat(client)
+    assert events[-1][0] == "error"
+    assert fakes["turns"] == []
+
+
+def test_failed_answers_are_given_back(client, fakes):
+    fakes["error"] = RuntimeError("timeout")
+    chat(client)
+    assert fakes["consumed"] == 0
+
+
+@pytest.mark.parametrize("answer, expected", [
+    ("I don't have that information. Please contact the business directly.", True),
+    ("Sorry, I do not have this information.", True),
+    ("I don’t have that information in my documents.", True),
+    ("The fee is ₹68,000 per year.", False),
+])
+def test_no_information_answers_are_detected(answer, expected):
+    assert main.says_no_information(answer) is expected
+
+
+def test_ai_saying_it_does_not_know_is_stored_as_unanswered(client, fakes):
+    fakes["tokens"] = ["I don't have that ", "information. Please contact us."]
+    chat(client)
+    assert fakes["turns"][0]["answered"] is False

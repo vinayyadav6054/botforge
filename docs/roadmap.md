@@ -8,9 +8,13 @@ What BotForge does today, and what can be added, ordered by how much each item h
 - Bots built from PDF, Word, text and Markdown files (RAG with pgvector + Gemini)
 - Embeddable website widget (one `<script>` tag), streamed answers
 - Lead capture: name, phone, course, email, page and transcript; statuses New / Contacted / Converted / Junk; CSV export
+- Plans (14-day trial, Starter, Business, Pro) with enforced limits, Razorpay subscriptions, admin page for manual payments
+- Password reset, email verification, monthly report email; conversation history with unanswered questions
+- "Powered by BotForge" badge (removed on Business and Pro), Privacy Policy, Terms, data export, account deletion
+- Landing page with live demo, demo website
 - Gateway with rate limits and CORS; free hosting guides (Render + Vercel, own server, Hugging Face)
 
-## Phase 1: needed before charging customers
+## Phase 1: needed before charging customers (done)
 
 | Feature | Why |
 |---|---|

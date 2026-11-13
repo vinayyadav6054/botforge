@@ -1,4 +1,4 @@
-﻿using Bots.Api.Data;
+using Bots.Api.Data;
 
 namespace Bots.Api;
 
@@ -139,6 +139,13 @@ public static class LeadRules
         System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
     /// <summary>Validates and cleans a lead. Returns an error message, or null and the cleaned values.</summary>
+    /// <summary>Keeps http(s) URLs without the query string (it may hold tokens); anything else becomes null.</summary>
+    public static string? CleanPageUrl(string? raw) =>
+        Uri.TryCreate(raw?.Trim(), UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            ? DocumentRules.Truncate(uri.GetLeftPart(UriPartial.Path), MaxPageUrlLength)
+            : null;
+
     public static string? Validate(CreateLeadRequest req, out Lead cleaned)
     {
         cleaned = new Lead();
@@ -157,10 +164,7 @@ public static class LeadRules
             return $"Course must be at most {MaxCourseLength} characters.";
 
         // page URL is informational only: keep http(s) URLs, silently drop anything else
-        string? pageUrl = null;
-        if (Uri.TryCreate(req.PageUrl?.Trim(), UriKind.Absolute, out var uri) &&
-            (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
-            pageUrl = DocumentRules.Truncate(uri.GetLeftPart(UriPartial.Path), MaxPageUrlLength); // no query: may hold tokens
+        var pageUrl = CleanPageUrl(req.PageUrl);
 
         var turns = (req.Transcript ?? [])
             .Where(t => (t.Role == "user" || t.Role == "assistant") && !string.IsNullOrWhiteSpace(t.Text))

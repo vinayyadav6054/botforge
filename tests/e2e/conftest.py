@@ -20,9 +20,23 @@ def stack_is_running():
         pytest.exit(f"Gateway not reachable at {GATEWAY} - start the stack first ({ex})", returncode=2)
 
 
+class PatientTransport(httpx.HTTPTransport):
+    """The suite signs up more accounts per minute than the gateway's per-IP auth limit allows (20/min):
+    wait for the limit window to pass instead of failing. Tests that check the limit itself use their own client."""
+
+    def handle_request(self, request):
+        for _ in range(4):
+            response = super().handle_request(request)
+            if response.status_code != 429 or not request.url.path.startswith("/api/auth/"):
+                return response
+            response.close()
+            time.sleep(20)
+        return super().handle_request(request)
+
+
 @pytest.fixture(scope="session")
 def http():
-    with httpx.Client(base_url=API, timeout=60) as c:
+    with httpx.Client(base_url=API, timeout=60, transport=PatientTransport()) as c:
         yield c
 
 
@@ -79,10 +93,13 @@ def tenant_factory(http):
     return lambda name="E2E Co": Tenant(http, name)
 
 
-def chat(http: httpx.Client, public_key: str, message: str, history=None) -> dict:
+def chat(http: httpx.Client, public_key: str, message: str, history=None, conversation_id=None) -> dict:
     """Sends a chat message and collects the SSE stream into {meta, text, error, done}."""
     result = {"meta": None, "text": "", "error": None, "done": False}
-    with http.stream("POST", f"/chat/{public_key}", json={"message": message, "history": history or []}) as res:
+    body = {"message": message, "history": history or []}
+    if conversation_id:
+        body["conversationId"] = conversation_id
+    with http.stream("POST", f"/chat/{public_key}", json=body) as res:
         assert res.status_code == 200, res.read()
         assert res.headers["content-type"].startswith("text/event-stream")
         event = None

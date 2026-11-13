@@ -43,7 +43,9 @@ SITE_ADDRESS=$site
 GEMINI_API_KEY=$key
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 JWT_KEY=$(openssl rand -base64 48 | tr -d '\n')
+ADMIN_API_KEY=$(openssl rand -hex 24)
 EOF
+  echo "Admin page key (open https://$site/admin): $(grep '^ADMIN_API_KEY=' .env | cut -d= -f2)"
 fi
 
 echo "==> Build and start (the first build takes 10-20 minutes)"

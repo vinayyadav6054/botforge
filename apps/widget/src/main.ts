@@ -1,4 +1,4 @@
-import { ChatApi, LeadCapture, Turn } from "./api";
+import { BotInfo, ChatApi, LeadCapture, Turn } from "./api";
 import { css } from "./styles";
 
 export interface Options {
@@ -56,6 +56,7 @@ export function mount(opts: Options): Widget {
   const historyKey = `botforge:${opts.botKey}:history`;
   const leadKey = `botforge:${opts.botKey}:lead`;
   const greetingKey = `botforge:${opts.botKey}:greeted`;
+  const conversationKey = `botforge:${opts.botKey}:conversation`;
 
   const host = document.createElement("div");
   host.setAttribute("data-botforge", "");
@@ -81,7 +82,7 @@ export function mount(opts: Options): Widget {
           <button class="send" type="submit" aria-label="Send">${SEND_ICON}</button>
         </div>
       </form>
-      <div class="footer">⚡ Powered by BotForge</div>
+      <div class="footer" hidden></div>
     </section>`;
   document.body.appendChild(host);
 
@@ -97,6 +98,7 @@ export function mount(opts: Options): Widget {
   const avatar = $<HTMLElement>(".avatar");
   const greeting = $<HTMLElement>(".greeting");
   const badge = $<HTMLElement>(".badge");
+  const footer = $<HTMLElement>(".footer");
 
   let history: Turn[] = loadHistory(historyKey);
   let busy = false;
@@ -128,6 +130,24 @@ export function mount(opts: Options): Widget {
     list.appendChild(row);
     list.scrollTop = list.scrollHeight;
     return el;
+  }
+
+  function showBranding(branding: BotInfo["branding"]) {
+    if (branding?.show === false) return;
+    const url = typeof branding?.url === "string" && /^https?:\/\//i.test(branding.url) ? branding.url : "";
+    const label = "⚡ Powered by BotForge";
+    footer.textContent = "";
+    if (url) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = label;
+      footer.appendChild(a);
+    } else {
+      footer.textContent = label;
+    }
+    footer.hidden = false;
   }
 
   function showChips(questions: string[]) {
@@ -168,6 +188,7 @@ export function mount(opts: Options): Widget {
       short = initials(info.name);
       if (short) avatar.textContent = short;
       lead = info.leadCapture?.enabled ? info.leadCapture : null;
+      showBranding(info.branding);
       talk.hidden = !lead || leadState === "done";
       if (!history.length) {
         bubble("bot", info.welcomeMessage);
@@ -225,7 +246,7 @@ export function mount(opts: Options): Widget {
         answered += 1;
         maybeOfferLead();
       },
-    });
+    }, { conversationId: conversationId(conversationKey), pageUrl: location.origin + location.pathname });
 
     busy = false;
     sendBtn.disabled = false;
@@ -409,6 +430,25 @@ export function mount(opts: Options): Widget {
   });
 
   return { open: () => setOpen(true), close: () => setOpen(false), ask };
+}
+
+/** One id per visitor session and bot; kept in sessionStorage so a page reload continues the same conversation. */
+export function conversationId(key: string): string {
+  const existing = loadFlag(key);
+  if (existing && /^[0-9a-f-]{36}$/i.test(existing)) return existing;
+  const id = newUuid();
+  saveFlag(key, id);
+  return id;
+}
+
+function newUuid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 function loadFlag(key: string): string | null {

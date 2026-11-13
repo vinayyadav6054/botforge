@@ -42,5 +42,9 @@ for origin in "${origins[@]}"; do
 done
 [ "$i" -gt 0 ] || echo "WARNING: DASHBOARD_URL is not set, so the dashboard cannot log in yet." >&2
 
+# email links and the widget badge point at the (first) dashboard address unless PUBLIC_URL says otherwise
+[ -n "${PUBLIC_URL:-}" ] || PUBLIC_URL="${Gateway__DashboardOrigins__0:-}"
+. /app/deploy/common-env.sh
+
 mkdir -p /data/storage
 exec supervisord -c /app/deploy/supervisord.conf

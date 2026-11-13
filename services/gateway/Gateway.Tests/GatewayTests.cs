@@ -92,6 +92,11 @@ public class GatewayTests(GatewayFactory factory) : IClassFixture<GatewayFactory
     [InlineData("/api/bots", "/bots")]
     [InlineData("/api/bots/123/documents?x=1", "/bots/123/documents")]
     [InlineData("/api/chat/bk_abc/info", "/chat/bk_abc/info")]
+    [InlineData("/api/account", "/account")]
+    [InlineData("/api/account/export", "/account/export")]
+    [InlineData("/api/billing/razorpay/webhook", "/billing/razorpay/webhook")]
+    [InlineData("/api/admin/tenants", "/admin/tenants")]
+    [InlineData("/api/admin/subscriptions/abc", "/admin/subscriptions/abc")]
     public async Task Strips_the_api_prefix_when_forwarding(string incoming, string forwardedPath)
     {
         var res = await _client.GetAsync(incoming);

@@ -37,6 +37,19 @@ services:
       JWT_KEY: ${JWT_KEY:?set JWT_KEY in deploy/oracle/.env}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
       GEMINI_FALLBACK_MODELS: ${GEMINI_FALLBACK_MODELS:-gemini-flash-latest}
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      RAZORPAY_PLAN_STARTER: ${RAZORPAY_PLAN_STARTER:-}
+      RAZORPAY_PLAN_BUSINESS: ${RAZORPAY_PLAN_BUSINESS:-}
+      RAZORPAY_PLAN_PRO: ${RAZORPAY_PLAN_PRO:-}
     volumes:
       - appdata:/data          # uploaded files + message queue survive restarts
 

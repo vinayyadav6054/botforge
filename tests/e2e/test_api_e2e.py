@@ -153,7 +153,9 @@ def test_bot_settings_update_reaches_the_widget(http, tenant_factory):
     res = owner.put(f"/bots/{bot['id']}", json={"name": "New Name", "welcomeMessage": "New welcome",
                                                 "suggestedQuestions": [" Fees? ", "", "Timings?"]})
     assert res.status_code == 200
-    assert http.get(f"/chat/{bot['publicKey']}/info").json() == {
+    info = http.get(f"/chat/{bot['publicKey']}/info").json()
+    assert info.pop("branding")["show"] is True   # trial plan keeps the badge
+    assert info == {
         "name": "New Name", "welcomeMessage": "New welcome",
         "leadCapture": {"enabled": False, "prompt": bot["leadPrompt"], "afterMessages": 2},
         "suggestedQuestions": ["Fees?", "Timings?"],

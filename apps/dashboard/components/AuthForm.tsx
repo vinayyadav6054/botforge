@@ -93,6 +93,16 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={isRegister ? "new-password" : "current-password"} />
           </div>
+          {!isRegister && (
+            <p className="small" style={{ margin: "-6px 0 14px", textAlign: "right" }}>
+              <Link href="/forgot-password">Forgot password?</Link>
+            </p>
+          )}
+          {isRegister && (
+            <p className="small muted" style={{ margin: "-4px 0 14px" }}>
+              By creating an account you agree to the <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.
+            </p>
+          )}
           <button className="btn block" type="submit" disabled={busy}>
             {busy ? "Please wait..." : isRegister ? "Create account" : "Log in"}
           </button>

@@ -1,6 +1,7 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using Bots.Api;
+using Bots.Api.Billing;
 using Bots.Api.Data;
 using Bots.Api.Messaging;
 using Bots.Api.Storage;
@@ -30,6 +31,11 @@ builder.Services.PostConfigure<StorageOptions>(o =>
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection("RabbitMq"));
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<SubscriptionService>();
+builder.Services.Configure<RazorpayOptions>(builder.Configuration.GetSection("Razorpay"));
+builder.Services.AddHttpClient<IRazorpayClient, RazorpayClient>(c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddHostedService<ConversationCleanup>();
 if (builder.Configuration.GetValue("RabbitMq:ConsumeStatusEvents", true))
     builder.Services.AddHostedService<DocumentStatusConsumer>();
 
@@ -75,10 +81,12 @@ var bots = app.MapGroup("/bots")
         return await next(ctx);
     });
 
-bots.MapPost("/", async (CreateBotRequest req, AppDbContext db, ITenantContext tenant) =>
+bots.MapPost("/", async (CreateBotRequest req, AppDbContext db, ITenantContext tenant, SubscriptionService subs) =>
 {
     var error = BotRules.Validate(req.Name, req.WelcomeMessage) ?? BotRules.ValidateQuestions(req.SuggestedQuestions);
     if (error is not null) return Results.BadRequest(new { error });
+    if (await subs.CheckBotLimitAsync(tenant.TenantId) is { } limit)
+        return Results.Json(new { error = limit, code = "plan_limit" }, statusCode: StatusCodes.Status402PaymentRequired);
 
     var bot = new Bot
     {
@@ -161,10 +169,12 @@ bots.MapGet("/{botId:guid}/documents/{docId:guid}", async (Guid botId, Guid docI
 
 bots.MapPost("/{botId:guid}/documents", async (
     Guid botId, IFormFile? file, AppDbContext db, ITenantContext tenant,
-    IFileStorage storage, IEventPublisher publisher, ILogger<Program> log) =>
+    IFileStorage storage, IEventPublisher publisher, SubscriptionService subs, ILogger<Program> log) =>
 {
     // the global filter means a bot of another tenant simply "does not exist" here
     if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
+    if (await subs.CheckDocumentLimitAsync(tenant.TenantId) is { } limit)
+        return Results.Json(new { error = limit, code = "plan_limit" }, statusCode: StatusCodes.Status402PaymentRequired);
 
     if (file is null) return Results.BadRequest(new { error = "Send the file as multipart form field 'file'." });
     if (file.Length == 0) return Results.BadRequest(new { error = "File is empty." });
@@ -283,11 +293,46 @@ bots.MapGet("/{botId:guid}/leads/export", async (Guid botId, AppDbContext db) =>
     return Results.File(bytes, "text/csv; charset=utf-8", $"leads-{DateTime.UtcNow:yyyy-MM-dd}.csv");
 });
 
+// ---------- conversations (dashboard) ----------
+
+bots.MapGet("/{botId:guid}/conversations", async (Guid botId, DateTime? before, int? take, AppDbContext db) =>
+{
+    if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
+    var size = Math.Clamp(take ?? 30, 1, 100);
+    var query = db.Conversations.Where(c => c.BotId == botId);
+    if (before is { } b) query = query.Where(c => c.LastMessageAt < b.ToUniversalTime());
+    var list = await query.OrderByDescending(c => c.LastMessageAt).Take(size)
+        .Select(c => new ConversationSummaryDto(c.Id, c.StartedAt, c.LastMessageAt, c.MessageCount, c.UnansweredCount,
+            c.Messages.Where(m => m.Role == "user").OrderBy(m => m.CreatedAt).Select(m => m.Text).FirstOrDefault(),
+            c.PageUrl))
+        .ToListAsync();
+    return Results.Ok(list);
+});
+
+bots.MapGet("/{botId:guid}/conversations/{conversationId:guid}", async (Guid botId, Guid conversationId, AppDbContext db) =>
+{
+    var c = await db.Conversations.Include(x => x.Messages).FirstOrDefaultAsync(x => x.Id == conversationId && x.BotId == botId);
+    if (c is null) return Results.NotFound();
+    return Results.Ok(new ConversationDto(c.Id, c.StartedAt, c.LastMessageAt, c.PageUrl,
+        c.Messages.OrderBy(m => m.CreatedAt).ThenBy(m => m.Role == "user" ? 0 : 1)
+            .Select(m => new ConversationMessageDto(m.Role, m.Text, m.Answered, m.CreatedAt)).ToList()));
+});
+
+// a visitor may ask for their chat to be removed
+bots.MapDelete("/{botId:guid}/conversations/{conversationId:guid}", async (Guid botId, Guid conversationId, AppDbContext db) =>
+{
+    var removed = await db.Conversations.Where(c => c.Id == conversationId && c.BotId == botId).ExecuteDeleteAsync();
+    return removed == 0 ? Results.NotFound() : Results.NoContent();
+});
+
+app.MapAccountEndpoints();
+
 // ---------- internal endpoints for other services (never expose these through the public gateway) ----------
 
-app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest request, AppDbContext db, IConfiguration config) =>
+app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest request, AppDbContext db, IConfiguration config,
+    SubscriptionService subs) =>
 {
-    if (!HasInternalKey(request, config)) return Results.Unauthorized();
+    if (!KeyCheck.HasInternalKey(request, config)) return Results.Unauthorized();
 
     // no tenant in context for service-to-service calls, so bypass the filter on purpose
     var bot = await db.Bots.IgnoreQueryFilters()
@@ -299,15 +344,106 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
             suggestedQuestions = b.SuggestedQuestions
         })
         .FirstOrDefaultAsync();
+    if (bot is null) return Results.NotFound();
 
-    return bot is null ? Results.NotFound() : Results.Ok(bot);
+    var plan = await subs.EffectivePlanAsync(bot.tenantId);
+    return Results.Ok(new
+    {
+        bot.botId, bot.tenantId, bot.name, bot.welcomeMessage, bot.leadCapture, bot.suggestedQuestions,
+        showBranding = !plan.RemoveBranding,
+        active = plan.AnswersPerMonth > 0
+    });
+});
+
+// the chat service asks before every AI answer: counts it if the plan's monthly limit allows
+app.MapPost("/internal/bots/{publicKey}/answers", async (string publicKey, HttpRequest request, AppDbContext db,
+    IConfiguration config, SubscriptionService subs) =>
+{
+    if (!KeyCheck.HasInternalKey(request, config)) return Results.Unauthorized();
+    var tenantId = await db.Bots.IgnoreQueryFilters().Where(b => b.PublicKey == publicKey)
+        .Select(b => (Guid?)b.TenantId).FirstOrDefaultAsync();
+    if (tenantId is null) return Results.NotFound();
+
+    var plan = await subs.EffectivePlanAsync(tenantId.Value);
+    if (plan.AnswersPerMonth == 0) return Results.Ok(new { allowed = false, reason = "inactive" });
+    var allowed = await subs.TryConsumeAnswerAsync(tenantId.Value, plan.AnswersPerMonth);
+    return Results.Ok(new { allowed, reason = allowed ? null : "limit" });
+});
+
+// the AI call failed after the answer was counted: the visitor got an error, so it does not count
+app.MapPost("/internal/bots/{publicKey}/answers/refund", async (string publicKey, HttpRequest request, AppDbContext db,
+    IConfiguration config, SubscriptionService subs) =>
+{
+    if (!KeyCheck.HasInternalKey(request, config)) return Results.Unauthorized();
+    var tenantId = await db.Bots.IgnoreQueryFilters().Where(b => b.PublicKey == publicKey)
+        .Select(b => (Guid?)b.TenantId).FirstOrDefaultAsync();
+    if (tenantId is null) return Results.NotFound();
+    await subs.RefundAnswerAsync(tenantId.Value);
+    return Results.NoContent();
+});
+
+// the chat service stores each question and answer so the owner can read the conversations
+app.MapPost("/internal/bots/{publicKey}/conversations", async (string publicKey, RecordTurnRequest req, HttpRequest request,
+    AppDbContext db, IConfiguration config, TimeProvider clock) =>
+{
+    if (!KeyCheck.HasInternalKey(request, config)) return Results.Unauthorized();
+    if (ConversationRules.Validate(req) is { } error) return Results.BadRequest(new { error });
+
+    var bot = await db.Bots.IgnoreQueryFilters().Where(b => b.PublicKey == publicKey)
+        .Select(b => new { b.Id, b.TenantId }).FirstOrDefaultAsync();
+    if (bot is null) return Results.NotFound();
+
+    var now = clock.GetUtcNow().UtcDateTime;
+    var conversation = await db.Conversations.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == req.ConversationId);
+    if (conversation is null)
+    {
+        conversation = new Conversation
+        {
+            Id = req.ConversationId!.Value, TenantId = bot.TenantId, BotId = bot.Id,
+            PageUrl = LeadRules.CleanPageUrl(req.PageUrl), StartedAt = now
+        };
+        db.Conversations.Add(conversation);
+    }
+    else if (conversation.BotId != bot.Id)
+    {
+        return Results.Conflict(new { error = "This conversation belongs to another bot." });
+    }
+    else if (conversation.MessageCount >= ConversationRules.MaxMessagesPerConversation)
+    {
+        return Results.Ok(new { stored = false });
+    }
+
+    db.ConversationMessages.AddRange(
+        new ConversationMessage
+        {
+            ConversationId = conversation.Id, TenantId = bot.TenantId, Role = "user", Answered = req.Answered, CreatedAt = now,
+            Text = DocumentRules.Truncate(req.Question!.Trim(), ConversationRules.MaxQuestionChars)
+        },
+        new ConversationMessage
+        {
+            ConversationId = conversation.Id, TenantId = bot.TenantId, Role = "assistant", Answered = req.Answered, CreatedAt = now,
+            Text = DocumentRules.Truncate(req.Answer!.Trim(), ConversationRules.MaxAnswerChars)
+        });
+    conversation.MessageCount += 2;
+    if (!req.Answered) conversation.UnansweredCount += 1;
+    conversation.LastMessageAt = now;
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+    {
+        // the first two turns of a new conversation arrived at the same time; the visitor will not notice
+        return Results.Conflict(new { error = "Retry." });
+    }
+    return Results.Ok(new { stored = true });
 });
 
 // a website visitor left their details in the widget (forwarded by the chat service)
 app.MapPost("/internal/bots/{publicKey}/leads", async (
     string publicKey, CreateLeadRequest req, HttpRequest request, AppDbContext db, IConfiguration config) =>
 {
-    if (!HasInternalKey(request, config)) return Results.Unauthorized();
+    if (!KeyCheck.HasInternalKey(request, config)) return Results.Unauthorized();
 
     var bot = await db.Bots.IgnoreQueryFilters().FirstOrDefaultAsync(b => b.PublicKey == publicKey);
     if (bot is null) return Results.NotFound();
@@ -330,14 +466,6 @@ app.MapPost("/internal/bots/{publicKey}/leads", async (
 });
 
 app.Run();
-
-static bool HasInternalKey(HttpRequest request, IConfiguration config)
-{
-    var expected = config["Internal:ApiKey"] ?? "";
-    var provided = request.Headers["X-Internal-Key"].ToString();
-    return expected.Length > 0 &&
-           CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected));
-}
 
 static async Task<bool> TryPublishAsync<T>(IEventPublisher publisher, ILogger log, string routingKey, T message)
 {

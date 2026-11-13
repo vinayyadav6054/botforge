@@ -157,6 +157,100 @@ namespace Bots.Api.Migrations
                     b.ToTable("documents", "bots");
                 });
 
+            modelBuilder.Entity("Bots.Api.Data.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bot_id");
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_message_at");
+
+                    b.Property<int>("MessageCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("message_count");
+
+                    b.Property<string>("PageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("page_url");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("UnansweredCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("unanswered_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_conversations");
+
+                    b.HasIndex("BotId")
+                        .HasDatabaseName("ix_conversations_bot_id");
+
+                    b.HasIndex("LastMessageAt")
+                        .HasDatabaseName("ix_conversations_last_message_at");
+
+                    b.HasIndex("TenantId", "BotId", "LastMessageAt")
+                        .HasDatabaseName("ix_conversations_tenant_id_bot_id_last_message_at");
+
+                    b.ToTable("conversations", "bots");
+                });
+
+            modelBuilder.Entity("Bots.Api.Data.ConversationMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Answered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("answered");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_conversation_messages");
+
+                    b.HasIndex("ConversationId", "CreatedAt")
+                        .HasDatabaseName("ix_conversation_messages_conversation_id_created_at");
+
+                    b.ToTable("conversation_messages", "bots");
+                });
+
             modelBuilder.Entity("Bots.Api.Data.Lead", b =>
                 {
                     b.Property<Guid>("Id")
@@ -230,6 +324,81 @@ namespace Bots.Api.Migrations
                     b.ToTable("leads", "bots");
                 });
 
+            modelBuilder.Entity("Bots.Api.Data.Subscription", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("CurrentPeriodEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_end");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("plan");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderSubscriptionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("provider_subscription_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TrialEndsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("trial_ends_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("TenantId")
+                        .HasName("pk_subscriptions");
+
+                    b.HasIndex("ProviderSubscriptionId")
+                        .HasDatabaseName("ix_subscriptions_provider_subscription_id");
+
+                    b.ToTable("subscriptions", "bots");
+                });
+
+            modelBuilder.Entity("Bots.Api.Data.UsageCounter", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Period")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("period");
+
+                    b.Property<int>("Answers")
+                        .HasColumnType("integer")
+                        .HasColumnName("answers");
+
+                    b.HasKey("TenantId", "Period")
+                        .HasName("pk_usage_counters");
+
+                    b.ToTable("usage_counters", "bots");
+                });
+
             modelBuilder.Entity("Bots.Api.Data.BotDocument", b =>
                 {
                     b.HasOne("Bots.Api.Data.Bot", null)
@@ -240,6 +409,26 @@ namespace Bots.Api.Migrations
                         .HasConstraintName("fk_documents_bots_bot_id");
                 });
 
+            modelBuilder.Entity("Bots.Api.Data.Conversation", b =>
+                {
+                    b.HasOne("Bots.Api.Data.Bot", null)
+                        .WithMany()
+                        .HasForeignKey("BotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversations_bots_bot_id");
+                });
+
+            modelBuilder.Entity("Bots.Api.Data.ConversationMessage", b =>
+                {
+                    b.HasOne("Bots.Api.Data.Conversation", null)
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversation_messages_conversations_conversation_id");
+                });
+
             modelBuilder.Entity("Bots.Api.Data.Lead", b =>
                 {
                     b.HasOne("Bots.Api.Data.Bot", null)
@@ -248,6 +437,11 @@ namespace Bots.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_leads_bots_bot_id");
+                });
+
+            modelBuilder.Entity("Bots.Api.Data.Conversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

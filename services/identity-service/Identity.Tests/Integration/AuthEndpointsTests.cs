@@ -6,7 +6,8 @@ using System.Text.Json;
 namespace Identity.Tests.Integration;
 
 [Trait("Level", "Integration")]
-public class AuthEndpointsTests(IdentityApiFactory factory) : IClassFixture<IdentityApiFactory>
+[Collection(IdentityApiCollection.Name)]
+public class AuthEndpointsTests(IdentityApiFactory factory)
 {
     private readonly HttpClient _client = factory.CreateClient();
 

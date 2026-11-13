@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DragEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import ConversationsSection from "@/components/ConversationsSection";
 import LeadsSection from "@/components/LeadsSection";
 import Shell from "@/components/Shell";
 import { api, Bot, BotDocument, gatewayOrigin } from "@/lib/api";
@@ -207,7 +208,8 @@ function BotDetail({ id }: { id: string }) {
   return (
     <>
       <Link href="/bots" className="crumb small">← All bots</Link>
-      <div className="page-head">
+      {/* the button sits next to the name: on the right the open chat panel would cover it */}
+      <div className="page-head start">
         <div className="row" style={{ gap: 14, alignItems: "center" }}>
           <span className="bot-avatar" aria-hidden>{bot.name.slice(0, 1).toUpperCase()}</span>
           <div>
@@ -261,6 +263,7 @@ function BotDetail({ id }: { id: string }) {
         <nav className="side-nav" aria-label="Bot sections">
           <a href="#knowledge">📄 Knowledge</a>
           <a href="#leads">📞 Leads</a>
+          <a href="#conversations">💬 Conversations</a>
           <a href="#install">🧩 Install</a>
           <a href="#settings">⚙️ Settings</a>
           <a href="#danger">⚠️ Danger zone</a>
@@ -341,6 +344,8 @@ function BotDetail({ id }: { id: string }) {
           <div id="leads" style={{ scrollMarginTop: 84 }}>
             <LeadsSection botId={id} enabled={bot.leadCaptureEnabled} />
           </div>
+
+          <ConversationsSection botId={id} />
 
           <section className="card" id="install">
             <div className="card-head">

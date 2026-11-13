@@ -78,6 +78,31 @@ Sign up at https://neon.tech, create a project and copy the connection string fr
 In Render → your service → **Environment**, set `DASHBOARD_URL` to the Vercel URL (no trailing slash; several
 addresses may be given comma-separated) and save. Render redeploys. Then open the Vercel URL and register.
 
+## 6. Selling: admin, email and payments (optional, add any time)
+
+Add these in Render → **Environment**. Each one switches on a feature; everything works without them.
+
+| Key | What it does |
+|---|---|
+| `ADMIN_API_KEY` | A long random value. Opens **/admin** on your dashboard: every business, its plan and usage, and a button to activate a plan after a UPI/bank payment. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Sends real emails: confirm email, password reset, monthly report. Free options: Brevo (300/day) or a Gmail account with an app password (`smtp.gmail.com`, 587). Without them the emails are only written to the Render log. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Online payments (Razorpay → Account & Settings → API keys). |
+| `RAZORPAY_PLAN_STARTER`, `RAZORPAY_PLAN_BUSINESS`, `RAZORPAY_PLAN_PRO` | The `plan_...` ids. Create three monthly plans in Razorpay → Subscriptions → Plans (₹499, ₹1,499, ₹3,999). |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay → Webhooks → add `https://<render-url>/api/billing/razorpay/webhook` with the events `subscription.activated`, `subscription.charged`, `subscription.halted`, `subscription.cancelled`, `subscription.completed`, and the same secret here. |
+| `PUBLIC_URL` | Only if email links should use another address than the first `DASHBOARD_URL`. |
+
+Plans and limits (`services/bot-service/Bots.Api/Billing/Plans.cs`; prices also in `apps/dashboard/lib/site.ts`):
+
+| Plan | Price | Bots | Documents | Answers / month | Badge |
+|---|---|---|---|---|---|
+| Free trial (14 days) | – | 3 | 20 | 300 | shown |
+| Starter | ₹499 | 1 | 10 | 500 | shown |
+| Business | ₹1,499 | 3 | 50 | 3,000 | removed |
+| Pro | ₹3,999 | 10 | 200 | 15,000 | removed |
+
+After the trial or a plan ends, the bots stop answering (visitors are asked to contact the business) and no new bots or
+documents can be added; all data stays available.
+
 ## Updating
 
 Push to `main`: Vercel and Render both redeploy automatically.

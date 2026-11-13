@@ -123,6 +123,14 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | GET | `/bots/{id}/leads` | JWT | enquiries, newest first (max 1000) |
 | PATCH/DELETE | `/bots/{id}/leads/{leadId}` | JWT | `{status: New\|Contacted\|Converted\|Junk}` / delete (data removal requests) |
 | GET | `/bots/{id}/leads/export` | JWT | CSV (UTF-8 with BOM, formula-safe) |
+| GET/DELETE | `/bots/{id}/conversations[/{cid}]` | JWT | visitor chats (newest first, `?before=&take=`), one chat, delete |
+| POST | `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email` | – | `{email}` / `{token, password}` / `{token}` |
+| POST | `/auth/resend-verification`, `/auth/delete-account` | JWT | – / `{password}` (deletes everything) |
+| GET | `/auth/export`, `/account/export` | JWT | all data of the business (JSON) |
+| GET | `/account` | JWT | plan, limits, this month's usage |
+| POST | `/account/checkout`, `/account/cancel` | JWT | `{plan}` → `{url}` Razorpay payment page / stop renewal |
+| POST | `/billing/razorpay/webhook` | Razorpay signature | subscription events |
+| GET/PUT | `/admin/tenants`, `/admin/subscriptions[/{tenantId}]` | `X-Admin-Key` | platform owner: businesses, plans; `{plan, months}` or `{trialDays}` |
 
 ## Deploy (free)
 

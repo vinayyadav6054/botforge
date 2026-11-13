@@ -92,3 +92,15 @@ describe("ChatApi", () => {
     expect(c.done).toBe(1);
   });
 });
+
+describe("send context", () => {
+  it("sends the conversation id and page with each message", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("event: done\ndata: {}\n\n", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const handlers = { onToken: vi.fn(), onError: vi.fn(), onDone: vi.fn() };
+    await new ChatApi("http://gw/api", "bk_x").send("q", [], handlers, { conversationId: "c-1", pageUrl: "https://shop.example/" });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      message: "q", history: [], conversationId: "c-1", pageUrl: "https://shop.example/",
+    });
+  });
+});

@@ -186,4 +186,111 @@ export const api = {
   deleteLead: (botId: string, leadId: string) =>
     request<void>(`/bots/${botId}/leads/${leadId}`, { method: "DELETE" }),
   exportLeads: async (botId: string) => (await send(`/bots/${botId}/leads/export`)).blob(),
+
+  // conversations
+  listConversations: (botId: string, before?: string) =>
+    request<ConversationSummary[]>(`/bots/${botId}/conversations?take=20${before ? `&before=${encodeURIComponent(before)}` : ""}`),
+  getConversation: (botId: string, id: string) => request<Conversation>(`/bots/${botId}/conversations/${id}`),
+  deleteConversation: (botId: string, id: string) =>
+    request<void>(`/bots/${botId}/conversations/${id}`, { method: "DELETE" }),
+
+  // account, plan and billing
+  me: () => request<Me>("/auth/me"),
+  account: () => request<Account>("/account"),
+  checkout: (plan: string) => request<{ url: string }>("/account/checkout", { method: "POST", body: JSON.stringify({ plan }) }),
+  cancelSubscription: () => request<void>("/account/cancel", { method: "POST" }),
+  /** Everything stored about the business: bot data from /account/export plus the account itself. */
+  exportAll: async () => {
+    const [account, data] = await Promise.all([request<object>("/auth/export"), request<object>("/account/export")]);
+    return new Blob([JSON.stringify({ account, ...data }, null, 2)], { type: "application/json" });
+  },
+  deleteAccount: (password: string) =>
+    request<void>("/auth/delete-account", { method: "POST", body: JSON.stringify({ password }) }),
+  resendVerification: () => request<{ sent: boolean; emailVerified: boolean }>("/auth/resend-verification", { method: "POST" }),
+
+  // signed-out flows
+  verifyEmail: (token: string) =>
+    request<{ email: string }>("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) }, false),
+  forgotPassword: (email: string) =>
+    request<void>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }, false),
+  resetPassword: (token: string, password: string) => authenticate("/auth/reset-password", { token, password }),
+
+  // platform admin (X-Admin-Key, not a login)
+  adminTenants: (key: string) => request<AdminTenant[]>("/admin/tenants", { headers: { "X-Admin-Key": key } }, false),
+  adminSubscriptions: (key: string) =>
+    request<AdminSubscription[]>("/admin/subscriptions", { headers: { "X-Admin-Key": key } }, false),
+  adminSetPlan: (key: string, tenantId: string, body: { plan?: string; months?: number; trialDays?: number }) =>
+    request<object>(`/admin/subscriptions/${tenantId}`, { method: "PUT", headers: { "X-Admin-Key": key }, body: JSON.stringify(body) }, false),
 };
+
+export interface ConversationSummary {
+  id: string;
+  startedAt: string;
+  lastMessageAt: string;
+  messageCount: number;
+  unansweredCount: number;
+  firstQuestion: string | null;
+  pageUrl: string | null;
+}
+
+export interface Conversation {
+  id: string;
+  startedAt: string;
+  lastMessageAt: string;
+  pageUrl: string | null;
+  messages: { role: "user" | "assistant"; text: string; answered: boolean; createdAt: string }[];
+}
+
+export interface Me {
+  userId: string;
+  email: string;
+  tenantId: string;
+  role: string;
+  tenantName: string;
+  emailVerified: boolean;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  bots: number;
+  documents: number;
+  answersPerMonth: number;
+  removeBranding: boolean;
+  priceInr: number;
+}
+
+export interface Account {
+  plan: Plan;
+  subscription: {
+    plan: string;
+    status: "trialing" | "active" | "halted" | "cancelled";
+    trialEndsAt: string;
+    currentPeriodEnd: string | null;
+    provider: string | null;
+  };
+  usage: { period: string; answers: number; bots: number; documents: number };
+  plans: Plan[];
+  /** plan ids that can be paid online right now (Razorpay configured) */
+  onlinePayment: string[];
+}
+
+export interface AdminTenant {
+  tenantId: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  owner: { email: string; emailVerified: boolean } | null;
+}
+
+export interface AdminSubscription {
+  tenantId: string;
+  plan: string;
+  status: string;
+  effectivePlan: string;
+  trialEndsAt: string;
+  currentPeriodEnd: string | null;
+  provider: string | null;
+  answersThisMonth: number;
+  bots: number;
+}

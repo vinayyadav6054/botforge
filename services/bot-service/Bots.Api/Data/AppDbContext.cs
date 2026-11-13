@@ -1,4 +1,4 @@
-﻿using Bots.Api.Tenancy;
+using Bots.Api.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bots.Api.Data;
@@ -18,6 +18,10 @@ public class AppDbContext : DbContext
     public DbSet<Bot> Bots => Set<Bot>();
     public DbSet<BotDocument> Documents => Set<BotDocument>();
     public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<UsageCounter> Usage => Set<UsageCounter>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ConversationMessage> ConversationMessages => Set<ConversationMessage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -62,6 +66,44 @@ public class AppDbContext : DbContext
             e.HasIndex(x => new { x.TenantId, x.BotId, x.CreatedAt });
             e.HasIndex(x => new { x.BotId, x.Phone, x.CreatedAt });   // duplicate check
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+
+        // subscriptions and usage are always looked up by an explicit tenant id (also from internal calls)
+        b.Entity<Subscription>(e =>
+        {
+            e.HasKey(x => x.TenantId);
+            e.Property(x => x.Plan).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Provider).HasMaxLength(20);
+            e.Property(x => x.ProviderSubscriptionId).HasMaxLength(100);
+            e.HasIndex(x => x.ProviderSubscriptionId);
+        });
+
+        b.Entity<UsageCounter>(e =>
+        {
+            e.ToTable("usage_counters");
+            e.HasKey(x => new { x.TenantId, x.Period });
+            e.Property(x => x.Period).HasMaxLength(7);
+        });
+
+        b.Entity<Conversation>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.PageUrl).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.BotId, x.LastMessageAt });
+            e.HasIndex(x => x.LastMessageAt);
+            e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Messages).WithOne().HasForeignKey(m => m.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+
+        b.Entity<ConversationMessage>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Role).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Text).IsRequired();
+            e.HasIndex(x => new { x.ConversationId, x.CreatedAt });
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
     }

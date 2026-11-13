@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from . import config
-from .bots_client import create_lead, resolve_bot
+from .bots_client import consume_answer, create_lead, record_turn, refund_answer, resolve_bot
 from .llm import stream_answer
 from .retrieval import get_model, retrieve
 
@@ -22,6 +22,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger("chat")
 
 PUBLIC_KEY = re.compile(r"^bk_[0-9a-f]{32}$")
+CONVERSATION_ID = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+
+NO_INFORMATION = "I don't have any information to answer that yet."
+# the system prompt tells the model to say this when the documents do not cover the question
+_NO_INFO = re.compile(r"(don['’]t|do not) have (that|this|any|the) information", re.IGNORECASE)
+
+
+def says_no_information(answer: str) -> bool:
+    """True when the model said the documents do not answer the question (marked "unanswered" for the owner)."""
+    return bool(_NO_INFO.search(answer))
+LIMIT_REACHED = ("This assistant has reached its limit of answers for this month. "
+                 "Please contact us directly and we will be happy to help.")
+NOT_AVAILABLE = "This assistant is not available right now. Please contact us directly."
 
 
 @asynccontextmanager
@@ -53,6 +66,9 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=config.MAX_QUESTION_CHARS)
     # earlier turns of this conversation, oldest first; the widget keeps them (we store nothing)
     history: list[Turn] = Field(default_factory=list, max_length=config.MAX_HISTORY_TURNS)
+    # the widget's id for this visitor session, so the owner sees the whole conversation together
+    conversationId: str | None = Field(default=None, pattern=CONVERSATION_ID)
+    pageUrl: str | None = Field(default=None, max_length=2000)
 
 
 class LeadRequest(BaseModel):
@@ -108,6 +124,7 @@ async def bot_info(public_key: str):
             "afterMessages": int(lead.get("afterMessages") or 0),
         },
         "suggestedQuestions": _questions(bot.get("suggestedQuestions")),
+        "branding": {"show": bot.get("showBranding", True) is not False, "url": config.BRANDING_URL},
     }
 
 
@@ -161,22 +178,56 @@ async def chat(public_key: str, body: ChatRequest):
         retrieval_query(question, history), config.TOP_K
     )
 
+    conversation_id = body.conversationId or str(uuid.uuid4())
+
+    async def record(answer: str, answered: bool):
+        # best effort: the visitor's answer must never fail because the history could not be saved
+        try:
+            await record_turn(public_key, {"conversationId": conversation_id, "question": question,
+                                           "answer": answer, "answered": answered, "pageUrl": body.pageUrl})
+        except httpx.HTTPError:
+            log.warning("Could not store a conversation turn")
+
+    async def allowed() -> str | None:
+        """None when the plan allows another AI answer, otherwise the message to show instead."""
+        try:
+            ok, reason = await consume_answer(public_key)
+        except httpx.HTTPError:
+            log.warning("Usage check failed; answering anyway")
+            return None
+        return None if ok else (LIMIT_REACHED if reason == "limit" else NOT_AVAILABLE)
+
     async def events():
-        yield sse("meta", {"botName": bot["name"], "sources": len(chunks)})
+        yield sse("meta", {"botName": bot["name"], "sources": len(chunks), "conversationId": conversation_id})
         if not chunks:
-            yield sse("token", {"text": "I don't have any information to answer that yet."})
+            yield sse("token", {"text": NO_INFORMATION})
+            await record(NO_INFORMATION, answered=False)
             yield sse("done", {})
             return
+        blocked = await allowed()
+        if blocked:
+            yield sse("token", {"text": blocked})
+            yield sse("done", {})
+            return
+        answer = []
         try:
             async for token in stream_answer(bot["name"], question, chunks, history):
+                answer.append(token)
                 yield sse("token", {"text": token})
-            yield sse("done", {})
         except Exception as ex:
             log.exception("Gemini call failed")
+            try:
+                await refund_answer(public_key)
+            except httpx.HTTPError:
+                log.warning("Could not refund a failed answer")
             busy = getattr(ex, "code", None) in (429, 503)
             message = ("The assistant is busy right now. Please try again in a moment."
                        if busy else "Sorry, something went wrong. Please try again.")
             yield sse("error", {"message": message})
+            return
+        text = "".join(answer)
+        await record(text, answered=not says_no_information(text))
+        yield sse("done", {})
 
     return StreamingResponse(
         events(),

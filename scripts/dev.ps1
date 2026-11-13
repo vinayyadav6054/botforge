@@ -133,6 +133,15 @@ function Start-App {
 
     # the gateway only accepts dashboard calls from the dashboard's own address
     $env:Gateway__DashboardOrigins__0 = "http://localhost:$DashboardPort"
+    # email links and the widget badge point at the local dashboard
+    $env:App__DashboardUrl = "http://localhost:$DashboardPort"
+    $env:BRANDING_URL = "http://localhost:$DashboardPort"
+    # identity calls the bot service (account deletion, monthly reports) with the bot service's internal key
+    $botsSecrets = dotnet user-secrets list --project (Join-Path $root "services/bot-service/Bots.Api") 2>$null
+    $internal = ($botsSecrets | Where-Object { $_ -like "Internal:ApiKey = *" }) -replace '^Internal:ApiKey = ', ''
+    if ($internal) { $env:Internal__ApiKey = $internal }
+    # admin page (http://localhost:<port>/admin): ADMIN_API_KEY from the environment, or a fixed local-only key
+    $env:Admin__ApiKey = if ($env:ADMIN_API_KEY) { $env:ADMIN_API_KEY } else { "local-admin-key" }
 
     $pids = @{}
     foreach ($s in $services) {

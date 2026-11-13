@@ -46,10 +46,11 @@ COPY services/chat-service/app /app/chat/app
 COPY services/ingestion-service/app /app/ingestion/app
 COPY deploy/render /app/deploy
 COPY deploy/huggingface/dbenv.py /app/deploy/dbenv.py
+COPY deploy/common/env.sh /app/deploy/common-env.sh
 
 RUN useradd -m -u 1000 user \
  && mkdir -p /data \
- && sed -i 's/\r$//' /app/deploy/start.sh \
+ && sed -i 's/\r$//' /app/deploy/start.sh /app/deploy/common-env.sh \
  && chmod +x /app/deploy/start.sh \
  && chown -R user:user /data
 USER user
