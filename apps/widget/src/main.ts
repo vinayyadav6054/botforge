@@ -1,4 +1,4 @@
-import { BotInfo, ChatApi, LeadCapture, Turn } from "./api";
+import { BotInfo, ChatApi, LeadCapture, OpeningHours, SourceRef, Turn } from "./api";
 import { css } from "./styles";
 
 export interface Options {
@@ -75,6 +75,7 @@ export function mount(opts: Options): Widget {
         <button type="button" class="icon-btn talk" aria-label="Request a call back" title="Request a call back" hidden>${PHONE_ICON}</button>
         <button type="button" class="icon-btn close" aria-label="Close chat">${SMALL_CLOSE_ICON}</button>
       </div>
+      <div class="hours" role="status" hidden></div>
       <div class="messages" aria-live="polite"></div>
       <form class="composer">
         <div class="pill">
@@ -99,6 +100,33 @@ export function mount(opts: Options): Widget {
   const greeting = $<HTMLElement>(".greeting");
   const badge = $<HTMLElement>(".badge");
   const footer = $<HTMLElement>(".footer");
+  const hoursBar = $<HTMLElement>(".hours");
+  const styleEl = root.querySelector("style")!;
+  let logo = "";   // the owner's logo (data: URL), used instead of initials
+
+  // bot settings are fetched right away, so colour, side and logo are right before the visitor opens the chat
+  let infoPromise: Promise<BotInfo> | null = null;
+  const getInfo = () =>
+    (infoPromise ??= api.info().catch((e) => {
+      infoPromise = null;   // try again when the chat is opened
+      throw e;
+    }));
+  getInfo().then(applyLook).catch(() => undefined);
+
+  function applyLook(info: BotInfo) {
+    const look = info.appearance;
+    if (look?.color && /^#[0-9a-f]{6}$/i.test(look.color)) styleEl.textContent = css(look.color);
+    const left = look?.position === "left";
+    for (const el of [launcher, panel, greeting]) el.classList.toggle("left", left);
+    if (look?.avatar && /^data:image\/(png|jpeg|webp);base64,/.test(look.avatar)) {
+      logo = look.avatar;
+      avatar.textContent = "";
+      const img = document.createElement("img");
+      img.src = logo;
+      img.alt = "";
+      avatar.appendChild(img);
+    }
+  }
 
   let history: Turn[] = loadHistory(historyKey);
   let busy = false;
@@ -119,7 +147,13 @@ export function mount(opts: Options): Widget {
       const mini = document.createElement("div");
       mini.className = "mini";
       mini.setAttribute("aria-hidden", "true");
-      if (short) mini.textContent = short;
+      if (logo) {
+        mini.classList.add("logo");
+        const img = document.createElement("img");
+        img.src = logo;
+        img.alt = "";
+        mini.appendChild(img);
+      } else if (short) mini.textContent = short;
       else mini.innerHTML = MINI_CHAT_ICON;
       row.appendChild(mini);
     }
@@ -148,6 +182,36 @@ export function mount(opts: Options): Widget {
       footer.textContent = label;
     }
     footer.hidden = false;
+  }
+
+  function showHours(hours: OpeningHours | undefined) {
+    if (!hours?.enabled || !hours.message || isOpenNow(hours, new Date())) return;
+    hoursBar.textContent = hours.message;
+    hoursBar.hidden = false;
+  }
+
+  function showSources(items: SourceRef[]) {
+    const valid = items.filter((s) => s && typeof s.name === "string").slice(0, 3);
+    if (!valid.length) return;
+    const line = document.createElement("div");
+    line.className = "sources";
+    line.append(valid.length > 1 ? "Sources: " : "Source: ");
+    valid.forEach((s, i) => {
+      if (i) line.append(" · ");
+      const label = s.location ? `${s.name} (${s.location})` : s.name;
+      if (s.url && /^https?:\/\//i.test(s.url)) {
+        const a = document.createElement("a");
+        a.href = s.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = label;
+        line.appendChild(a);
+      } else {
+        line.append(label);
+      }
+    });
+    list.appendChild(line);
+    list.scrollTop = list.scrollHeight;
   }
 
   function showChips(questions: string[]) {
@@ -181,7 +245,9 @@ export function mount(opts: Options): Widget {
     loading.innerHTML = '<div class="msg-loading"><span class="typing"><span></span><span></span><span></span></span></div>';
     list.appendChild(loading);
     try {
-      const info = await api.info();
+      const info = await getInfo();
+      applyLook(info);
+      showHours(info.hours);
       loading.remove();
       botName = info.name;
       title.textContent = info.name;
@@ -196,6 +262,7 @@ export function mount(opts: Options): Widget {
         showChips(questions.filter((q) => typeof q === "string" && q.trim()).slice(0, 4));
       }
       for (const t of history) bubble(t.role === "user" ? "user" : "bot", t.text);
+      if (lead?.timing === "start" && !leadState && !history.length) showLeadForm();
     } catch {
       loading.remove();
       bubble("error", "This assistant is not available right now.");
@@ -235,6 +302,7 @@ export function mount(opts: Options): Widget {
         if (!received) answer.parentElement?.remove();
         bubble("error", message);
       },
+      onSources: (items) => showSources(items),
       onDone: () => {
         if (!received) answer.textContent = "Sorry, I don't have an answer for that.";
         const turns: Turn[] = [
@@ -255,8 +323,8 @@ export function mount(opts: Options): Widget {
 
   // ---------- lead capture ----------
   function maybeOfferLead() {
-    // afterMessages 0 means: only when the visitor clicks "Talk to us"
-    if (!lead || leadState || leadCard || lead.afterMessages <= 0) return;
+    // "button" (or afterMessages 0): only when the visitor clicks the call-back button; "start": shown on open
+    if (!lead || leadState || leadCard || lead.timing === "button" || lead.timing === "start" || lead.afterMessages <= 0) return;
     if (answered >= lead.afterMessages) showLeadForm();
   }
 
@@ -291,7 +359,9 @@ export function mount(opts: Options): Widget {
 
     const name = field("name", "Your name", "text", true, "name");
     const phone = field("phone", "Phone number", "tel", true, "tel");
-    const course = field("course", "Course / interest", "text", false, "off");
+    const course = field("course", lead.courseLabel || "Course / interest", "text", false, "off");
+    const email = field("email", "Email", "email", false, "email");
+    email.input.placeholder = "e.g. asha@example.com";
     name.input.placeholder = "e.g. Asha Patil";
     phone.input.placeholder = "e.g. 98200 12345";
     phone.input.inputMode = "tel";
@@ -323,7 +393,10 @@ export function mount(opts: Options): Widget {
     skip.textContent = "No thanks, keep chatting";
     actions.append(submit, skip);
 
-    card.append(intro, name.wrap, phone.wrap, course.wrap, trap, consent, error, actions);
+    card.append(intro, name.wrap, phone.wrap);
+    if (lead.askEmail) card.append(email.wrap);
+    if (lead.askCourse !== false) card.append(course.wrap);
+    card.append(trap, consent, error, actions);
     list.appendChild(card);
     list.scrollTop = list.scrollHeight;
     leadCard = card;
@@ -353,6 +426,7 @@ export function mount(opts: Options): Widget {
         name: n,
         phone: p,
         course: course.input.value.trim() || undefined,
+        email: email.input.value.trim() || undefined,
         pageUrl: location.href,
         transcript: history,
         website: trap.value || undefined,
@@ -449,6 +523,25 @@ function newUuid(): string {
   b[8] = (b[8] & 0x3f) | 0x80;
   const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/** Is the business open now, in its own time zone? (Visitors may be anywhere.) */
+export function isOpenNow(hours: OpeningHours, now: Date): boolean {
+  let weekday = "", time = "";
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: hours.timeZone, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(now);
+    weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+    time = `${parts.find((p) => p.type === "hour")?.value}:${parts.find((p) => p.type === "minute")?.value}`.replace(/^24/, "00");
+  } catch {
+    return true;   // unknown time zone: never claim to be closed
+  }
+  const day = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(weekday) + 1;
+  if (!hours.days.includes(day)) return false;
+  return hours.start <= hours.end
+    ? time >= hours.start && time < hours.end
+    : time >= hours.start || time < hours.end;   // e.g. 18:00-02:00
 }
 
 function loadFlag(key: string): string | null {

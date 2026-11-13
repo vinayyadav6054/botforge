@@ -37,3 +37,6 @@ GEMINI_API_KEY = _required("GEMINI_API_KEY") if EMBEDDING_PROVIDER == "gemini" e
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
+
+# online sources may only fetch public internet addresses; "true" allows localhost/private ones (local testing only)
+ALLOW_PRIVATE_SOURCES = os.getenv("ALLOW_PRIVATE_SOURCES", "").strip().lower() in ("1", "true", "yes")

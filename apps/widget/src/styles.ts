@@ -188,8 +188,22 @@ textarea:focus-visible { outline: none; }
   .greeting { right: 16px; }
 }
 
+/* owner settings: left placement, logo, opening hours, sources under answers */
+.launcher.left, .greeting.left, .panel.left { right: auto; left: 20px; }
+.panel.left { transform-origin: bottom left; }
+@media (max-width: 480px) { .panel.left { left: 0; } .greeting.left { left: 16px; } }
+.avatar img, .mini img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.mini.logo { background: #fff; box-shadow: 0 0 0 1px rgba(17,24,39,.08); overflow: hidden; }
+.hours { padding: 8px 14px; font-size: 12.5px; line-height: 1.4; background: #fff8e6; color: #7a5300; border-bottom: 1px solid #f1e3bd; }
+.hours::before { content: "🕘 "; }
+.hours[hidden] { display: none; }
+.sources { margin: -6px 0 0 34px; font-size: 11.5px; color: #7a8190; animation: fade .2s ease-out; }
+.sources a { color: inherit; text-decoration: underline; }
+
 @media (prefers-color-scheme: dark) {
   .panel, .greeting { background: #1c1f24; color: #e6e8eb; }
+  .hours { background: #2f2611; color: #f0c36b; border-color: #4a3c18; }
+  .sources { color: #a8b0ba; }
   .greeting { box-shadow: 0 14px 34px -8px rgba(0,0,0,.6), 0 0 0 1px #343a43; }
   .messages { background: #15171b; }
   .msg.bot, .msg-loading { background: #23272e; box-shadow: 0 0 0 1px #343a43; }

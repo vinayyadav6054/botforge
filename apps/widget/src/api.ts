@@ -4,6 +4,34 @@ export interface LeadCapture {
   enabled: boolean;
   prompt: string;
   afterMessages: number;
+  /** when the form opens: after N answers, at the start of the chat, or only from the call-back button */
+  timing?: "after" | "start" | "button";
+  askEmail?: boolean;
+  askCourse?: boolean;
+  courseLabel?: string;
+}
+
+export interface Appearance {
+  color?: string | null;
+  position?: "left" | "right";
+  /** data:image/... logo */
+  avatar?: string | null;
+}
+
+export interface OpeningHours {
+  enabled: boolean;
+  start: string;
+  end: string;
+  /** 1 = Monday ... 7 = Sunday */
+  days: number[];
+  timeZone: string;
+  message: string;
+}
+
+export interface SourceRef {
+  name: string;
+  location?: string | null;
+  url?: string | null;
 }
 
 export interface BotInfo {
@@ -13,6 +41,8 @@ export interface BotInfo {
   suggestedQuestions?: string[];
   /** "Powered by BotForge": shown unless the business's plan removes it */
   branding?: { show?: boolean; url?: string };
+  appearance?: Appearance;
+  hours?: OpeningHours;
 }
 
 /** Sent with every message so the owner sees the whole visit as one conversation. */
@@ -25,6 +55,7 @@ export interface LeadInput {
   name: string;
   phone: string;
   course?: string;
+  email?: string;
   pageUrl?: string;
   transcript: Turn[];
   website?: string; // honeypot
@@ -39,6 +70,8 @@ export interface StreamHandlers {
   onToken: (text: string) => void;
   onError: (message: string) => void;
   onDone: () => void;
+  /** where the answer came from (sent after the answer when the owner enabled it) */
+  onSources?: (items: SourceRef[]) => void;
 }
 
 export class ChatApi {
@@ -118,6 +151,8 @@ export class ChatApi {
           else if (evt.event === "error") {
             handlers.onError(typeof data.message === "string" ? data.message : "Something went wrong.");
             finished = true;
+          } else if (evt.event === "sources" && Array.isArray(data.items)) {
+            handlers.onSources?.(data.items as SourceRef[]);
           } else if (evt.event === "done") {
             handlers.onDone();
             finished = true;
