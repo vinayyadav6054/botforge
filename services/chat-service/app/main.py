@@ -6,7 +6,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from typing import Literal
@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from . import config
 from .bots_client import consume_answer, create_lead, record_turn, refund_answer, resolve_bot
+from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, to_english, transcribe
 from .llm import stream_answer
 from .retrieval import citations, get_model, retrieve
 
@@ -92,6 +93,15 @@ def retrieval_query(question: str, history: list[tuple[str, str]]) -> str:
     """Follow-ups like "and on Saturday?" only make sense with the previous question, so search with both."""
     previous = next((text for role, text in reversed(history) if role == "user"), None)
     return f"{previous}\n{question}" if previous else question
+
+
+async def find_chunks(bot: dict, question: str, history: list[tuple[str, str]]):
+    """Searches with the question, plus its English translation when it is in Hindi, Hinglish, Tamil..."""
+    query = retrieval_query(question, history)
+    english = await to_english(question)
+    if english:
+        query = f"{query}\n{english}"
+    return await asyncio.to_thread(retrieve, uuid.UUID(bot["tenantId"]), uuid.UUID(bot["botId"]), query, config.TOP_K)
 
 
 def sse(event: str, data: dict) -> str:
@@ -203,10 +213,7 @@ async def chat(public_key: str, body: ChatRequest):
     bot = await _get_bot(public_key)
 
     history = [(t.role, t.text) for t in body.history if t.text.strip()]
-    chunks = await asyncio.to_thread(
-        retrieve, uuid.UUID(bot["tenantId"]), uuid.UUID(bot["botId"]),
-        retrieval_query(question, history), config.TOP_K
-    )
+    chunks = await find_chunks(bot, question, history)
 
     conversation_id = body.conversationId or str(uuid.uuid4())
 
@@ -272,3 +279,27 @@ async def chat(public_key: str, body: ChatRequest):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/chat/{public_key}/transcribe")
+async def transcribe_voice(public_key: str, request: Request):
+    """The widget's microphone: audio in, text out (the widget then sends it as a normal question)."""
+    bot = await _get_bot(public_key)
+    if bot.get("active") is False:
+        raise HTTPException(status_code=403, detail="This assistant is not available right now.")
+    mime = (request.headers.get("content-type") or "").split(";")[0].strip().lower()
+    if mime not in AUDIO_TYPES:
+        raise HTTPException(status_code=415, detail="Unsupported audio format")
+    audio = bytearray()
+    async for part in request.stream():
+        audio += part
+        if len(audio) > MAX_AUDIO_BYTES:
+            raise HTTPException(status_code=413, detail="The recording is too long")
+    if not audio:
+        raise HTTPException(status_code=400, detail="Empty recording")
+    try:
+        text = await transcribe(bytes(audio), mime)
+    except Exception:
+        log.exception("Transcription failed")
+        raise HTTPException(status_code=503, detail="Could not understand the recording. Please type your question.")
+    return {"text": text}

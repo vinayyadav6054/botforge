@@ -55,6 +55,8 @@ public class MigrationUpgradeTests
         Assert.Equal("Course / interest", bot.LeadCourseLabel);
         Assert.Equal([1, 2, 3, 4, 5, 6], bot.HoursDays);
         Assert.False(string.IsNullOrEmpty(bot.OfflineMessage));
+        Assert.Equal("auto", bot.ReplyLanguage);
+        Assert.True(bot.VoiceEnabled);
 
         var doc = await db.Documents.IgnoreQueryFilters().AsNoTracking().SingleAsync(d => d.BotId == botId);
         Assert.Equal("file", doc.Kind);

@@ -36,6 +36,8 @@ builder.Services.AddScoped<SubscriptionService>();
 builder.Services.Configure<RazorpayOptions>(builder.Configuration.GetSection("Razorpay"));
 builder.Services.AddHttpClient<IRazorpayClient, RazorpayClient>(c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHostedService<ConversationCleanup>();
+builder.Services.AddSingleton<SecretBox>();
+builder.Services.AddHttpClient<ChannelPlatforms>(c => c.Timeout = TimeSpan.FromSeconds(20));
 if (builder.Configuration.GetValue("Sources:AutoSync", true))
     builder.Services.AddHostedService<SourceSync>();
 if (builder.Configuration.GetValue("RabbitMq:ConsumeStatusEvents", true))
@@ -309,7 +311,7 @@ bots.MapGet("/{botId:guid}/conversations", async (Guid botId, DateTime? before, 
     var list = await query.OrderByDescending(c => c.LastMessageAt).Take(size)
         .Select(c => new ConversationSummaryDto(c.Id, c.StartedAt, c.LastMessageAt, c.MessageCount, c.UnansweredCount,
             c.Messages.Where(m => m.Role == "user").OrderBy(m => m.CreatedAt).Select(m => m.Text).FirstOrDefault(),
-            c.PageUrl))
+            c.PageUrl, c.Channel, c.ContactName, c.ContactId))
         .ToListAsync();
     return Results.Ok(list);
 });
@@ -331,6 +333,7 @@ bots.MapDelete("/{botId:guid}/conversations/{conversationId:guid}", async (Guid 
 });
 
 bots.MapKnowledgeEndpoints();
+bots.MapChannelEndpoints(app);
 app.MapAccountEndpoints();
 
 // ---------- internal endpoints for other services (never expose these through the public gateway) ----------
@@ -352,7 +355,9 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
                 timing = b.LeadTiming, askEmail = b.LeadAskEmail, askCourse = b.LeadAskCourse, courseLabel = b.LeadCourseLabel
             },
             suggestedQuestions = b.SuggestedQuestions,
-            style = new { tone = b.Tone, answerLength = b.AnswerLength, topicsToAvoid = b.TopicsToAvoid, customInstructions = b.CustomInstructions },
+            style = new { tone = b.Tone, answerLength = b.AnswerLength, topicsToAvoid = b.TopicsToAvoid, customInstructions = b.CustomInstructions,
+                          replyLanguage = b.ReplyLanguage },
+            b.VoiceEnabled,
             b.ShowSources,
             appearance = new { color = b.WidgetColor, position = b.WidgetPosition, avatar = b.AvatarDataUrl },
             hours = new
@@ -368,7 +373,7 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
     return Results.Ok(new
     {
         bot.botId, bot.tenantId, bot.name, bot.welcomeMessage, bot.leadCapture, bot.suggestedQuestions,
-        bot.style, showSources = bot.ShowSources, bot.appearance, bot.hours,
+        bot.style, showSources = bot.ShowSources, bot.appearance, bot.hours, voiceEnabled = bot.VoiceEnabled,
         showBranding = !plan.RemoveBranding,
         active = plan.AnswersPerMonth > 0
     });
@@ -419,7 +424,10 @@ app.MapPost("/internal/bots/{publicKey}/conversations", async (string publicKey,
         conversation = new Conversation
         {
             Id = req.ConversationId!.Value, TenantId = bot.TenantId, BotId = bot.Id,
-            PageUrl = LeadRules.CleanPageUrl(req.PageUrl), StartedAt = now
+            PageUrl = LeadRules.CleanPageUrl(req.PageUrl), StartedAt = now,
+            Channel = req.Channel is { } ch && ChannelEndpoints.Kinds.Contains(ch) ? ch : "web",
+            ContactName = req.ContactName is { } cn ? DocumentRules.Truncate(cn.Trim(), 100) : null,
+            ContactId = req.ContactId is { } ci ? DocumentRules.Truncate(ci.Trim(), 100) : null
         };
         db.Conversations.Add(conversation);
     }

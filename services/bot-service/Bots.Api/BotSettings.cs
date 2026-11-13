@@ -36,6 +36,8 @@ public class UpdateBotRequest
     public List<int>? HoursDays { get; set; }
     public string? TimeZone { get; set; }
     public string? OfflineMessage { get; set; }
+    public string? ReplyLanguage { get; set; }
+    public bool? VoiceEnabled { get; set; }
 }
 
 public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicKey, DateTime CreatedAt,
@@ -43,14 +45,15 @@ public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicK
     bool LeadAskEmail, bool LeadAskCourse, string LeadCourseLabel, string LeadTiming,
     string Tone, string AnswerLength, string TopicsToAvoid, string CustomInstructions, bool ShowSources,
     string? WidgetColor, string WidgetPosition, string? AvatarDataUrl,
-    bool HoursEnabled, string HoursStart, string HoursEnd, List<int> HoursDays, string TimeZone, string OfflineMessage)
+    bool HoursEnabled, string HoursStart, string HoursEnd, List<int> HoursDays, string TimeZone, string OfflineMessage,
+    string ReplyLanguage, bool VoiceEnabled)
 {
     public static BotDto From(Bot b) => new(b.Id, b.Name, b.WelcomeMessage, b.PublicKey, b.CreatedAt,
         b.LeadCaptureEnabled, b.LeadPrompt, b.LeadAfterMessages, b.SuggestedQuestions,
         b.LeadAskEmail, b.LeadAskCourse, b.LeadCourseLabel, b.LeadTiming,
         b.Tone, b.AnswerLength, b.TopicsToAvoid, b.CustomInstructions, b.ShowSources,
         b.WidgetColor, b.WidgetPosition, b.AvatarDataUrl,
-        b.HoursEnabled, b.HoursStart, b.HoursEnd, b.HoursDays, b.TimeZone, b.OfflineMessage);
+        b.HoursEnabled, b.HoursStart, b.HoursEnd, b.HoursDays, b.TimeZone, b.OfflineMessage, b.ReplyLanguage, b.VoiceEnabled);
 }
 
 public static partial class BotSettingsRules
@@ -58,6 +61,8 @@ public static partial class BotSettingsRules
     public static readonly IReadOnlySet<string> Tones = new HashSet<string> { "friendly", "professional", "casual", "enthusiastic" };
     public static readonly IReadOnlySet<string> Lengths = new HashSet<string> { "short", "medium", "detailed" };
     public static readonly IReadOnlySet<string> Timings = new HashSet<string> { "after", "start", "button" };
+    public static readonly IReadOnlySet<string> Languages =
+        new HashSet<string> { "auto", "en", "hi", "mr", "ta", "te", "bn", "gu", "kn", "ml", "pa", "ur" };
     public const int MaxAvatarChars = 70_000;   // ~50 KB image; the dashboard resizes logos to 160 px
 
     [GeneratedRegex("^#[0-9a-fA-F]{6}$")] private static partial Regex Color();
@@ -82,6 +87,7 @@ public static partial class BotSettingsRules
         if (r.HoursDays is { } days && (days.Count > 7 || days.Any(d => d is < 1 or > 7))) return "Days must be numbers 1 (Monday) to 7 (Sunday).";
         if (r.TimeZone is { } zone && (zone.Length > 60 || !Zone().IsMatch(zone))) return "Time zone must look like Asia/Kolkata.";
         if (r.OfflineMessage?.Trim().Length > 300) return "The closed message must be at most 300 characters.";
+        if (r.ReplyLanguage is { } lang && !Languages.Contains(lang)) return "Unknown reply language.";
         return null;
     }
 
@@ -105,5 +111,7 @@ public static partial class BotSettingsRules
         if (r.HoursDays is { } days) bot.HoursDays = days.Distinct().Order().ToList();
         if (r.TimeZone is { } zone) bot.TimeZone = zone;
         if (r.OfflineMessage is { } offline && offline.Trim().Length > 0) bot.OfflineMessage = offline.Trim();
+        if (r.ReplyLanguage is { } language) bot.ReplyLanguage = language;
+        if (r.VoiceEnabled is { } voice) bot.VoiceEnabled = voice;
     }
 }

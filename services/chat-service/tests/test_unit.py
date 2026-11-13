@@ -61,6 +61,16 @@ def fakes(monkeypatch):
         state["consumed"] -= 1
 
     monkeypatch.setattr(main, "refund_answer", refund_answer)
+
+    async def to_english(text):
+        return state.get("english")
+
+    async def transcribe(audio, mime):
+        state["transcribed"] = (len(audio), mime)
+        return state.get("transcript", "When is the next batch?")
+
+    monkeypatch.setattr(main, "to_english", to_english)
+    monkeypatch.setattr(main, "transcribe", transcribe)
     monkeypatch.setattr(main, "consume_answer", consume_answer)
     monkeypatch.setattr(main, "record_turn", record_turn)
     monkeypatch.setattr(main, "resolve_bot", resolve_bot)
@@ -599,3 +609,58 @@ def test_info_passes_only_safe_appearance_values(client, fakes):
     fakes["bot"] = {**BOT, "appearance": {"color": "#1d4ed8", "position": "left", "avatar": "data:image/png;base64,iVBO="}}
     assert client.get(f"/chat/{KEY}/info").json()["appearance"] == {
         "color": "#1d4ed8", "position": "left", "avatar": "data:image/png;base64,iVBO="}
+
+
+# ---------- phase 3: languages and voice ----------
+
+from app import language  # noqa: E402
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("What are the fees?", False),
+    ("JEE ki fees kitni hai?", True),            # Hinglish
+    ("फीस कितनी है?", True),                      # Hindi
+    ("கட்டணம் எவ்வளவு?", True),                   # Tamil
+    ("Is parking available near the station?", False),
+    ("Admission kab se hai", True),
+])
+def test_questions_needing_translation_are_detected(text, expected):
+    assert language.needs_translation(text) is expected
+
+
+def test_translated_question_is_added_to_the_search(client, fakes):
+    fakes["english"] = "What is the fee for JEE?"
+    chat(client)
+    query = fakes["retrieve_calls"][0][2]
+    assert "Open on Sunday?" in query and "What is the fee for JEE?" in query
+
+
+def test_reply_language_rule():
+    assert "Always reply in Hindi" in llm.build_system("Bot", {"replyLanguage": "hi"})
+    auto = llm.build_system("Bot", {})
+    assert "same language the visitor used" in auto and "Hinglish" in auto
+    assert "Always reply in" not in llm.build_system("Bot", {"replyLanguage": "klingon"})
+
+
+def test_voice_is_transcribed(client, fakes):
+    res = client.post(f"/chat/{KEY}/transcribe", content=b"\x1aE\xdf\xa3fake-webm", headers={"Content-Type": "audio/webm;codecs=opus"})
+    assert res.status_code == 200 and res.json() == {"text": "When is the next batch?"}
+    assert fakes["transcribed"] == (13, "audio/webm")
+
+
+@pytest.mark.parametrize("ctype, body, status", [
+    ("image/png", b"x", 415),
+    ("audio/webm", b"", 400),
+])
+def test_bad_recordings_are_rejected(client, ctype, body, status):
+    assert client.post(f"/chat/{KEY}/transcribe", content=body, headers={"Content-Type": ctype}).status_code == status
+
+
+def test_huge_recordings_are_rejected(client, monkeypatch):
+    monkeypatch.setattr(main, "MAX_AUDIO_BYTES", 10)
+    assert client.post(f"/chat/{KEY}/transcribe", content=b"x" * 50, headers={"Content-Type": "audio/ogg"}).status_code == 413
+
+
+def test_inactive_bots_do_not_transcribe(client, fakes):
+    fakes["bot"] = {**BOT, "active": False}
+    assert client.post(f"/chat/{KEY}/transcribe", content=b"abc", headers={"Content-Type": "audio/ogg"}).status_code == 403

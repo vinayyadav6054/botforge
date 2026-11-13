@@ -33,7 +33,8 @@ public static class AccountEndpoints
     public static object PlanDto(Plan p) => new
     {
         id = p.Id, name = p.Name, bots = p.Bots, documents = p.Documents,
-        answersPerMonth = p.AnswersPerMonth, removeBranding = p.RemoveBranding, priceInr = p.PriceInr
+        answersPerMonth = p.AnswersPerMonth, removeBranding = p.RemoveBranding, priceInr = p.PriceInr,
+        websitePages = p.WebsitePages, messagingApps = p.MessagingApps
     };
 
     public static void MapAccountEndpoints(this WebApplication app)

@@ -24,6 +24,85 @@ namespace Bots.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Bots.Api.Channel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bot_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("external_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTime?>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_message_at");
+
+                    b.Property<string>("SecretsCipher")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("secrets_cipher");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("VerifyToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("verify_token");
+
+                    b.Property<string>("WebhookSecret")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("webhook_secret");
+
+                    b.HasKey("Id")
+                        .HasName("pk_channels");
+
+                    b.HasIndex("BotId")
+                        .HasDatabaseName("ix_channels_bot_id");
+
+                    b.HasIndex("Kind", "ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_channels_kind_external_id");
+
+                    b.HasIndex("TenantId", "BotId")
+                        .HasDatabaseName("ix_channels_tenant_id_bot_id");
+
+                    b.ToTable("channels", "bots");
+                });
+
             modelBuilder.Entity("Bots.Api.Data.Bot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -124,6 +203,14 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("public_key");
 
+                    b.Property<string>("ReplyLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("auto")
+                        .HasColumnName("reply_language");
+
                     b.Property<bool>("ShowSources")
                         .HasColumnType("boolean")
                         .HasColumnName("show_sources");
@@ -154,6 +241,10 @@ namespace Bots.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("topics_to_avoid");
+
+                    b.Property<bool>("VoiceEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("voice_enabled");
 
                     b.Property<string>("WelcomeMessage")
                         .IsRequired()
@@ -295,6 +386,24 @@ namespace Bots.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("bot_id");
 
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("web")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("ContactId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("contact_id");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("contact_name");
+
                     b.Property<DateTime>("LastMessageAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_message_at");
@@ -388,6 +497,14 @@ namespace Bots.Api.Migrations
                     b.Property<Guid>("BotId")
                         .HasColumnType("uuid")
                         .HasColumnName("bot_id");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("web")
+                        .HasColumnName("channel");
 
                     b.Property<DateTime>("ConsentAt")
                         .HasColumnType("timestamp with time zone")
@@ -571,6 +688,16 @@ namespace Bots.Api.Migrations
                         .HasName("pk_usage_counters");
 
                     b.ToTable("usage_counters", "bots");
+                });
+
+            modelBuilder.Entity("Bots.Api.Channel", b =>
+                {
+                    b.HasOne("Bots.Api.Data.Bot", null)
+                        .WithMany()
+                        .HasForeignKey("BotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_channels_bots_bot_id");
                 });
 
             modelBuilder.Entity("Bots.Api.Data.BotDocument", b =>

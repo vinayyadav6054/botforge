@@ -47,6 +47,11 @@ public class Bot
     public List<int> HoursDays { get; set; } = [1, 2, 3, 4, 5, 6];
     public string TimeZone { get; set; } = "Asia/Kolkata";
     public string OfflineMessage { get; set; } = "We're closed right now. Ask me anything, or leave your number and we'll call you back.";
+
+    /// <summary>"auto" = reply in the visitor's language; or a language code (hi, mr, ta, ...) to always use.</summary>
+    public string ReplyLanguage { get; set; } = "auto";
+    /// <summary>Microphone and read-aloud buttons in the website chat.</summary>
+    public bool VoiceEnabled { get; set; } = true;
 }
 
 /// <summary>An answer written by the owner; the bot prefers it when a visitor asks a matching question.</summary>
@@ -98,6 +103,8 @@ public class Lead
     public string? PageUrl { get; set; }
     public string Transcript { get; set; } = "[]";      // JSON array of {role, text}, the chat that led here
     public string Status { get; set; } = LeadStatus.New;
+    /// <summary>Where the enquiry came from: "web" or a messaging app.</summary>
+    public string Channel { get; set; } = "web";
     public DateTime ConsentAt { get; set; } = DateTime.UtcNow;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
@@ -148,6 +155,11 @@ public class Conversation
     public int MessageCount { get; set; }
     /// <summary>Questions the documents could not answer.</summary>
     public int UnansweredCount { get; set; }
+    /// <summary>"web" (the widget) or a messaging app: whatsapp, instagram, messenger, telegram.</summary>
+    public string Channel { get; set; } = "web";
+    /// <summary>Messaging apps: the customer's name and number/handle.</summary>
+    public string? ContactName { get; set; }
+    public string? ContactId { get; set; }
     public List<ConversationMessage> Messages { get; set; } = new();
 }
 

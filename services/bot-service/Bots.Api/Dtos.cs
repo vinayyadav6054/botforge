@@ -12,15 +12,15 @@ public record TranscriptTurn(string? Role, string? Text);
 
 // sent by the chat service on behalf of a website visitor
 public record CreateLeadRequest(string? Name, string? Phone, string? Email, string? Course,
-    string? PageUrl, List<TranscriptTurn>? Transcript);
+    string? PageUrl, List<TranscriptTurn>? Transcript, string? Channel = null);
 
 public record UpdateLeadRequest(string? Status);
 
 public record LeadDto(Guid Id, Guid BotId, string Name, string Phone, string? Email, string? Course,
-    string? PageUrl, string Transcript, string Status, DateTime CreatedAt)
+    string? PageUrl, string Transcript, string Status, DateTime CreatedAt, string Channel)
 {
     public static LeadDto From(Lead l) =>
-        new(l.Id, l.BotId, l.Name, l.Phone, l.Email, l.Course, l.PageUrl, l.Transcript, l.Status, l.CreatedAt);
+        new(l.Id, l.BotId, l.Name, l.Phone, l.Email, l.Course, l.PageUrl, l.Transcript, l.Status, l.CreatedAt, l.Channel);
 }
 
 public record DocumentDto(Guid Id, Guid BotId, string FileName, string ContentType, long SizeBytes,
@@ -175,6 +175,7 @@ public static class LeadRules
             Email = email,
             Course = course,
             PageUrl = pageUrl,
+            Channel = req.Channel is "whatsapp" or "instagram" or "messenger" or "telegram" ? req.Channel : "web",
             Transcript = System.Text.Json.JsonSerializer.Serialize(turns)
         };
         return null;

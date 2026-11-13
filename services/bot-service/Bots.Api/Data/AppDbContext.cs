@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<QaEntry> QaEntries => Set<QaEntry>();
+    public DbSet<Channel> Channels => Set<Channel>();
     public DbSet<UsageCounter> Usage => Set<UsageCounter>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationMessage> ConversationMessages => Set<ConversationMessage>();
@@ -51,6 +52,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.HoursDays).IsRequired();
             e.Property(x => x.TimeZone).HasMaxLength(60).IsRequired();
             e.Property(x => x.OfflineMessage).HasMaxLength(300).IsRequired();
+            e.Property(x => x.ReplyLanguage).HasMaxLength(10).IsRequired().HasDefaultValue("auto");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });
 
@@ -81,6 +83,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.PageUrl).HasMaxLength(500);
             e.Property(x => x.Transcript).IsRequired();
             e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Channel).HasMaxLength(20).IsRequired().HasDefaultValue("web");
             e.HasIndex(x => new { x.TenantId, x.BotId, x.CreatedAt });
             e.HasIndex(x => new { x.BotId, x.Phone, x.CreatedAt });   // duplicate check
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
@@ -109,6 +112,9 @@ public class AppDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.PageUrl).HasMaxLength(500);
+            e.Property(x => x.Channel).HasMaxLength(20).IsRequired().HasDefaultValue("web");
+            e.Property(x => x.ContactName).HasMaxLength(100);
+            e.Property(x => x.ContactId).HasMaxLength(100);
             e.HasIndex(x => new { x.TenantId, x.BotId, x.LastMessageAt });
             e.HasIndex(x => x.LastMessageAt);
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
@@ -121,6 +127,22 @@ public class AppDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Question).HasMaxLength(300).IsRequired();
             e.Property(x => x.Answer).HasMaxLength(2000).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.BotId });
+            e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
+        });
+
+        b.Entity<Channel>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasMaxLength(20).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.ExternalId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.SecretsCipher).IsRequired();
+            e.Property(x => x.VerifyToken).HasMaxLength(64).IsRequired();
+            e.Property(x => x.WebhookSecret).HasMaxLength(64).IsRequired();
+            e.Property(x => x.LastError).HasMaxLength(300);
+            e.HasIndex(x => new { x.Kind, x.ExternalId }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.BotId });
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);

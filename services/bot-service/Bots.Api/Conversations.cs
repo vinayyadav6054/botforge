@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Bots.Api;
 
 /// <summary>One question and its answer, sent by the chat service after it answered a visitor.</summary>
-public record RecordTurnRequest(Guid? ConversationId, string? Question, string? Answer, bool Answered = true, string? PageUrl = null);
+public record RecordTurnRequest(Guid? ConversationId, string? Question, string? Answer, bool Answered = true, string? PageUrl = null,
+    string? Channel = null, string? ContactName = null, string? ContactId = null);
 
 public record ConversationSummaryDto(Guid Id, DateTime StartedAt, DateTime LastMessageAt, int MessageCount,
-    int UnansweredCount, string? FirstQuestion, string? PageUrl);
+    int UnansweredCount, string? FirstQuestion, string? PageUrl, string Channel = "web", string? ContactName = null,
+    string? ContactId = null);
 
 public record ConversationMessageDto(string Role, string Text, bool Answered, DateTime CreatedAt);
 

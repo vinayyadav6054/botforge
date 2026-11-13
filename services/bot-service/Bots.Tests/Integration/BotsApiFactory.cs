@@ -28,6 +28,7 @@ public class BotsApiFactory : WebApplicationFactory<Program>
 
     public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "botforge-it-" + Guid.NewGuid().ToString("N"));
     public FakePublisher Publisher { get; } = new();
+    public FakePlatform Platform { get; } = new();
     public string ConnectionString { get; }
 
     public BotsApiFactory()
@@ -47,11 +48,13 @@ public class BotsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("RabbitMq:ConsumeStatusEvents", "false");
         builder.UseSetting("Admin:ApiKey", AdminKey);
         builder.UseSetting("Sources:AutoSync", "false");   // tests call SourceSync.RunOnceAsync directly
+        builder.UseSetting("Channels:PublicUrl", "https://bots.test");
         builder.UseSetting("Razorpay:WebhookSecret", WebhookSecret);
         builder.ConfigureTestServices(s =>
         {
             s.RemoveAll<IEventPublisher>();
             s.AddSingleton<IEventPublisher>(Publisher);
+            s.AddHttpClient<Bots.Api.ChannelPlatforms>().ConfigurePrimaryHttpMessageHandler(() => Platform);
         });
     }
 
@@ -138,4 +141,26 @@ public static class TestDatabase
 public class BotsApiCollection : ICollectionFixture<BotsApiFactory>
 {
     public const string Name = "bots-api";
+}
+
+/// <summary>Stands in for api.telegram.org and graph.facebook.com.</summary>
+public class FakePlatform : HttpMessageHandler
+{
+    public ConcurrentQueue<(string Method, string Url, string Body)> Calls { get; } = new();
+    public Func<HttpRequestMessage, HttpResponseMessage?>? Override { get; set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        var url = request.RequestUri!.ToString();
+        Calls.Enqueue((request.Method.Method, url, request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct)));
+        if (Override?.Invoke(request) is { } custom) return custom;
+        string json;
+        if (url.Contains("/getMe")) json = """{"ok":true,"result":{"id":777000111,"username":"sunrise_bot"}}""";
+        else if (url.Contains("/setWebhook") || url.Contains("/deleteWebhook")) json = """{"ok":true,"result":true}""";
+        else if (url.Contains("fields=display_phone_number")) json = """{"display_phone_number":"+91 98200 12345","id":"1234567890"}""";
+        else if (url.Contains("/me?fields=")) json = """{"id":"55501","name":"Sunrise Academy"}""";
+        else if (url.Contains("subscribed_apps")) json = """{"success":true}""";
+        else return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
+    }
 }
