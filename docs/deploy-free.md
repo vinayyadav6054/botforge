@@ -67,6 +67,11 @@ Sign up at https://neon.tech, create a project and copy the connection string fr
 2. **Root Directory**: `apps/dashboard` (Framework: Next.js is detected).
 3. **Environment Variables**: `NEXT_PUBLIC_API_URL` = `https://botforge-xxxx.onrender.com/api` (your Render URL + `/api`).
 4. **Deploy**. Note the URL, e.g. `https://botforge-abc.vercel.app`.
+5. Optional, for the public website (prices are in `apps/dashboard/lib/site.ts`):
+   - `NEXT_PUBLIC_CONTACT_WHATSAPP`: your number with country code, e.g. `919876543210` (shows "Talk on WhatsApp")
+   - `NEXT_PUBLIC_CONTACT_EMAIL`
+   - `NEXT_PUBLIC_DEMO_BOT_KEY`: makes `/demo` use a real bot. Create a bot, upload
+     `apps/dashboard/public/samples/sunrise-academy.txt`, copy its `bk_...` key from the snippet, then redeploy.
 
 ## 5. Connect the two
 

@@ -41,6 +41,7 @@ function BotDetail({ id }: { id: string }) {
   const [dragOver, setDragOver] = useState(false);
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [color, setColor] = useState(DEFAULT_COLOR);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const loadDocs = useCallback(async () => {
@@ -77,13 +78,14 @@ function BotDetail({ id }: { id: string }) {
     const s = document.createElement("script");
     s.src = `${gatewayOrigin()}/widget.js?v=${Date.now()}`;
     s.dataset.botKey = bot.publicKey;
+    if (color !== DEFAULT_COLOR) s.dataset.color = color;
     s.async = true;
     document.body.appendChild(s);
     return () => {
       s.remove();
       document.querySelectorAll("[data-botforge]").forEach((el) => el.remove());
     };
-  }, [preview, bot]);
+  }, [preview, bot, color]);
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -175,7 +177,7 @@ function BotDetail({ id }: { id: string }) {
   }
 
   const snippet = bot
-    ? `<script src="${gatewayOrigin()}/widget.js" data-bot-key="${bot.publicKey}" async></script>`
+    ? `<script src="${gatewayOrigin()}/widget.js" data-bot-key="${bot.publicKey}"${color !== DEFAULT_COLOR ? ` data-color="${color}"` : ""} async></script>`
     : "";
 
   async function copySnippet() {
@@ -200,18 +202,20 @@ function BotDetail({ id }: { id: string }) {
   }
 
   const readyCount = docs.filter((d) => d.status === "Ready").length;
+  const chunks = docs.reduce((n, d) => n + (d.status === "Ready" ? d.chunkCount ?? 0 : 0), 0);
 
   return (
     <>
-      <p className="small" style={{ marginBottom: 8 }}>
-        <Link href="/bots">← All bots</Link>
-      </p>
+      <Link href="/bots" className="crumb small">← All bots</Link>
       <div className="page-head">
-        <div>
-          <h1>{bot.name}</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            {readyCount} of {docs.length} document{docs.length === 1 ? "" : "s"} ready
-          </p>
+        <div className="row" style={{ gap: 14, alignItems: "center" }}>
+          <span className="bot-avatar" aria-hidden>{bot.name.slice(0, 1).toUpperCase()}</span>
+          <div>
+            <h1>{bot.name}</h1>
+            <p className="muted" style={{ margin: 0 }}>
+              {readyCount} of {docs.length} document{docs.length === 1 ? "" : "s"} ready
+            </p>
+          </div>
         </div>
         <button className="btn" onClick={() => setPreview((p) => !p)} disabled={readyCount === 0}
           title={readyCount === 0 ? "Upload a document first" : ""}>
@@ -227,133 +231,225 @@ function BotDetail({ id }: { id: string }) {
         </div>
       )}
 
-      <section className="card">
-        <h2>Knowledge</h2>
-        <div
-          className={`dropzone${dragOver ? " over" : ""}`}
-          onClick={() => fileInput.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && fileInput.current?.click()}
-        >
-          {uploading ? (
-            <span><span className="spinner" style={{ verticalAlign: "middle" }} /> Uploading {uploading}…</span>
-          ) : (
-            <>
-              <strong>Drop files here</strong> or click to choose
-              <div className="small">PDF, DOCX, TXT or Markdown · up to 10 MB each</div>
-            </>
-          )}
-        </div>
-        <input ref={fileInput} type="file" multiple accept={ALLOWED.join(",")} hidden
-          aria-label="Upload documents" onChange={(e) => e.target.files && upload(e.target.files)} />
-
-        {docs.length > 0 && (
-          <div className="table-wrap" style={{ marginTop: 16 }}>
-            <table>
-              <thead>
-                <tr><th>File</th><th>Size</th><th>Status</th><th aria-label="Actions" /></tr>
-              </thead>
-              <tbody>
-                {docs.map((d) => (
-                  <tr key={d.id}>
-                    <td>
-                      {d.fileName}
-                      {d.status === "Failed" && d.error && <div className="small" style={{ color: "var(--danger)" }}>{d.error}</div>}
-                    </td>
-                    <td className="muted">{formatSize(d.sizeBytes)}</td>
-                    <td><StatusBadge doc={d} /></td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      {(d.status === "Failed" || d.status === "UploadedUnqueued") && (
-                        <button className="btn secondary small" onClick={() => reprocess(d)}>Retry</button>
-                      )}{" "}
-                      <button className="btn danger small" onClick={() => removeDoc(d)} aria-label={`Delete ${d.fileName}`}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="stats">
+        <div className="stat">
+          <div className="label">Status</div>
+          <div style={{ marginTop: 10 }}>
+            {readyCount > 0
+              ? <span className="badge ready">● Ready to answer</span>
+              : <span className="badge processing">Needs a document</span>}
           </div>
-        )}
-      </section>
-
-      <LeadsSection botId={id} enabled={bot.leadCaptureEnabled} />
-
-      <section className="card">
-        <h2>Add to your website</h2>
-        <p className="muted small">Paste this just before the closing <code>&lt;/body&gt;</code> tag of your site.</p>
-        <pre className="snippet" data-testid="embed-snippet">{snippet}</pre>
-        <button className="btn secondary small" style={{ marginTop: 10 }} onClick={copySnippet}>
-          {copied ? "Copied!" : "Copy snippet"}
-        </button>
-      </section>
-
-      <form className="card" onSubmit={save} aria-label="Bot settings">
-        <h2>Settings</h2>
-        <div className="field">
-          <label htmlFor="name">Name</label>
-          <input id="name" type="text" required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="field">
-          <label htmlFor="welcomeMessage">Welcome message</label>
-          <textarea id="welcomeMessage" maxLength={500} value={welcome} onChange={(e) => setWelcome(e.target.value)} />
+        <div className="stat">
+          <div className="label">Documents</div>
+          <div className="value">{docs.length}</div>
+          <div className="hint">{readyCount} ready</div>
         </div>
-
-        <fieldset className="field questions">
-          <legend>Suggested questions <span className="muted small">(optional, up to 4)</span></legend>
-          <p className="small muted" style={{ margin: "0 0 8px" }}>
-            Shown as buttons under the welcome message, so visitors can ask with one tap.
-          </p>
-          {questions.map((q, i) => (
-            <input key={i} type="text" maxLength={120} value={q} aria-label={`Suggested question ${i + 1}`}
-              placeholder={QUESTION_EXAMPLES[i]}
-              onChange={(e) => setQuestions((qs) => qs.map((x, j) => (j === i ? e.target.value : x)))} />
-          ))}
-        </fieldset>
-
-        <h3 style={{ fontSize: 15, margin: "20px 0 10px" }}>Lead capture</h3>
-        <div className="field">
-          <label className="check" htmlFor="leadEnabled">
-            <input id="leadEnabled" type="checkbox" checked={leadEnabled} onChange={(e) => setLeadEnabled(e.target.checked)} />
-            Ask visitors for their name and phone number
-          </label>
-          <p className="small muted" style={{ margin: "4px 0 0" }}>
-            Adds a call-back button to the chat and collects enquiries in the Leads list above.
-          </p>
+        <div className="stat">
+          <div className="label">Knowledge pieces</div>
+          <div className="value">{chunks}</div>
+          <div className="hint">searched for every question</div>
         </div>
-        {leadEnabled && (
-          <>
-            <div className="field">
-              <label htmlFor="leadPrompt">Invitation text</label>
-              <textarea id="leadPrompt" maxLength={300} value={leadPrompt} onChange={(e) => setLeadPrompt(e.target.value)} />
+        <div className="stat">
+          <div className="label">Lead capture</div>
+          <div className="value">{bot.leadCaptureEnabled ? "On" : "Off"}</div>
+          <div className="hint">{bot.leadCaptureEnabled ? "visitors can ask for a call back" : "turn it on in Settings"}</div>
+        </div>
+      </div>
+
+      <div className="detail">
+        <nav className="side-nav" aria-label="Bot sections">
+          <a href="#knowledge">📄 Knowledge</a>
+          <a href="#leads">📞 Leads</a>
+          <a href="#install">🧩 Install</a>
+          <a href="#settings">⚙️ Settings</a>
+          <a href="#danger">⚠️ Danger zone</a>
+        </nav>
+
+        <div>
+          <section className="card" id="knowledge">
+            <div className="card-head">
+              <div className="section-title"><span className="section-icon" aria-hidden>📄</span><h2>Knowledge</h2></div>
+              <span className="muted small">The bot answers only from these files</span>
+            </div>
+            <div
+              className={`dropzone${dragOver ? " over" : ""}`}
+              onClick={() => fileInput.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && fileInput.current?.click()}
+            >
+              {uploading ? (
+                <span><span className="spinner" style={{ verticalAlign: "middle" }} /> Uploading {uploading}…</span>
+              ) : (
+                <>
+                  <span className="drop-icon" aria-hidden>⬆</span>
+                  <strong>Drop files here</strong> or click to choose
+                  <div className="small">PDF, DOCX, TXT or Markdown · up to 10 MB each</div>
+                </>
+              )}
+            </div>
+            <input ref={fileInput} type="file" multiple accept={ALLOWED.join(",")} hidden
+              aria-label="Upload documents" onChange={(e) => e.target.files && upload(e.target.files)} />
+
+            {docs.length === 0 && !uploading && (
+              <p className="small muted" style={{ margin: "12px 0 0" }}>
+                No documents yet. Brochures, fee lists, timings and FAQs work best.{" "}
+                <a href="/samples/sunrise-academy.txt" download>Try a sample document</a>.
+              </p>
+            )}
+
+            {docs.length > 0 && (
+              <div className="table-wrap" style={{ marginTop: 16 }}>
+                <table>
+                  <thead>
+                    <tr><th>File</th><th>Size</th><th>Status</th><th aria-label="Actions" /></tr>
+                  </thead>
+                  <tbody>
+                    {docs.map((d) => (
+                      <tr key={d.id}>
+                        <td>
+                          <div className="file-cell">
+                            <span className="file-icon" aria-hidden>{d.fileName.split(".").pop()}</span>
+                            <div>
+                              {d.fileName}
+                              {d.status === "Failed" && d.error && <div className="small" style={{ color: "var(--danger)" }}>{d.error}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="muted">{formatSize(d.sizeBytes)}</td>
+                        <td><StatusBadge doc={d} /></td>
+                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          {(d.status === "Failed" || d.status === "UploadedUnqueued") && (
+                            <button className="btn secondary small" onClick={() => reprocess(d)}>Retry</button>
+                          )}{" "}
+                          <button className="btn danger small" onClick={() => removeDoc(d)} aria-label={`Delete ${d.fileName}`}>
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <div id="leads" style={{ scrollMarginTop: 84 }}>
+            <LeadsSection botId={id} enabled={bot.leadCaptureEnabled} />
+          </div>
+
+          <section className="card" id="install">
+            <div className="card-head">
+              <div className="section-title"><span className="section-icon" aria-hidden>🧩</span><h2>Add to your website</h2></div>
             </div>
             <div className="field">
-              <label htmlFor="leadAfter">Show the form automatically after this many answers</label>
-              <input id="leadAfter" type="number" min={0} max={20} value={leadAfter}
-                onChange={(e) => setLeadAfter(Number(e.target.value))} />
-              <p className="small muted" style={{ margin: "4px 0 0" }}>0 = only when the visitor taps the call-back button.</p>
+              <span className="small" style={{ fontWeight: 700, display: "block", marginBottom: 6 }}>Chat colour</span>
+              <div className="swatches" role="group" aria-label="Chat colour">
+                {COLORS.map((c) => (
+                  <button key={c.value} type="button" className="swatch" style={{ background: c.value }}
+                    aria-pressed={color === c.value} aria-label={c.name} title={c.name} onClick={() => setColor(c.value)} />
+                ))}
+                <span className="small muted">Pick your brand colour; it is added to the code below.</span>
+              </div>
             </div>
-          </>
-        )}
+            <p className="muted small">Paste this just before the closing <code>&lt;/body&gt;</code> tag of your site.</p>
+            <pre className="snippet" data-testid="embed-snippet">{snippet}</pre>
+            <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+              <button className="btn secondary small" onClick={copySnippet}>
+                {copied ? "Copied!" : "Copy snippet"}
+              </button>
+              <div className="platforms" style={{ marginTop: 0 }}>
+                <span>WordPress</span><span>Wix</span><span>Shopify</span><span>Webflow</span><span>Any HTML</span>
+              </div>
+            </div>
+          </section>
 
-        <button className="btn" type="submit" disabled={saving || !name.trim()}>
-          {saving ? "Saving..." : "Save changes"}
-        </button>
-      </form>
+          <form className="card" onSubmit={save} aria-label="Bot settings" id="settings">
+            <div className="card-head">
+              <div className="section-title"><span className="section-icon" aria-hidden>⚙️</span><h2>Settings</h2></div>
+            </div>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="name">Name</label>
+                <input id="name" type="text" required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="welcomeMessage">Welcome message</label>
+                <textarea id="welcomeMessage" maxLength={500} value={welcome} rows={2} style={{ minHeight: 44 }}
+                  onChange={(e) => setWelcome(e.target.value)} />
+              </div>
+            </div>
 
-      <section className="card">
-        <h2>Danger zone</h2>
-        <p className="muted small">Deleting the bot removes its documents and stops the widget on every site using it.</p>
-        <button className="btn danger" onClick={removeBot}>Delete bot</button>
-      </section>
+            <fieldset className="field questions">
+              <legend>Suggested questions <span className="muted small">(optional, up to 4)</span></legend>
+              <p className="small muted" style={{ margin: "0 0 8px" }}>
+                Shown as buttons under the welcome message, so visitors can ask with one tap.
+              </p>
+              <div className="question-grid">
+                {questions.map((q, i) => (
+                  <input key={i} type="text" maxLength={120} value={q} aria-label={`Suggested question ${i + 1}`}
+                    placeholder={QUESTION_EXAMPLES[i]}
+                    onChange={(e) => setQuestions((qs) => qs.map((x, j) => (j === i ? e.target.value : x)))} />
+                ))}
+              </div>
+            </fieldset>
+
+            <h3 className="subhead">Lead capture</h3>
+            <div className="field">
+              <label className="check" htmlFor="leadEnabled">
+                <input id="leadEnabled" type="checkbox" checked={leadEnabled} onChange={(e) => setLeadEnabled(e.target.checked)} />
+                Ask visitors for their name and phone number
+              </label>
+              <p className="small muted" style={{ margin: "4px 0 0 28px" }}>
+                Adds a call-back button to the chat and collects enquiries in the Leads list.
+              </p>
+            </div>
+            {leadEnabled && (
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="leadPrompt">Invitation text</label>
+                  <textarea id="leadPrompt" maxLength={300} value={leadPrompt} onChange={(e) => setLeadPrompt(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="leadAfter">Show the form automatically after this many answers</label>
+                  <input id="leadAfter" type="number" min={0} max={20} value={leadAfter}
+                    onChange={(e) => setLeadAfter(Number(e.target.value))} />
+                  <p className="small muted" style={{ margin: "4px 0 0" }}>0 = only when the visitor taps the call-back button.</p>
+                </div>
+              </div>
+            )}
+
+            <button className="btn" type="submit" disabled={saving || !name.trim()}>
+              {saving ? "Saving..." : "Save changes"}
+            </button>
+          </form>
+
+          <section className="card danger-zone" id="danger">
+            <h2>Danger zone</h2>
+            <p className="muted small">Deleting the bot removes its documents and stops the widget on every site using it.</p>
+            <button className="btn danger" onClick={removeBot}>Delete bot</button>
+          </section>
+        </div>
+      </div>
     </>
   );
 }
+
+/** The widget's own default colour: the snippet only gets data-color when another one is picked. */
+const DEFAULT_COLOR = "#4f46e5";
+const COLORS = [
+  { name: "Indigo (default)", value: DEFAULT_COLOR },
+  { name: "Ember", value: "#c8461f" },
+  { name: "Blue", value: "#1d4ed8" },
+  { name: "Teal", value: "#0f766e" },
+  { name: "Green", value: "#15803d" },
+  { name: "Rose", value: "#be185d" },
+  { name: "Charcoal", value: "#1f2937" },
+];
 
 const QUESTION_EXAMPLES = [
   "e.g. What are the fees?",

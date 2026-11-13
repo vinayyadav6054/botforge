@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import Logo from "@/components/Logo";
 import { api, ApiError, getSession } from "@/lib/api";
 
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
@@ -43,11 +44,25 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <main className="auth-wrap">
-      <div className="card auth-card">
-        <div className="brand" style={{ marginBottom: 18 }}>
-          Bot<span>Forge</span>
+    <div className="auth-split">
+      <aside className="auth-side">
+        <span className="glow" />
+        <Logo />
+        <div>
+          <h2>
+            {isRegister ? <>Answer every visitor. <em>Even at 2 AM.</em></> : <>Good to see you <em>again.</em></>}
+          </h2>
+          <ul>
+            <li>Learns from your PDFs, Word files and FAQs</li>
+            <li>Collects names and phone numbers for you</li>
+            <li>One line of code on any website</li>
+          </ul>
         </div>
+        <p className="quote">Built for coaching classes, clinics, builders, restaurants and every business that answers the same questions all day.</p>
+      </aside>
+      <main className="auth-main">
+      <div className="auth-card">
+        <div className="auth-mobile-brand"><Logo /></div>
         <h1>{isRegister ? "Create your workspace" : "Welcome back"}</h1>
         <p className="muted">
           {isRegister ? "Set up a chatbot that answers from your own documents." : "Log in to manage your bots."}
@@ -91,6 +106,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
           )}
         </p>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }
