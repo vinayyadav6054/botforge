@@ -3,7 +3,7 @@
  * Edit this file (or set the NEXT_PUBLIC_* variables on Vercel) and redeploy.
  */
 export const site = {
-  name: "BotForge",
+  name: "Kahiye",
   tagline: "AI receptionist for your website",
   /** WhatsApp number with country code and no "+" or spaces, e.g. "919876543210". Empty hides the buttons. */
   whatsapp: process.env.NEXT_PUBLIC_CONTACT_WHATSAPP ?? "",

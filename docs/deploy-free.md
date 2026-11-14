@@ -85,7 +85,7 @@ Add these in Render → **Environment**. Each one switches on a feature; everyth
 | Key | What it does |
 |---|---|
 | `ADMIN_API_KEY` | A long random value. Opens **/admin** on your dashboard: every business, its plan and usage, and a button to activate a plan after a UPI/bank payment. |
-| `BREVO_API_KEY`, `EMAIL_FROM` | Sends real emails (confirm email, password reset, monthly report) through Brevo's HTTPS API, free for 300 a day. `EMAIL_FROM` like `BotForge <you@gmail.com>`, with that address verified as a sender in Brevo. Render's free plan blocks SMTP ports, so use this there. Without it the emails are only written to the Render log. |
+| `BREVO_API_KEY`, `EMAIL_FROM` | Sends real emails (confirm email, password reset, monthly report) through Brevo's HTTPS API, free for 300 a day. `EMAIL_FROM` like `Kahiye <you@gmail.com>`, with that address verified as a sender in Brevo. Render's free plan blocks SMTP ports, so use this there. Without it the emails are only written to the Render log. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Any SMTP account instead of Brevo's API (Gmail app password: `smtp.gmail.com`, 587). Only on hosts that allow SMTP (not Render free). |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Online payments (Razorpay → Account & Settings → API keys). |
 | `RAZORPAY_PLAN_STARTER`, `RAZORPAY_PLAN_BUSINESS`, `RAZORPAY_PLAN_PRO` | The `plan_...` ids. Create three monthly plans in Razorpay → Subscriptions → Plans (₹499, ₹1,499, ₹3,999). |
@@ -106,7 +106,7 @@ documents can be added; all data stays available.
 
 ## 7. Messaging apps (WhatsApp, Instagram, Messenger, Telegram)
 
-Nothing to set on Render: it gives BotForge its public address (`RENDER_EXTERNAL_URL`), which the apps send messages to.
+Nothing to set on Render: it gives Kahiye its public address (`RENDER_EXTERNAL_URL`), which the apps send messages to.
 Each business connects its own accounts in the dashboard (bot page → **Messaging apps**), with step-by-step help:
 
 - **Telegram:** create a bot with @BotFather and paste the token. Done.

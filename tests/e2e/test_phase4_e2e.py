@@ -68,7 +68,7 @@ def test_new_lead_reaches_the_webhook_signed(http, tenant_factory, hook):
 
     _, headers, body = wait_for(hook, "/lead-1")
     expected = "sha256=" + hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
-    assert headers["X-BotForge-Signature"] == expected
+    assert headers["X-Kahiye-Signature"] == expected
     data = json.loads(body)
     assert (data["event"], data["name"], data["phone"], data["course"], data["botName"]) == \
            ("lead.created", "Asha", "9820012345", "JEE", "Alerts Bot")

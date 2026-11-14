@@ -3,8 +3,8 @@ import DemoWidget from "@/components/landing/DemoWidget";
 import { site } from "@/lib/site";
 
 export const metadata = {
-  title: "Demo website · BotForge",
-  description: "A sample coaching institute website with a BotForge assistant in the corner.",
+  title: "Demo website · Kahiye",
+  description: "A sample coaching institute website with a Kahiye assistant in the corner.",
 };
 
 const COLOR = "#1d4ed8";
@@ -22,9 +22,9 @@ export default function DemoSite() {
       <div className="demo-banner">
         <span>
           <strong>Demo:</strong> a sample website for a made-up institute.{" "}
-          {site.demoBotKey ? "The assistant in the corner is a real BotForge bot." : "Open the chat in the corner."}
+          {site.demoBotKey ? "The assistant in the corner is a real Kahiye bot." : "Open the chat in the corner."}
         </span>
-        <Link href="/">← Back to BotForge</Link>
+        <Link href="/">← Back to Kahiye</Link>
       </div>
 
       <header className="ds-nav">

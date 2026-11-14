@@ -7,7 +7,9 @@ export function gatewayOrigin(): string {
   return new URL(API_URL, base).origin;
 }
 
-const TOKEN_KEY = "botforge.session";
+const TOKEN_KEY = "kahiye.session";
+/** The session key before the rename to Kahiye: still read, so nobody is logged out. */
+const OLD_TOKEN_KEY = "botforge.session";
 
 export interface Session {
   token: string;
@@ -147,7 +149,7 @@ export class ApiError extends Error {
 export function getSession(): Session | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(OLD_TOKEN_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as Session;
     return isExpired(s.token) ? (clearSession(), null) : s;
@@ -162,6 +164,7 @@ export function saveSession(s: Session) {
 
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(OLD_TOKEN_KEY);
 }
 
 function isExpired(token: string): boolean {

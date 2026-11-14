@@ -5,7 +5,7 @@ import { gatewayOrigin } from "@/lib/api";
 import ChatDemo from "./ChatDemo";
 
 /**
- * On the demo website: the real BotForge widget when a demo bot is configured (NEXT_PUBLIC_DEMO_BOT_KEY),
+ * On the demo website: the real Kahiye widget when a demo bot is configured (NEXT_PUBLIC_DEMO_BOT_KEY),
  * otherwise a floating scripted chat so the page still works without a backend.
  */
 export default function DemoWidget({ botKey, color }: { botKey: string; color: string }) {
@@ -21,7 +21,7 @@ export default function DemoWidget({ botKey, color }: { botKey: string; color: s
     document.body.appendChild(s);
     return () => {
       s.remove();
-      document.querySelectorAll("[data-botforge]").forEach((el) => el.remove());
+      document.querySelectorAll("[data-kahiye]").forEach((el) => el.remove());
     };
   }, [botKey, color]);
 

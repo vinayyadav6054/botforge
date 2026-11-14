@@ -12,7 +12,7 @@ public class RazorpayOptions
     public string? KeyId { get; set; }
     public string? KeySecret { get; set; }
     public string? WebhookSecret { get; set; }
-    /// <summary>Razorpay plan ids (plan_...) per BotForge plan id: starter, business, pro.</summary>
+    /// <summary>Razorpay plan ids (plan_...) per Kahiye plan id: starter, business, pro.</summary>
     public Dictionary<string, string> Plans { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public bool Enabled => !string.IsNullOrWhiteSpace(KeyId) && !string.IsNullOrWhiteSpace(KeySecret);

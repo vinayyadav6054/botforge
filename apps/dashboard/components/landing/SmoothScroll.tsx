@@ -15,7 +15,7 @@ export default function SmoothScroll() {
       easing: (t) => 1 - Math.pow(1 - t, 4),
       smoothWheel: true,
       // the chat widget (shadow DOM host) and marked areas keep their own scrolling
-      prevent: (node) => !!(node as HTMLElement).closest?.("[data-botforge], [data-lenis-prevent]"),
+      prevent: (node) => !!(node as HTMLElement).closest?.("[data-kahiye], [data-lenis-prevent]"),
     });
     let frame = 0;
     const raf = (time: number) => {

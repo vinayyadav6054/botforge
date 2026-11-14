@@ -19,7 +19,7 @@ def test_conversations_are_logged_and_answers_counted(http, tenant_factory):
     first = chat(http, bot["publicKey"], "What is the loyalty code?", conversation_id=cid)
     assert "MAPLE-913" in first["text"] and first["meta"]["conversationId"] == cid
     second = chat(http, bot["publicKey"], "Until what time are you open?", conversation_id=cid)
-    assert second["done"] and not second["error"], second   # an AI timeout here is not a BotForge bug: rerun
+    assert second["done"] and not second["error"], second   # an AI timeout here is not a Kahiye bug: rerun
 
     account = owner.get("/account").json()
     assert account["plan"]["id"] == "trial"

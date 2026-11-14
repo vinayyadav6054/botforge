@@ -32,7 +32,7 @@ MAX_QUESTION_CHARS = 1000
 MAX_HISTORY_TURNS = 10
 MAX_HISTORY_TURN_CHARS = 4000
 
-# "Powered by BotForge" link in the widget (shown on plans that keep the badge); empty = text without a link
+# "Powered by Kahiye" link in the widget (shown on plans that keep the badge); empty = text without a link
 BRANDING_URL = os.getenv("BRANDING_URL", "").strip()
 
 # messaging apps (overridable for tests)

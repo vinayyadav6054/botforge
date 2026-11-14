@@ -27,7 +27,7 @@ async function register(page: Page, owner: ReturnType<typeof newOwner>) {
 
 /** Asks the widget a question and returns the text of the bot's answer bubble. */
 async function askWidget(page: Page, question: string) {
-  const widget = page.locator("[data-botforge]");
+  const widget = page.locator("[data-kahiye]");
   const launcher = widget.getByRole("button", { name: "Open chat" });
   if (await launcher.isVisible()) await launcher.click();
   const input = widget.getByLabel("Message");
@@ -72,7 +72,7 @@ test("owner signs up, builds a bot from a document and chats with it in the live
 
   // live preview with the real widget
   await page.getByRole("button", { name: "Test your bot" }).click();
-  const widget = page.locator("[data-botforge]");
+  const widget = page.locator("[data-kahiye]");
   await widget.getByRole("button", { name: "Open chat" }).click();
   await expect(widget.locator(".title")).toHaveText("Coffee Helper");
   await expect(widget.locator(".msg.bot").first()).toHaveText("Hi! Ask me about Harbor Coffee.");
@@ -129,7 +129,7 @@ test("the embed snippet works on a customer's own website", async ({ page, reque
 async function runCustomerSite(page: Page, url: string) {
   await page.goto(url);
 
-  const widget = page.locator("[data-botforge]");
+  const widget = page.locator("[data-kahiye]");
   await widget.getByRole("button", { name: "Open chat" }).click();
   await expect(widget.locator(".title")).toHaveText("Shop Assistant");
   await expect(widget.locator(".msg.bot").first()).toHaveText("Welcome to the shop!");
@@ -221,7 +221,7 @@ test("the owner takes over a live chat and the visitor sees the reply on the cus
 
     // the owner, in the dashboard
     await ownerPage.goto("/login");
-    await ownerPage.evaluate((s) => localStorage.setItem("botforge.session", s),
+    await ownerPage.evaluate((s) => localStorage.setItem("kahiye.session", s),
       JSON.stringify({ token: reg.token, email: owner.email, tenantSlug: reg.tenantSlug, role: "Owner" }));
     await ownerPage.goto(`/bots/${bot.id}#conversations`);
     await ownerPage.locator(".convo-item", { hasText: "What is the loyalty code?" }).click();
@@ -232,7 +232,7 @@ test("the owner takes over a live chat and the visitor sees the reply on the cus
     await expect(ownerPage.locator(".bubble.agent")).toContainText("Hi, this is Priya.");
 
     // the visitor sees the person join and the reply, without reloading
-    const widget = visitor.locator("[data-botforge]");
+    const widget = visitor.locator("[data-kahiye]");
     await expect(widget.locator(".msg.agent")).toHaveText("Hi, this is Priya. Want me to call you?", { timeout: 30_000 });
     await expect(widget.locator(".status")).toHaveText("Chatting with a person");
 

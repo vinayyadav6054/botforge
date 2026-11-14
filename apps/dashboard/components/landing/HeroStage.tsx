@@ -67,7 +67,7 @@ export default function HeroStage() {
       <motion.div className="hs-tilt" style={{ rotateX: rx, rotateY: ry, scale }}>
         {/* the owner's dashboard */}
         <div className="hs-window">
-          <div className="hs-bar"><i /><i /><i /><span>app.botforge · {s.business}</span></div>
+          <div className="hs-bar"><i /><i /><i /><span>app.kahiye · {s.business}</span></div>
           <div className="hs-body">
             <div className="hs-side">
               <b className="on" /><b /><b /><b /><b />

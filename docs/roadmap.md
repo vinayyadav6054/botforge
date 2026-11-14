@@ -1,6 +1,6 @@
-# BotForge roadmap (future scope)
+# Kahiye roadmap (future scope)
 
-What BotForge does today, and what can be added, ordered by how much each item helps sell the product.
+What Kahiye does today, and what can be added, ordered by how much each item helps sell the product.
 
 ## Today
 
@@ -10,7 +10,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
 - Lead capture: name, phone, course, email, page and transcript; statuses New / Contacted / Converted / Junk; CSV export
 - Plans (14-day trial, Starter, Business, Pro) with enforced limits, Razorpay subscriptions, admin page for manual payments
 - Password reset, email verification, monthly report email; conversation history with unanswered questions
-- "Powered by BotForge" badge (removed on Business and Pro), Privacy Policy, Terms, data export, account deletion
+- "Powered by Kahiye" badge (removed on Business and Pro), Privacy Policy, Terms, data export, account deletion
 - Landing page with live demo, demo website
 - WhatsApp, Instagram, Messenger and Telegram answer from the same knowledge (voice notes too); WhatsApp chats become leads
 - Hindi, Hinglish and other Indian languages: questions are also searched in English, reply language setting,
@@ -32,7 +32,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
 | **Password reset and email verification** | Basic account safety; fewer support requests |
 | **Conversation history** for the owner (all chats, not only leads) | "What are my customers asking?" is a key selling point |
 | **Monthly report email** (questions answered, leads, top topics) | Shows value every month, so customers keep paying |
-| **"Powered by BotForge" link**, removable on paid plans | Free marketing; a reason to upgrade |
+| **"Powered by Kahiye" link**, removable on paid plans | Free marketing; a reason to upgrade |
 | **Privacy Policy, Terms, data deletion and export** | Required for storing customer data (India DPDP Act 2023) |
 | **Landing page** with pricing, demo bot and WhatsApp contact | Trust and self-service sign-ups |
 
@@ -79,7 +79,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
 
 - **Agency / reseller (white-label) plan**: agencies manage many client bots under their own brand and domain
 - **Team accounts**: several users per business with roles (owner, editor, viewer)
-- **Public API and SDKs** so developers can use BotForge bots in their own apps
+- **Public API and SDKs** so developers can use Kahiye bots in their own apps
 - **Custom domains** for the widget and a hosted chat page (`chat.business.com`)
 - **Industry templates**: coaching, clinic, real estate, salon, restaurant, with ready questions and lead fields
 - **Enterprise**: SSO, audit logs, data stored in India, uptime SLA, on-premise option

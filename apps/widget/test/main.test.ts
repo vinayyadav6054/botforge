@@ -54,7 +54,7 @@ describe("mount", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const widget = mount({ botKey: "bk_t", apiBase: "http://gw/api", accent: "#000" });
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     widget.open();
     await tick();
     await tick();
@@ -69,7 +69,7 @@ describe("mount", () => {
 
     const bubbles = [...root.querySelectorAll(".msg")].map((m) => m.textContent);
     expect(bubbles).toEqual(["Hello there!", "Open on Sunday?", "Closed on Sundays."]);
-    expect(JSON.parse(sessionStorage.getItem("botforge:bk_t:history")!)).toEqual([
+    expect(JSON.parse(sessionStorage.getItem("kahiye:bk_t:history")!)).toEqual([
       { role: "user", text: "Open on Sunday?" },
       { role: "assistant", text: "Closed on Sundays." },
     ]);
@@ -85,7 +85,7 @@ describe("mount", () => {
       .mockResolvedValueOnce(sse('event: token\ndata: {"text":"Rs 500."}\n\n', "event: done\ndata: {}\n\n")));
 
     const widget = mount({ botKey: "bk_order", apiBase: "http://gw/api", accent: "#000" });
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     widget.ask("Fees?");
     await tick();
     releaseInfo();   // the bot's settings arrive after the question was asked
@@ -107,7 +107,7 @@ describe("mount", () => {
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
 
     const widget = mount({ botKey: "bk_actions", apiBase: "http://gw/api", accent: "#000" });
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     widget.open();
     for (let i = 0; i < 5; i++) await tick();
 
@@ -139,7 +139,7 @@ describe("mount", () => {
       vi.stubGlobal("fetch", fetchMock);
 
       const widget = mount({ botKey: "bk_handover", apiBase: "http://gw/api", accent: "#000" });
-      const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+      const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
       widget.open();
       for (let i = 0; i < 5; i++) await tick();
       widget.ask("Can I talk to someone?");
@@ -156,8 +156,8 @@ describe("mount", () => {
       const poll = fetchMock.mock.calls.map((c) => String(c[0])).find((u) => u.includes("/updates"))!;
       expect(poll).toMatch(/\/chat\/bk_handover\/conversations\/[0-9a-f-]{36}\/updates\?after=/);
       // the next check only asks for newer replies
-      expect(sessionStorage.getItem("botforge:bk_handover:agentSince")).toBe("2026-11-14T10:00:00Z");
-      expect(JSON.parse(sessionStorage.getItem("botforge:bk_handover:history")!).at(-1))
+      expect(sessionStorage.getItem("kahiye:bk_handover:agentSince")).toBe("2026-11-14T10:00:00Z");
+      expect(JSON.parse(sessionStorage.getItem("kahiye:bk_handover:history")!).at(-1))
         .toEqual({ role: "assistant", text: "Priya here, how can I help?" });
     } finally {
       vi.useRealTimers();
@@ -180,7 +180,7 @@ describe("mount", () => {
   it("hides the action bar when the business has no buttons", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ name: "A", welcomeMessage: "Hi" }))));
     const widget = mount({ botKey: "bk_noactions", apiBase: "http://gw/api", accent: "#000" });
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     widget.open();
     for (let i = 0; i < 5; i++) await tick();
     expect(root.querySelector(".actions")!.hasAttribute("hidden")).toBe(true);
@@ -193,7 +193,7 @@ describe("mount", () => {
     widget.open();
     await tick();
     await tick();
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     expect(root.querySelector("img")).toBeNull();
     expect(root.querySelector(".msg.bot")!.textContent).toBe("<img src=x onerror=alert(1)>");
   });
@@ -204,7 +204,7 @@ describe("mount", () => {
     widget.open();
     await tick();
     await tick();
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     expect(root.querySelector(".msg.error")!.textContent).toMatch(/not available/);
   });
 });
@@ -227,7 +227,7 @@ describe("lead capture", () => {
     await settle();
     widget.ask("What are the fees?");
     await settle();
-    return document.querySelector("[data-botforge]")!.shadowRoot!;
+    return document.querySelector("[data-kahiye]")!.shadowRoot!;
   }
 
   function fill(root: ShadowRoot, values: Record<string, string>) {
@@ -266,7 +266,7 @@ describe("lead capture", () => {
     expect(root.querySelector("form.lead")).toBeNull();
     expect([...root.querySelectorAll(".msg.bot")].pop()!.textContent).toBe("Thank you, Asha! Our team will contact you soon.");
     expect((root.querySelector(".talk") as HTMLButtonElement).hidden).toBe(true);
-    expect(sessionStorage.getItem("botforge:bk_lead:lead")).toBe("done");
+    expect(sessionStorage.getItem("kahiye:bk_lead:lead")).toBe("done");
   });
 
   it("validates locally and shows server errors without losing the input", async () => {
@@ -288,7 +288,7 @@ describe("lead capture", () => {
     const root = await chatOnce(vi.fn());
     (root.querySelector(".lead-skip") as HTMLButtonElement).click();
     expect(root.querySelector("form.lead")).toBeNull();
-    expect(sessionStorage.getItem("botforge:bk_lead:lead")).toBe("dismissed");
+    expect(sessionStorage.getItem("kahiye:bk_lead:lead")).toBe("dismissed");
     // the header button still works
     (root.querySelector(".talk") as HTMLButtonElement).click();
     expect(root.querySelector("form.lead")).not.toBeNull();
@@ -307,7 +307,7 @@ describe("lead capture", () => {
     await settle();
     widget.ask("hi");
     await settle();
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     expect((root.querySelector(".talk") as HTMLButtonElement).hidden).toBe(true);
     expect(root.querySelector("form.lead")).toBeNull();
   });
@@ -322,7 +322,7 @@ describe("lead capture", () => {
     await settle();
     widget.ask("q");
     await settle();
-    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
     expect(root.querySelector("img")).toBeNull();
     expect(root.querySelector(".lead-intro")!.textContent).toBe("<img src=x onerror=alert(1)>");
   });
@@ -332,7 +332,7 @@ describe("redesign", () => {
   const settle = async () => {
     for (let i = 0; i < 12; i++) await tick();
   };
-  const shadow = () => document.querySelector("[data-botforge]")!.shadowRoot!;
+  const shadow = () => document.querySelector("[data-kahiye]")!.shadowRoot!;
 
   it("derives initials and expands short colours", () => {
     expect(initials("Kalrashukla Classes")).toBe("KC");
@@ -373,7 +373,7 @@ describe("redesign", () => {
   });
 
   it("does not show chips when the conversation already has history", async () => {
-    sessionStorage.setItem("botforge:bk_hist:history", JSON.stringify([{ role: "user", text: "Hello" }]));
+    sessionStorage.setItem("kahiye:bk_hist:history", JSON.stringify([{ role: "user", text: "Hello" }]));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
       name: "Bot", welcomeMessage: "Hi!", suggestedQuestions: ["Fees?"],
     }))));
@@ -446,26 +446,26 @@ describe("plans and conversation history", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(infoWith({ branding: { show: true, url: "javascript:alert(1)" } })));
     const w = mount({ botKey: "bk_badge1", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
     w.open();
-    const root = document.querySelectorAll("[data-botforge]")[document.querySelectorAll("[data-botforge]").length - 1].shadowRoot!;
+    const root = document.querySelectorAll("[data-kahiye]")[document.querySelectorAll("[data-kahiye]").length - 1].shadowRoot!;
     await vi.waitFor(() => expect(root.querySelector<HTMLElement>(".footer")!.hidden).toBe(false));
     expect(root.querySelector(".footer a")).toBeNull();
-    expect(root.querySelector(".footer")!.textContent).toContain("Powered by BotForge");
+    expect(root.querySelector(".footer")!.textContent).toContain("Powered by Kahiye");
   });
 
   it("hides the badge on plans without it", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(infoWith({ branding: { show: false } })));
     const w = mount({ botKey: "bk_badge2", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
     w.open();
-    const root = document.querySelectorAll("[data-botforge]")[document.querySelectorAll("[data-botforge]").length - 1].shadowRoot!;
+    const root = document.querySelectorAll("[data-kahiye]")[document.querySelectorAll("[data-kahiye]").length - 1].shadowRoot!;
     await vi.waitFor(() => expect(root.querySelector(".title")!.textContent).toBe("Bot"));
     expect(root.querySelector<HTMLElement>(".footer")!.hidden).toBe(true);
   });
 
   it("keeps one conversation id per session and bot", () => {
     sessionStorage.clear();
-    const a = conversationId("botforge:bk_1:conversation");
+    const a = conversationId("kahiye:bk_1:conversation");
     expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-    expect(conversationId("botforge:bk_1:conversation")).toBe(a);
-    expect(conversationId("botforge:bk_2:conversation")).not.toBe(a);
+    expect(conversationId("kahiye:bk_1:conversation")).toBe(a);
+    expect(conversationId("kahiye:bk_2:conversation")).not.toBe(a);
   });
 });

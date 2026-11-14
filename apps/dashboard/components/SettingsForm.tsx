@@ -349,7 +349,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         </div>
         <span className="small muted">
           Each lead is POSTed as JSON (name, phone, email, course, channel, botName, transcript, createdAt).
-          {bot.webhookSecret && <> Signature header <code>X-BotForge-Signature</code> = HMAC-SHA256 with secret <code>{bot.webhookSecret}</code>.</>}
+          {bot.webhookSecret && <> Signature header <code>X-Kahiye-Signature</code> = HMAC-SHA256 with secret <code>{bot.webhookSecret}</code>.</>}
         </span>
       </div>
       <details className="sheets-help">

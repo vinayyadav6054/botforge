@@ -203,14 +203,14 @@ public class AccountEndpointsTests(IdentityApiFactory factory)
         var now = DateTime.UtcNow;
         await MonthlyReportService.SendDueAsync(scope.ServiceProvider, now);
 
-        var report = factory.Emails.To(email).Single(m => m.Subject.StartsWith("Your BotForge report"));
+        var report = factory.Emails.To(email).Single(m => m.Subject.StartsWith("Your Kahiye report"));
         Assert.Contains("Conversations: 40", report.Text);
         Assert.Contains("New leads: 7", report.Text);
-        Assert.DoesNotContain(factory.Emails.To(unverifiedEmail), m => m.Subject.StartsWith("Your BotForge report"));
+        Assert.DoesNotContain(factory.Emails.To(unverifiedEmail), m => m.Subject.StartsWith("Your Kahiye report"));
 
         // running again in the same month sends nothing new
         await MonthlyReportService.SendDueAsync(scope.ServiceProvider, now);
-        Assert.Single(factory.Emails.To(email), m => m.Subject.StartsWith("Your BotForge report"));
+        Assert.Single(factory.Emails.To(email), m => m.Subject.StartsWith("Your Kahiye report"));
         factory.Bots.Stats = [];
     }
 }

@@ -22,7 +22,7 @@ public class BrevoEmailSenderTests
     }
 
     private static BrevoEmailSender Sender(Capture handler) => new(new HttpClient(handler),
-        Options.Create(new EmailOptions { From = "BotForge <hello@example.com>", Brevo = new BrevoOptions { ApiKey = "xkeysib-test" } }));
+        Options.Create(new EmailOptions { From = "Kahiye <hello@example.com>", Brevo = new BrevoOptions { ApiKey = "xkeysib-test" } }));
 
     [Fact]
     public async Task Posts_the_email_to_brevo_with_the_api_key()
@@ -34,7 +34,7 @@ public class BrevoEmailSenderTests
         Assert.Equal("xkeysib-test", handler.Request.Headers.GetValues("api-key").Single());
         var json = JsonDocument.Parse(handler.Body).RootElement;
         Assert.Equal("hello@example.com", json.GetProperty("sender").GetProperty("email").GetString());
-        Assert.Equal("BotForge", json.GetProperty("sender").GetProperty("name").GetString());
+        Assert.Equal("Kahiye", json.GetProperty("sender").GetProperty("name").GetString());
         Assert.Equal("owner@example.com", json.GetProperty("to")[0].GetProperty("email").GetString());
         Assert.Equal("Hi", json.GetProperty("subject").GetString());
         Assert.Equal("<p>html</p>", json.GetProperty("htmlContent").GetString());

@@ -9,13 +9,13 @@ import { site, whatsappLink } from "@/lib/site";
 import "@/components/landing/landing.css";
 
 export const metadata = {
-  title: "BotForge · AI assistant that turns your website visitors into customers",
+  title: "Kahiye · AI assistant that turns your website visitors into customers",
   description:
-    "Upload your brochure, price list and FAQs. BotForge answers your customers 24×7 on your website and WhatsApp, in Hindi or English, from your own documents, and sends you every lead.",
+    "Upload your brochure, price list and FAQs. Kahiye answers your customers 24×7 on your website and WhatsApp, in Hindi or English, from your own documents, and sends you every lead.",
 };
 
 const STEPS = [
-  { title: "Upload what you already have", text: "Brochure, fee list, menu, FAQ, or just your website address. BotForge reads it in about a minute." },
+  { title: "Upload what you already have", text: "Brochure, fee list, menu, FAQ, or just your website address. Kahiye reads it in about a minute." },
   { title: "Test it and make it yours", text: "Ask it anything a customer would. Pick your colour and logo, add one-tap questions and switch on call-backs." },
   { title: "Go live on your website and WhatsApp", text: "Paste one line on WordPress, Wix, Shopify or any site, or share your demo link. Leads start arriving in your inbox." },
 ];
@@ -208,7 +208,7 @@ export default function Landing() {
             </SpotlightGrid>
             {site.whatsapp && (
               <p className="lp-center-link">
-                Want us to set it up for you? <a href={whatsappLink("Hi! I'd like a BotForge assistant for my business.")} target="_blank" rel="noopener noreferrer">Chat with us on WhatsApp →</a>
+                Want us to set it up for you? <a href={whatsappLink("Hi! I'd like a Kahiye assistant for my business.")} target="_blank" rel="noopener noreferrer">Chat with us on WhatsApp →</a>
               </p>
             )}
           </div>
@@ -234,7 +234,7 @@ export default function Landing() {
             <div className="lp-cta center">
               <Link href="/register" className="btn lg">Build your assistant free</Link>
               {site.whatsapp && (
-                <a href={whatsappLink("Hi! I'd like to know more about BotForge.")} className="btn ghost lg" target="_blank" rel="noopener noreferrer">
+                <a href={whatsappLink("Hi! I'd like to know more about Kahiye.")} className="btn ghost lg" target="_blank" rel="noopener noreferrer">
                   Talk to us on WhatsApp
                 </a>
               )}

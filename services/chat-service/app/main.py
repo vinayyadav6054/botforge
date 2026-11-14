@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="botforge chat-service", lifespan=lifespan)
+app = FastAPI(title="kahiye chat-service", lifespan=lifespan)
 
 # the widget runs on customers' websites, so any origin may call this public endpoint
 # (later: restrict per bot to the domains the business registered)

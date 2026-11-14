@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Runs the whole BotForge stack locally.
+  Runs the whole Kahiye stack locally.
 
 .EXAMPLE
   ./scripts/dev.ps1 start     # infra (docker) + all services + dashboard

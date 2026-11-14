@@ -167,7 +167,7 @@ function BotDetail({ id }: { id: string }) {
     document.body.appendChild(s);
     return () => {
       s.remove();
-      document.querySelectorAll("[data-botforge]").forEach((el) => el.remove());
+      document.querySelectorAll("[data-kahiye]").forEach((el) => el.remove());
     };
   }, [preview, bot]);
 

@@ -122,7 +122,7 @@ CSV cells that start with `= + - @` are prefixed with `'` so spreadsheets do not
   (`POST /internal/tenants/{id}/lead-alert`, internal key), which emails the owner (or the bot's `alert_email`) with the
   lead, one-tap Call / WhatsApp links and the chat. Email goes through Brevo's HTTPS API or SMTP.
 - **Webhook:** optional per bot. Flat JSON (`event`, `name`, `phone`, `email`, `course`, `channel`, `botName`,
-  `transcript`, ...) signed with `X-BotForge-Signature: sha256=HMAC(secret, body)`. Server errors and timeouts are retried
+  `transcript`, ...) signed with `X-Kahiye-Signature: sha256=HMAC(secret, body)`. Server errors and timeouts are retried
   twice; 4xx is not. The HTTP client resolves the host and refuses private, loopback, link-local and CGNAT addresses at
   connect time (so DNS cannot point it inside the server), unless `Webhooks:AllowPrivate` is set (Development only).
   Google Sheets works through a small Apps Script web app (shown in the dashboard); Zapier / Make catch hooks work as is.

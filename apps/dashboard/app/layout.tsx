@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BotForge",
+  title: "Kahiye",
   description: "An AI assistant for your business that answers from your own documents and collects leads, on your website and WhatsApp.",
 };
 

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# BotForge backend for Render's FREE plan (512 MB RAM): gateway, identity, bots, chat and ingestion
+# Kahiye backend for Render's FREE plan (512 MB RAM): gateway, identity, bots, chat and ingestion
 # in one container. Everything heavy lives in free external services instead:
 #   dashboard -> Vercel, Postgres + pgvector -> Neon, RabbitMQ -> CloudAMQP, embeddings -> Gemini API.
 # Build context = repo root (Render: "Dockerfile Path" = deploy/render/Dockerfile). Guide: docs/deploy-free.md

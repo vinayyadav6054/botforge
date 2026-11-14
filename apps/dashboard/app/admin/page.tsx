@@ -5,7 +5,7 @@ import CenterCard from "@/components/CenterCard";
 import Logo from "@/components/Logo";
 import { AdminSubscription, AdminTenant, api } from "@/lib/api";
 
-const KEY = "botforge.admin";
+const KEY = "kahiye.admin";
 
 interface Row extends AdminTenant {
   sub?: AdminSubscription;

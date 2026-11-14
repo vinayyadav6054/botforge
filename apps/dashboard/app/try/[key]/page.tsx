@@ -14,7 +14,7 @@ interface Info {
 }
 
 declare global {
-  interface Window { BotForge?: { open: () => void; ask: (text: string) => void } }
+  interface Window { Kahiye?: { open: () => void; ask: (text: string) => void } }
 }
 
 const FALLBACK_QUESTIONS = ["What are your timings?", "What are the fees / prices?", "Where are you located?", "Can someone call me back?"];
@@ -48,12 +48,12 @@ export default function TryPage() {
     s.async = true;
     s.onload = () => {
       setReady(true);
-      if (window.matchMedia("(min-width: 700px)").matches) setTimeout(() => window.BotForge?.open(), 600);
+      if (window.matchMedia("(min-width: 700px)").matches) setTimeout(() => window.Kahiye?.open(), 600);
     };
     document.body.appendChild(s);
     return () => {
       s.remove();
-      document.querySelectorAll("[data-botforge]").forEach((el) => el.remove());
+      document.querySelectorAll("[data-kahiye]").forEach((el) => el.remove());
     };
   }, [info, key]);
 
@@ -63,7 +63,7 @@ export default function TryPage() {
         <div className="try-card center">
           <h1 className="display-2">This demo link is not active.</h1>
           <p className="muted">Ask the person who sent it for a new link.</p>
-          <Link href="/" className="btn">About BotForge</Link>
+          <Link href="/" className="btn">About Kahiye</Link>
         </div>
       </div>
     );
@@ -96,9 +96,9 @@ export default function TryPage() {
         <p className="try-label">Try one of these:</p>
         <div className="try-chips">
           {questions.map((q) => (
-            <button key={q} className="try-chip" disabled={!ready} onClick={() => window.BotForge?.ask(q)}>{q}</button>
+            <button key={q} className="try-chip" disabled={!ready} onClick={() => window.Kahiye?.ask(q)}>{q}</button>
           ))}
-          <button className="try-chip ghost" disabled={!ready} onClick={() => window.BotForge?.ask("Aapki fees kitni hai?")}>Aapki fees kitni hai?</button>
+          <button className="try-chip ghost" disabled={!ready} onClick={() => window.Kahiye?.ask("Aapki fees kitni hai?")}>Aapki fees kitni hai?</button>
         </div>
         <p className="muted small">Or tap the chat bubble in the corner and type your own question.</p>
 
@@ -106,7 +106,7 @@ export default function TryPage() {
           <a className="btn" href={cta} target={site.whatsapp ? "_blank" : undefined} rel="noopener noreferrer">
             Put this on our website
           </a>
-          <span className="muted small">Demo made with <Link href="/">BotForge</Link></span>
+          <span className="muted small">Demo made with <Link href="/">Kahiye</Link></span>
         </div>
       </main>
     </div>

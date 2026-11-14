@@ -56,7 +56,7 @@ const APPS: { kind: ChannelKind; label: string; icon: string; steps: string[]; f
     kind: "telegram", label: "Telegram", icon: "✈️",
     steps: [
       "Open Telegram, search for @BotFather and send /newbot. Choose a name and a username ending in “bot”.",
-      "BotFather replies with a token like 123456789:AA… — paste it here. That's all: BotForge connects the rest.",
+      "BotFather replies with a token like 123456789:AA… — paste it here. That's all: Kahiye connects the rest.",
     ],
     fields: [{ name: "token", label: "Bot token", placeholder: "123456789:AA…", secret: true }],
   },

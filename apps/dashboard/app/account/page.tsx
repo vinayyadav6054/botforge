@@ -31,7 +31,7 @@ function planFeatures(p: Plan) {
     `${p.bots} bot${p.bots === 1 ? "" : "s"}`,
     `${p.answersPerMonth.toLocaleString()} answers a month`,
     `${p.documents} documents`,
-    p.removeBranding ? "No “Powered by” badge" : "“Powered by BotForge” badge",
+    p.removeBranding ? "No “Powered by” badge" : "“Powered by Kahiye” badge",
     p.messagingApps ? "WhatsApp, Instagram, Messenger, Telegram" : "Website chat only",
   ];
 }
@@ -53,7 +53,7 @@ function AccountPage() {
     setError(null);
     if (!account?.onlinePayment.includes(plan.id)) {
       if (site.whatsapp) {
-        window.open(whatsappLink(`Hi! I'd like the BotForge ${plan.name} plan (₹${plan.priceInr}/month). My account: ${getSession()?.email ?? ""}`), "_blank", "noopener");
+        window.open(whatsappLink(`Hi! I'd like the Kahiye ${plan.name} plan (₹${plan.priceInr}/month). My account: ${getSession()?.email ?? ""}`), "_blank", "noopener");
       } else {
         setNotice(`Online payment is not set up yet. Contact us to activate the ${plan.name} plan.`);
       }
@@ -90,7 +90,7 @@ function AccountPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `botforge-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `kahiye-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Brand mark: a speech bubble with a spark (the "forge"), in the brand gradient, plus the word mark. */
+/** Brand mark: a speech bubble with a spark (an instant answer), in the brand gradient, plus the word mark "Kahiye". */
 export function Mark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden focusable="false" className="mark">
@@ -20,9 +20,9 @@ export function Mark({ size = 28 }: { size?: number }) {
 
 export default function Logo({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="brand" aria-label="BotForge home">
+    <Link href={href} className="brand" aria-label="Kahiye home">
       <Mark />
-      <span>Bot<em>Forge</em></span>
+      <span>Kah<em>iye</em></span>
     </Link>
   );
 }

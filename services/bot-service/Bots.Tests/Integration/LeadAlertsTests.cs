@@ -81,8 +81,8 @@ public class LeadAlertsTests(BotsApiFactory factory)
         await Submit(bot, "9811100002");
 
         var call = (await WaitFor("hooks.example/lead-a", "9811100002")).Single();
-        Assert.Equal(WebhookSender.Sign(bot.WebhookSecret!, call.Body), call.Headers["X-BotForge-Signature"]);
-        Assert.Equal("lead.created", call.Headers["X-BotForge-Event"]);
+        Assert.Equal(WebhookSender.Sign(bot.WebhookSecret!, call.Body), call.Headers["X-Kahiye-Signature"]);
+        Assert.Equal("lead.created", call.Headers["X-Kahiye-Event"]);
         var json = JsonDocument.Parse(call.Body).RootElement;
         Assert.Equal("lead.created", json.GetProperty("event").GetString());
         Assert.Equal("Asha", json.GetProperty("name").GetString());

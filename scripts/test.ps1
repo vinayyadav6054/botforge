@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Runs the BotForge test suite in three levels.
+  Runs the Kahiye test suite in three levels.
 
   unit         pure logic, no external services            (xUnit, pytest -m unit, Vitest, tsc)
   integration  each service against real Postgres/RabbitMQ (docker infra must be up)

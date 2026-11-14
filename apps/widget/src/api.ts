@@ -39,7 +39,7 @@ export interface BotInfo {
   welcomeMessage: string;
   leadCapture?: LeadCapture;
   suggestedQuestions?: string[];
-  /** "Powered by BotForge": shown unless the business's plan removes it */
+  /** "Powered by Kahiye": shown unless the business's plan removes it */
   branding?: { show?: boolean; url?: string };
   appearance?: Appearance;
   hours?: OpeningHours;

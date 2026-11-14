@@ -36,7 +36,7 @@ export function initials(name: string): string {
 export function readOptions(script: HTMLScriptElement | null): Options | null {
   const botKey = script?.dataset.botKey?.trim();
   if (!botKey) {
-    console.error("[BotForge] Missing data-bot-key on the widget <script> tag.");
+    console.error("[Kahiye] Missing data-bot-key on the widget <script> tag.");
     return null;
   }
   // default API: same origin as the script, under /api (the gateway serves both)
@@ -57,14 +57,14 @@ export interface Widget {
 
 export function mount(opts: Options): Widget {
   const api = new ChatApi(opts.apiBase, opts.botKey);
-  const historyKey = `botforge:${opts.botKey}:history`;
-  const agentSinceKey = `botforge:${opts.botKey}:agentSince`;
-  const leadKey = `botforge:${opts.botKey}:lead`;
-  const greetingKey = `botforge:${opts.botKey}:greeted`;
-  const conversationKey = `botforge:${opts.botKey}:conversation`;
+  const historyKey = `kahiye:${opts.botKey}:history`;
+  const agentSinceKey = `kahiye:${opts.botKey}:agentSince`;
+  const leadKey = `kahiye:${opts.botKey}:lead`;
+  const greetingKey = `kahiye:${opts.botKey}:greeted`;
+  const conversationKey = `kahiye:${opts.botKey}:conversation`;
 
   const host = document.createElement("div");
-  host.setAttribute("data-botforge", "");
+  host.setAttribute("data-kahiye", "");
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `
     <style>${css(opts.accent)}</style>
@@ -200,7 +200,7 @@ export function mount(opts: Options): Widget {
   function showBranding(branding: BotInfo["branding"]) {
     if (branding?.show === false) return;
     const url = typeof branding?.url === "string" && /^https?:\/\//i.test(branding.url) ? branding.url : "";
-    const label = "⚡ Powered by BotForge";
+    const label = "⚡ Powered by Kahiye";
     footer.textContent = "";
     if (url) {
       const a = document.createElement("a");

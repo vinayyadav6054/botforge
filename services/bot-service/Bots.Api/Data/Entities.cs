@@ -57,7 +57,7 @@ public class Bot
     public bool AlertEmailEnabled { get; set; } = true;
     public string? AlertEmail { get; set; }
     public string? WebhookUrl { get; set; }
-    /// <summary>Signs webhook bodies (HMAC-SHA256), so the receiver can check they came from BotForge.</summary>
+    /// <summary>Signs webhook bodies (HMAC-SHA256), so the receiver can check they came from Kahiye.</summary>
     public string? WebhookSecret { get; set; }
 
     // action buttons in the chat, also given to the AI so it can share them when a visitor asks

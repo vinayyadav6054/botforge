@@ -41,6 +41,7 @@ public record ChannelDto(Guid Id, string Kind, string DisplayName, string Webhoo
 public class SecretBox(IConfiguration config)
 {
     private byte[] Key => HKDF.DeriveKey(HashAlgorithmName.SHA256, Encoding.UTF8.GetBytes(config["Jwt:Key"]!), 32,
+        // "botforge" is the product's former name: it must never change, or every saved connection stops decrypting
         Encoding.UTF8.GetBytes("botforge"), Encoding.UTF8.GetBytes("channel-secrets-v1"));
 
     public string Seal(Dictionary<string, string> secrets)
@@ -188,7 +189,7 @@ public static class ChannelEndpoints
                 return Results.Json(new { error = "WhatsApp, Instagram, Messenger and Telegram are included in the Business and Pro plans.", code = "plan_limit" },
                     statusCode: StatusCodes.Status402PaymentRequired);
             if (string.IsNullOrWhiteSpace(config["Channels:PublicUrl"]))
-                return Results.BadRequest(new { error = "Messaging apps work once BotForge is online (they need a public address to send messages to)." });
+                return Results.BadRequest(new { error = "Messaging apps work once Kahiye is online (they need a public address to send messages to)." });
 
             var setup = await platforms.CheckAsync(req);
             if (setup.Error is not null) return Results.BadRequest(new { error = setup.Error });
@@ -203,7 +204,7 @@ public static class ChannelEndpoints
             };
             if (req.Kind == "telegram" &&
                 !await platforms.SetTelegramWebhookAsync(setup.Secrets!["token"], WebhookUrl(config, channel), channel.WebhookSecret))
-                return Results.BadRequest(new { error = "Telegram did not accept the webhook address. Is BotForge reachable over https?" });
+                return Results.BadRequest(new { error = "Telegram did not accept the webhook address. Is Kahiye reachable over https?" });
 
             db.Channels.Add(channel);
             await db.SaveChangesAsync();

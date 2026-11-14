@@ -20,12 +20,12 @@ const info = (extra: object) =>
   new Response(JSON.stringify({ name: "Sunrise Academy", welcomeMessage: "Hi!", ...extra }));
 
 function lastRoot(): ShadowRoot {
-  const hosts = document.querySelectorAll("[data-botforge]");
+  const hosts = document.querySelectorAll("[data-kahiye]");
   return hosts[hosts.length - 1].shadowRoot!;
 }
 
 afterEach(() => {
-  document.querySelectorAll("[data-botforge]").forEach((el) => el.remove());
+  document.querySelectorAll("[data-kahiye]").forEach((el) => el.remove());
   sessionStorage.clear();
   vi.unstubAllGlobals();
 });

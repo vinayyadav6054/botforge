@@ -66,7 +66,7 @@ public class LeadAlertSender(AppDbContext db, IdentityAlerts identity, WebhookSe
     {
         Id = Guid.Empty, TenantId = bot.TenantId, BotId = bot.Id, Name = "Test Lead", Phone = "+919800000000",
         Email = "test@example.com", Course = "Test enquiry", Channel = "web", CreatedAt = DateTime.UtcNow,
-        Transcript = """[{"role":"user","text":"This is a test from BotForge."},{"role":"assistant","text":"Your lead alerts are working."}]""",
+        Transcript = """[{"role":"user","text":"This is a test from Kahiye."},{"role":"assistant","text":"Your lead alerts are working."}]""",
     };
 }
 
@@ -156,9 +156,9 @@ public class WebhookSender(HttpClient http, ILogger<WebhookSender> log)
     private async Task<AlertResult> TryOnceAsync(string url, string secret, string body, CancellationToken ct)
     {
         using var msg = new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
-        msg.Headers.Add("X-BotForge-Signature", Sign(secret, body));
-        msg.Headers.Add("X-BotForge-Event", body.Contains("\"event\":\"lead.test\"") ? "lead.test" : "lead.created");
-        msg.Headers.UserAgent.ParseAdd("BotForge-Webhook/1.0");
+        msg.Headers.Add("X-Kahiye-Signature", Sign(secret, body));
+        msg.Headers.Add("X-Kahiye-Event", body.Contains("\"event\":\"lead.test\"") ? "lead.test" : "lead.created");
+        msg.Headers.UserAgent.ParseAdd("Kahiye-Webhook/1.0");
         try
         {
             using var res = await http.SendAsync(msg, ct);

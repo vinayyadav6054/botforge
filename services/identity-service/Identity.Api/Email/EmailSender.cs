@@ -15,8 +15,8 @@ public interface IEmailSender
 
 public class EmailOptions
 {
-    /// <summary>Sender, e.g. "BotForge &lt;hello@yourdomain.com&gt;".</summary>
-    public string From { get; set; } = "BotForge <no-reply@botforge.local>";
+    /// <summary>Sender, e.g. "Kahiye &lt;hello@yourdomain.com&gt;".</summary>
+    public string From { get; set; } = "Kahiye <no-reply@kahiye.local>";
     public SmtpOptions Smtp { get; set; } = new();
     public BrevoOptions Brevo { get; set; } = new();
 }
@@ -69,7 +69,7 @@ public class BrevoEmailSender(HttpClient http, IOptions<EmailOptions> options) :
         {
             Content = JsonContent.Create(new
             {
-                sender = new { name = string.IsNullOrWhiteSpace(from.DisplayName) ? "BotForge" : from.DisplayName, email = from.Address },
+                sender = new { name = string.IsNullOrWhiteSpace(from.DisplayName) ? "Kahiye" : from.DisplayName, email = from.Address },
                 to = new[] { new { email = message.To } },
                 subject = message.Subject,
                 htmlContent = message.Html,
@@ -103,34 +103,34 @@ public static class EmailTemplates
     private static string E(string s) => HtmlEncoder.Default.Encode(s);
 
     private static string Layout(string title, string bodyHtml) => $"""
-        <!doctype html><html><body style="margin:0;background:#f7f2ea;font-family:Segoe UI,Arial,sans-serif;color:#1c1714">
+        <!doctype html><html><body style="margin:0;background:#f6f7fb;font-family:Segoe UI,Arial,sans-serif;color:#0b1020">
         <div style="max-width:520px;margin:0 auto;padding:28px 18px">
-          <div style="font-weight:800;font-size:18px;margin-bottom:18px">Bot<span style="color:#c8461f">Forge</span></div>
-          <div style="background:#fffdf9;border:1px solid #e6dccd;border-radius:14px;padding:26px">
+          <div style="font-weight:800;font-size:19px;margin-bottom:18px;letter-spacing:-.02em">Kah<span style="color:#5b5bf6">iye</span></div>
+          <div style="background:#ffffff;border:1px solid #e3e6f0;border-radius:14px;padding:26px">
             <h1 style="font-size:20px;margin:0 0 14px">{E(title)}</h1>
             {bodyHtml}
           </div>
-          <p style="color:#6b6159;font-size:12px;margin-top:16px">You received this email because of your BotForge account.</p>
+          <p style="color:#5b6478;font-size:12px;margin-top:16px">You received this email because of your Kahiye account.</p>
         </div></body></html>
         """;
 
     private static string Button(string url, string label) =>
-        $"""<p style="margin:22px 0"><a href="{E(url)}" style="background:#c8461f;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">{E(label)}</a></p>""";
+        $"""<p style="margin:22px 0"><a href="{E(url)}" style="background:#5b5bf6;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">{E(label)}</a></p>""";
 
-    public static EmailMessage Verify(string to, string url) => new(to, "Confirm your email for BotForge",
-        $"Welcome to BotForge!\n\nConfirm your email address by opening this link (valid for 24 hours):\n{url}\n\nIf you did not sign up, ignore this email.",
+    public static EmailMessage Verify(string to, string url) => new(to, "Confirm your email for Kahiye",
+        $"Welcome to Kahiye!\n\nConfirm your email address by opening this link (valid for 24 hours):\n{url}\n\nIf you did not sign up, ignore this email.",
         Layout("Confirm your email", $"""
-            <p>Welcome to BotForge! Please confirm that this is your email address, so we can send you password resets and your monthly report.</p>
+            <p>Welcome to Kahiye! Please confirm that this is your email address, so we can send you password resets and your monthly report.</p>
             {Button(url, "Confirm email")}
-            <p style="color:#6b6159;font-size:13px">The link is valid for 24 hours. If you did not sign up, you can ignore this email.</p>
+            <p style="color:#5b6478;font-size:13px">The link is valid for 24 hours. If you did not sign up, you can ignore this email.</p>
             """));
 
-    public static EmailMessage Reset(string to, string url) => new(to, "Reset your BotForge password",
-        $"Someone asked to reset the password of your BotForge account.\n\nChoose a new password here (valid for 1 hour):\n{url}\n\nIf it was not you, ignore this email; your password stays the same.",
+    public static EmailMessage Reset(string to, string url) => new(to, "Reset your Kahiye password",
+        $"Someone asked to reset the password of your Kahiye account.\n\nChoose a new password here (valid for 1 hour):\n{url}\n\nIf it was not you, ignore this email; your password stays the same.",
         Layout("Reset your password", $"""
-            <p>Someone asked to reset the password of your BotForge account.</p>
+            <p>Someone asked to reset the password of your Kahiye account.</p>
             {Button(url, "Choose a new password")}
-            <p style="color:#6b6159;font-size:13px">The link is valid for 1 hour. If it was not you, ignore this email; your password stays the same.</p>
+            <p style="color:#5b6478;font-size:13px">The link is valid for 1 hour. If it was not you, ignore this email; your password stays the same.</p>
             """));
 
     private static readonly Dictionary<string, string> ChannelNames = new()
@@ -159,27 +159,27 @@ public static class EmailTemplates
                    $"\n\nCall back soon: people who get a call within an hour are far more likely to join.\nAll leads: {leadsUrl}";
 
         var rows = string.Join("", details.Select(d =>
-            $"""<tr><td style="padding:6px 0;color:#6b6159;width:120px;vertical-align:top">{E(d.Label)}</td><td style="padding:6px 0;font-weight:700">{E(d.Value)}</td></tr>"""));
+            $"""<tr><td style="padding:6px 0;color:#5b6478;width:120px;vertical-align:top">{E(d.Label)}</td><td style="padding:6px 0;font-weight:700">{E(d.Value)}</td></tr>"""));
         var chat = turns.Count == 0 ? "" : $"""
-            <div style="margin-top:18px;border-top:1px solid #e6dccd;padding-top:14px">
-              <div style="color:#6b6159;font-size:13px;margin-bottom:8px">The chat</div>
+            <div style="margin-top:18px;border-top:1px solid #e3e6f0;padding-top:14px">
+              <div style="color:#5b6478;font-size:13px;margin-bottom:8px">The chat</div>
               {string.Join("", turns.Select(t => t.Role == "user"
-                  ? $"""<p style="margin:6px 0 6px 40px;background:#fbe5da;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""
-                  : $"""<p style="margin:6px 40px 6px 0;background:#f0e9dd;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""))}
+                  ? $"""<p style="margin:6px 0 6px 40px;background:#ecebff;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""
+                  : $"""<p style="margin:6px 40px 6px 0;background:#eef0f7;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""))}
             </div>
             """;
         var actions = $"""
             <p style="margin:20px 0 6px">
-              <a href="tel:{tel}" style="background:#c8461f;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">Call {E(l.Name)}</a>
+              <a href="tel:{tel}" style="background:#5b5bf6;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">Call {E(l.Name)}</a>
               <a href="https://wa.me/{whatsapp}" style="background:#1e7a3c;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">WhatsApp</a>
-              <a href="{E(leadsUrl)}" style="color:#c8461f;font-weight:700;padding:11px 4px;display:inline-block">All leads →</a>
+              <a href="{E(leadsUrl)}" style="color:#5b5bf6;font-weight:700;padding:11px 4px;display:inline-block">All leads →</a>
             </p>
             """;
         return new EmailMessage(to, $"New lead: {l.Name} · {l.Phone} ({l.BotName})", text,
             Layout($"New enquiry for {l.BotName}", $"""
                 <table style="width:100%;border-collapse:collapse">{rows}</table>
                 {actions}
-                <p style="color:#6b6159;font-size:13px">Call back soon: people who get a call within an hour are far more likely to join.</p>
+                <p style="color:#5b6478;font-size:13px">Call back soon: people who get a call within an hour are far more likely to join.</p>
                 {chat}
                 """));
     }
@@ -194,14 +194,14 @@ public static class EmailTemplates
                 ? "No visitor chatted with your assistant this month. Check that the snippet is on your website, and share your website link with customers."
                 : "Every question was answered from your documents. Keep them up to date when prices or timings change.";
         var rows = string.Join("", new[] { ("Conversations", n.Conversations), ("Answers", n.Answers), ("New leads", n.Leads), ("Unanswered questions", n.Unanswered) }
-            .Select(r => $"""<tr><td style="padding:8px 0;color:#6b6159">{r.Item1}</td><td style="padding:8px 0;text-align:right;font-weight:800;font-size:18px">{r.Item2}</td></tr>"""));
-        return new EmailMessage(to, $"Your BotForge report for {n.Month}",
-            $"BotForge report for {n.Business}, {n.Month}\n\nConversations: {n.Conversations}\nAnswers: {n.Answers}\nNew leads: {n.Leads}\nUnanswered questions: {n.Unanswered}\nPlan: {n.Plan}\n\n{tip}\n\nDashboard: {dashboardUrl}",
+            .Select(r => $"""<tr><td style="padding:8px 0;color:#5b6478">{r.Item1}</td><td style="padding:8px 0;text-align:right;font-weight:800;font-size:18px">{r.Item2}</td></tr>"""));
+        return new EmailMessage(to, $"Your Kahiye report for {n.Month}",
+            $"Kahiye report for {n.Business}, {n.Month}\n\nConversations: {n.Conversations}\nAnswers: {n.Answers}\nNew leads: {n.Leads}\nUnanswered questions: {n.Unanswered}\nPlan: {n.Plan}\n\n{tip}\n\nDashboard: {dashboardUrl}",
             Layout($"{n.Month} at {n.Business}", $"""
-                <table style="width:100%;border-collapse:collapse;border-top:1px solid #e6dccd">{rows}</table>
+                <table style="width:100%;border-collapse:collapse;border-top:1px solid #e3e6f0">{rows}</table>
                 <p style="margin-top:16px">{E(tip)}</p>
                 {Button(dashboardUrl, "Open dashboard")}
-                <p style="color:#6b6159;font-size:13px">Plan: {E(n.Plan)}</p>
+                <p style="color:#5b6478;font-size:13px">Plan: {E(n.Plan)}</p>
                 """));
     }
 }

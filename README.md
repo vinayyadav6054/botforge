@@ -1,4 +1,4 @@
-# BotForge
+# Kahiye
 
 Multi-tenant SaaS for building AI chatbots from your own documents (RAG).
 A business signs up, creates a bot, uploads PDFs / Word / text files, and pastes one `<script>` tag

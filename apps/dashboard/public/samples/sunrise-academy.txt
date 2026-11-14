@@ -1,5 +1,5 @@
 Sunrise Academy - Information for students and parents
-(Fictional business used for the BotForge demo.)
+(Fictional business used for the Kahiye demo.)
 
 ABOUT
 Sunrise Academy is a coaching institute on FC Road, Pune, preparing students for JEE Main, JEE Advanced and NEET since 2011.

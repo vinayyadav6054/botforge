@@ -12,12 +12,12 @@ function sse(...events: string[]): Response {
   return new Response(new ReadableStream({ start(c) { events.forEach((e) => c.enqueue(enc.encode(e))); c.close(); } }));
 }
 const root = () => {
-  const hosts = document.querySelectorAll("[data-botforge]");
+  const hosts = document.querySelectorAll("[data-kahiye]");
   return hosts[hosts.length - 1].shadowRoot!;
 };
 
 afterEach(() => {
-  document.querySelectorAll("[data-botforge]").forEach((el) => el.remove());
+  document.querySelectorAll("[data-kahiye]").forEach((el) => el.remove());
   sessionStorage.clear();
   vi.unstubAllGlobals();
 });

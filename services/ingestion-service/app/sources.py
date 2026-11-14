@@ -21,7 +21,7 @@ from .parsing import Section, extract_sections, rows_to_text, _csv_rows
 
 log = logging.getLogger("ingestion")
 
-USER_AGENT = "BotForgeBot/1.0 (+https://botforge.app; reads the site for its owner's chatbot)"
+USER_AGENT = "KahiyeBot/1.0 (reads the site for its owner's AI assistant)"
 TIMEOUT = 15.0
 MAX_BYTES = 5 * 1024 * 1024
 MAX_REDIRECTS = 5

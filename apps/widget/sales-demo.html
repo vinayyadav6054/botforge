@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  BotForge sales demo page — one file, reused for every prospect.
+  Kahiye sales demo page — one file, reused for every prospect.
 
   Usage:
     sales-demo.html?key=bk_xxx&name=Kalrashukla%20Classes&color=%23b91c1c
@@ -84,12 +84,12 @@
       <a class="btn" id="cta" href="#" target="_blank" rel="noopener">Chat with me on WhatsApp</a>
     </section>
 
-    <footer>Demo built with BotForge using publicly available information. Answers may be incomplete until your full documents are added.</footer>
+    <footer>Demo built with Kahiye using publicly available information. Answers may be incomplete until your full documents are added.</footer>
   </main>
 
   <script>
     // ===== EDIT THESE TWO BEFORE SENDING DEMOS =====
-    var DEFAULT_GATEWAY = "https://YOUR-GATEWAY.example.com"; // deployed BotForge gateway (serves /widget.js and /api)
+    var DEFAULT_GATEWAY = "https://YOUR-GATEWAY.example.com"; // deployed Kahiye gateway (serves /widget.js and /api)
     var CONTACT_WHATSAPP = "910000000000";                    // your number, country code + number, digits only
     // ===============================================
 
@@ -134,11 +134,11 @@
       chips.appendChild(b);
     });
 
-    // Opens the chat and sends the question through the widget's public API (BotForge.ask).
+    // Opens the chat and sends the question through the widget's public API (Kahiye.ask).
     // If the widget has not loaded yet, copy the question so the visitor can paste it.
     function ask(q) {
-      if (window.BotForge && typeof window.BotForge.ask === "function") {
-        window.BotForge.ask(q);
+      if (window.Kahiye && typeof window.Kahiye.ask === "function") {
+        window.Kahiye.ask(q);
         return;
       }
       if (navigator.clipboard) navigator.clipboard.writeText(q).catch(function () {});
@@ -158,7 +158,7 @@
       s.setAttribute("data-color", accent);
       s.onload = function () {
         // open the chat automatically on desktop; on phones leave the page readable first
-        if (window.innerWidth > 700 && window.BotForge && window.BotForge.open) window.BotForge.open();
+        if (window.innerWidth > 700 && window.Kahiye && window.Kahiye.open) window.Kahiye.open();
       };
       s.onerror = function () { warn("Could not load the chat widget from " + gateway + ". Is the gateway running?"); };
       document.body.appendChild(s);
