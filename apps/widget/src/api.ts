@@ -85,6 +85,14 @@ export interface StreamHandlers {
   onDone: () => void;
   /** where the answer came from (sent after the answer when the owner enabled it) */
   onSources?: (items: SourceRef[]) => void;
+  /** a person from the business is handling this chat: no bot answer comes */
+  onHandover?: () => void;
+}
+
+/** A person's replies since the last check, and whether they are still handling the chat. */
+export interface HandoverUpdates {
+  human: boolean;
+  messages: { text: string; at: string }[];
 }
 
 export class ChatApi {
@@ -98,6 +106,22 @@ export class ChatApi {
     const res = await fetch(this.url("/info"));
     if (!res.ok) throw new Error(`info failed: ${res.status}`);
     return res.json();
+  }
+
+  /** Replies from a person at the business; null when the check failed (try again later). */
+  async updates(conversationId: string, after: string | null): Promise<HandoverUpdates | null> {
+    try {
+      const query = after ? `?after=${encodeURIComponent(after)}` : "";
+      const res = await fetch(this.url(`/conversations/${encodeURIComponent(conversationId)}/updates${query}`));
+      if (!res.ok) return null;
+      const body = await res.json();
+      const messages = Array.isArray(body?.messages)
+        ? body.messages.filter((m: { text?: unknown; at?: unknown }) => typeof m?.text === "string" && typeof m?.at === "string")
+        : [];
+      return { human: body?.human === true, messages };
+    } catch {
+      return null;
+    }
   }
 
   /** Speech to text for the microphone button; null when nothing could be understood. */
@@ -180,6 +204,8 @@ export class ChatApi {
           else if (evt.event === "error") {
             handlers.onError(typeof data.message === "string" ? data.message : "Something went wrong.");
             finished = true;
+          } else if (evt.event === "handover") {
+            handlers.onHandover?.();
           } else if (evt.event === "sources" && Array.isArray(data.items)) {
             handlers.onSources?.(data.items as SourceRef[]);
           } else if (evt.event === "done") {

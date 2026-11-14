@@ -96,6 +96,7 @@ public class GatewayTests(GatewayFactory factory) : IClassFixture<GatewayFactory
     [InlineData("/api/bots", "/bots")]
     [InlineData("/api/bots/123/documents?x=1", "/bots/123/documents")]
     [InlineData("/api/chat/bk_abc/info", "/chat/bk_abc/info")]
+    [InlineData("/api/chat/bk_abc/conversations/c1/updates", "/chat/bk_abc/conversations/c1/updates")]
     [InlineData("/api/channels/whatsapp/abc", "/channels/whatsapp/abc")]
     [InlineData("/api/account", "/account")]
     [InlineData("/api/account/export", "/account/export")]
@@ -257,5 +258,31 @@ public class SingleHostGatewayTests(SingleHostGatewayFactory factory) : IClassFi
         for (var i = 0; i < 4; i++) await Login("203.0.113.1");
         Assert.Equal(HttpStatusCode.TooManyRequests, await Login("203.0.113.1"));
         Assert.Equal(HttpStatusCode.OK, await Login("203.0.113.2"));   // a different visitor is unaffected
+    }
+
+    [Fact]
+    public async Task Polling_for_replies_has_its_own_limit()
+    {
+        await using var limited = new LimitedChatFactory();
+        var client = limited.CreateClient();
+        var chat = new List<HttpStatusCode>();
+        for (var i = 0; i < 3; i++) chat.Add((await client.GetAsync("/api/chat/bk_x/info")).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, chat[2]);
+        // the chat limit is used up, but the open widget can still check for a person's reply
+        for (var i = 0; i < 5; i++)
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/chat/bk_x/conversations/c1/updates")).StatusCode);
+        var origin = new HttpRequestMessage(HttpMethod.Get, "/api/chat/bk_x/conversations/c1/updates");
+        origin.Headers.Add("Origin", "https://any-customer-site.example");
+        Assert.Equal("*", (await client.SendAsync(origin)).Headers.GetValues("Access-Control-Allow-Origin").Single());
+    }
+
+    private sealed class LimitedChatFactory : GatewayFactory
+    {
+        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.UseSetting("Gateway:RateLimits:ChatPerMinute", "2");
+            builder.UseSetting("Gateway:RateLimits:PollPerMinute", "100");
+        }
     }
 }

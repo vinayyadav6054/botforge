@@ -115,6 +115,10 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px
 }
 .chip:hover { background: ${a("12")}; border-color: ${accent}; }
 
+.msg.note { background: transparent; box-shadow: none; color: #6b7280; font-size: 12.5px; font-style: italic; padding: 4px 6px; }
+.msg.agent { box-shadow: 0 0 0 1.5px ${a("55")}; }
+.with-person .status::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; margin-right: 6px; vertical-align: 1px; }
+
 .actions { display: flex; gap: 6px; padding: 8px 12px 0; overflow-x: auto; scrollbar-width: none; }
 .actions::-webkit-scrollbar { display: none; }
 .action {

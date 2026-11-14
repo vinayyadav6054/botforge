@@ -60,7 +60,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
 
 ## Phase 4: from chatbot to sales assistant (in progress)
 
-- **Human handover**: live chat inbox where staff take over a conversation
+- **Human handover**: live conversations in the dashboard; take over, reply on the website or in messaging apps, hand back (done)
 - **Instant lead alerts** to the owner: email and webhooks done (Google Sheets, Zapier, Make); WhatsApp / Telegram to the owner later
 - **CRM integration**: Google Sheets and any CRM through the signed webhook (done); native Zoho, HubSpot, LeadSquared later
 - **Appointment booking**: booking-link button (Calendly, Google booking page, any form) done; own calendar and reminders later

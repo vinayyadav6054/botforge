@@ -174,6 +174,8 @@ public class Conversation
     /// <summary>Messaging apps: the customer's name and number/handle.</summary>
     public string? ContactName { get; set; }
     public string? ContactId { get; set; }
+    /// <summary>A person from the business is replying until then; the bot stays quiet (see Handover).</summary>
+    public DateTime? HumanUntil { get; set; }
     public List<ConversationMessage> Messages { get; set; } = new();
 }
 
@@ -182,7 +184,7 @@ public class ConversationMessage
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ConversationId { get; set; }
     public Guid TenantId { get; set; }
-    public string Role { get; set; } = default!;   // "user" | "assistant"
+    public string Role { get; set; } = default!;   // "user" | "assistant" | "agent" (a person from the business)
     public string Text { get; set; } = default!;
     /// <summary>For questions: false when nothing in the documents matched.</summary>
     public bool Answered { get; set; } = true;

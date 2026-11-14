@@ -84,6 +84,11 @@ def world(monkeypatch):
     monkeypatch.setattr(main, "find_chunks", find_chunks)
     monkeypatch.setattr(main, "check_quota", check_quota)
     monkeypatch.setattr(main, "stream_answer", stream_answer)
+
+    async def human_is_replying(key, conversation_id):
+        return state.get("human", False)
+
+    monkeypatch.setattr(main, "human_is_replying", human_is_replying)
     monkeypatch.setattr(main, "transcribe", transcribe)
     monkeypatch.setattr(main, "give_back", nothing)
     monkeypatch.setattr(main, "get_model", lambda: None)

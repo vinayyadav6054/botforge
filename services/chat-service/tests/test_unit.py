@@ -77,6 +77,11 @@ def fakes(monkeypatch):
     monkeypatch.setattr(main, "resolve_bot", resolve_bot)
     monkeypatch.setattr(main, "retrieve", retrieve)
     monkeypatch.setattr(main, "stream_answer", stream_answer)
+
+    async def human_is_replying(key, conversation_id):
+        return state.get("human", False)
+
+    monkeypatch.setattr(main, "human_is_replying", human_is_replying)
     monkeypatch.setattr(main, "get_model", lambda: None)  # skip loading the embedding model
     return state
 

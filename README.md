@@ -130,6 +130,8 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | PATCH/DELETE | `/bots/{id}/leads/{leadId}` | JWT | `{status: New\|Contacted\|Converted\|Junk}` / delete (data removal requests) |
 | GET | `/bots/{id}/leads/export` | JWT | CSV (UTF-8 with BOM, formula-safe) |
 | POST | `/bots/{id}/alerts/test` | JWT | `{kind: email\|webhook}`: sends a sample lead, answers `{ok, status, error}` |
+| POST | `/bots/{id}/conversations/{cid}/takeover`, `/release`, `/reply` | JWT | human handover: pause the bot / give it back / `{text}` sent as the business (website or messaging app) |
+| GET | `/chat/{publicKey}/conversations/{cid}/updates?after=` | public | the widget's check: `{human, messages:[{text, at}]}` (own rate limit) |
 | GET/DELETE | `/bots/{id}/conversations[/{cid}]` | JWT | visitor chats (newest first, `?before=&take=`), one chat, delete |
 | POST | `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email` | – | `{email}` / `{token, password}` / `{token}` |
 | POST | `/auth/resend-verification`, `/auth/delete-account` | JWT | – / `{password}` (deletes everything) |

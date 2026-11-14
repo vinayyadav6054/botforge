@@ -116,7 +116,7 @@ def build_contents(question: str, chunks: list[tuple[str, float]],
                    history: list[tuple[str, str]] | None = None) -> list[types.Content]:
     """Earlier turns as plain chat turns, then the latest question together with the retrieved context."""
     contents = [
-        types.Content(role="model" if role == "assistant" else "user", parts=[types.Part(text=text)])
+        types.Content(role="model" if role in ("assistant", "agent") else "user", parts=[types.Part(text=text)])
         for role, text in (history or [])
     ]
     contents.append(types.Content(role="user", parts=[types.Part(text=build_prompt(question, chunks))]))

@@ -977,3 +977,16 @@ h2.section-title { font-size: 17px; }
 .sheets-help summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .sheets-help ol { padding-left: 20px; display: grid; gap: 4px; margin: 12px 0; }
 .sheets-help .snippet { white-space: pre; overflow-x: auto; font-size: 12px; }
+
+/* human handover */
+.handover-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 13px; margin-bottom: 4px; }
+.handover-bar.on { background: var(--ok-soft); color: var(--ok); }
+.handover-bar.on strong { color: var(--ok); }
+.bubble.agent { background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
+.agent-tag { display: block; font-size: 11px; font-weight: 800; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+.reply-box { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
+.reply-box textarea { flex: 1; min-height: 44px; resize: vertical; }
+.convo-item.is-human { border-left: 3px solid var(--ok); }
+.convo-item .live-dot { vertical-align: 1px; }
+.section-title .pill-live { margin-left: 4px; }

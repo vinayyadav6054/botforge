@@ -194,3 +194,57 @@ test("bot settings, document deletion and bot deletion", async ({ page }) => {
   await expect(page).toHaveURL(/\/bots$/);
   await expect(page.getByText("You have no bots yet.")).toBeVisible();
 });
+
+test("the owner takes over a live chat and the visitor sees the reply on the customer's site", async ({ browser, request }) => {
+  const owner = newOwner();
+  const reg = await (await request.post(`${GATEWAY}/api/auth/register-tenant`, {
+    data: { tenantName: owner.business, email: owner.email, password: owner.password },
+  })).json();
+  const auth = { Authorization: `Bearer ${reg.token}` };
+  const bot = await (await request.post(`${GATEWAY}/api/bots`, { headers: auth, data: { name: "Live Bot", welcomeMessage: "Hello!" } })).json();
+  const doc = await (await request.post(`${GATEWAY}/api/bots/${bot.id}/documents`, {
+    headers: auth, multipart: { file: { name: "faq.txt", mimeType: "text/plain", buffer: Buffer.from(FAQ) } },
+  })).json();
+  await expect.poll(async () => (await (await request.get(`${GATEWAY}/api/bots/${bot.id}/documents/${doc.id}`,
+    { headers: auth })).json()).status, { timeout: 90_000 }).toBe("Ready");
+
+  // the visitor, on the customer's own website
+  const html = `<!doctype html><html><body><h1>Shop</h1>
+    <script src="${GATEWAY}/widget.js" data-bot-key="${bot.publicKey}" async></script></body></html>`;
+  const shop = createServer((_, res) => res.writeHead(200, { "Content-Type": "text/html" }).end(html));
+  await new Promise<void>((resolve) => shop.listen(0, "127.0.0.1", resolve));
+  const visitor = await browser.newPage();
+  const ownerPage = await browser.newPage();
+  try {
+    await visitor.goto(`http://127.0.0.1:${(shop.address() as AddressInfo).port}/`);
+    expect(await askWidget(visitor, "What is the loyalty code?")).toContain("MAPLE-913");
+
+    // the owner, in the dashboard
+    await ownerPage.goto("/login");
+    await ownerPage.evaluate((s) => localStorage.setItem("botforge.session", s),
+      JSON.stringify({ token: reg.token, email: owner.email, tenantSlug: reg.tenantSlug, role: "Owner" }));
+    await ownerPage.goto(`/bots/${bot.id}#conversations`);
+    await ownerPage.locator(".convo-item", { hasText: "What is the loyalty code?" }).click();
+    await ownerPage.getByRole("button", { name: "Take over" }).click();
+    await expect(ownerPage.getByText("You are replying.")).toBeVisible();
+    await ownerPage.getByLabel("Your reply").fill("Hi, this is Priya. Want me to call you?");
+    await ownerPage.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(ownerPage.locator(".bubble.agent")).toContainText("Hi, this is Priya.");
+
+    // the visitor sees the person join and the reply, without reloading
+    const widget = visitor.locator("[data-botforge]");
+    await expect(widget.locator(".msg.agent")).toHaveText("Hi, this is Priya. Want me to call you?", { timeout: 30_000 });
+    await expect(widget.locator(".status")).toHaveText("Chatting with a person");
+
+    // while the owner handles it, the visitor's message goes to them and the bot stays quiet
+    await widget.getByLabel("Message").fill("Yes please, after 6");
+    await widget.getByLabel("Message").press("Enter");
+    await expect(ownerPage.locator(".bubble.user").last()).toHaveText("Yes please, after 6", { timeout: 15_000 });
+    // welcome + the first answer; the "person joined" note and the reply are not bot answers
+    await expect(widget.locator(".msg.bot:not(.note):not(.agent)")).toHaveCount(2);
+  } finally {
+    shop.close();
+    await visitor.close();
+    await ownerPage.close();
+  }
+});

@@ -58,6 +58,7 @@ export interface Widget {
 export function mount(opts: Options): Widget {
   const api = new ChatApi(opts.apiBase, opts.botKey);
   const historyKey = `botforge:${opts.botKey}:history`;
+  const agentSinceKey = `botforge:${opts.botKey}:agentSince`;
   const leadKey = `botforge:${opts.botKey}:lead`;
   const greetingKey = `botforge:${opts.botKey}:greeted`;
   const conversationKey = `botforge:${opts.botKey}:conversation`;
@@ -164,6 +165,10 @@ export function mount(opts: Options): Widget {
   let answered = history.filter((t) => t.role === "assistant").length;
   let short = ""; // the bot's initials, shown in the avatars
   let chips: HTMLDivElement | null = null;
+  // human handover: a person from the business may take over; their replies are fetched while the chat is open
+  let human = false;
+  let agentSince = loadFlag(agentSinceKey);
+  let pollTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Adds a message row and returns its bubble; bot rows get a small avatar. */
   function bubble(kind: "bot" | "user" | "error", text: string): HTMLDivElement {
@@ -376,6 +381,44 @@ export function mount(opts: Options): Widget {
     actionBar.hidden = !actionBar.childElementCount;
   }
 
+  function setHuman(on: boolean) {
+    if (on && !human) {
+      const note = bubble("bot", fill(T.humanJoined, botName || "the team"));
+      note.classList.add("note");
+    }
+    human = on;
+    status.textContent = on ? T.withPerson : T.online;
+    panel.classList.toggle("with-person", on);
+  }
+
+  async function pollUpdates() {
+    if (!history.length && !human) return;   // nothing stored yet: nobody can have replied
+    const update = await api.updates(conversationId(conversationKey), agentSince);
+    if (!update) return;
+    setHuman(update.human);
+    for (const m of update.messages) {
+      const el = bubble("bot", m.text);
+      el.classList.add("agent");
+      history = [...history, { role: "assistant", text: m.text } as Turn].slice(-MAX_HISTORY);
+      agentSince = m.at;
+    }
+    if (update.messages.length) {
+      saveHistory(historyKey, history);
+      if (agentSince) saveFlag(agentSinceKey, agentSince);
+    }
+  }
+
+  /** Checks often while a person is replying, rarely otherwise; only while the chat is open. */
+  function schedulePoll(delay?: number) {
+    clearTimeout(pollTimer);
+    if (panel.hidden || !host.isConnected) return;   // closed, or the page removed the widget
+    pollTimer = setTimeout(async () => {
+      if (panel.hidden || !host.isConnected) return;
+      await pollUpdates();
+      schedulePoll();
+    }, delay ?? (human ? 4000 : 15000));
+  }
+
   function setOpen(open: boolean) {
     panel.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
@@ -386,7 +429,18 @@ export function mount(opts: Options): Widget {
       hideGreeting();
       void loadInfo();
       setTimeout(() => input.focus(), 0);
+      schedulePoll(1500);   // catch replies that came while the chat was closed
+    } else {
+      clearTimeout(pollTimer);
     }
+  }
+
+  /** Sends after the welcome message, so a question asked before the chat finished loading stays in order. */
+  async function sendAfterLoad(text: string) {
+    busy = true;              // no second message (or double click) while waiting
+    sendBtn.disabled = true;
+    await loadInfo();
+    void send(text);
   }
 
   async function send(text: string) {
@@ -397,8 +451,17 @@ export function mount(opts: Options): Widget {
     const answer = bubble("bot", "");
     answer.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
     let received = "";
+    let handedOver = false;
+    if (!agentSince) {
+      // replies from a person can only come after the first message
+      agentSince = new Date().toISOString();
+      saveFlag(agentSinceKey, agentSince);
+    }
 
     await api.send(text, history.slice(-MAX_HISTORY), {
+      onHandover: () => {
+        handedOver = true;
+      },
       onToken: (t) => {
         received += t;
         answer.textContent = received;
@@ -410,6 +473,15 @@ export function mount(opts: Options): Widget {
       },
       onSources: (items) => showSources(items),
       onDone: () => {
+        if (handedOver) {
+          // the person will answer; their reply arrives through the regular check
+          answer.parentElement?.remove();
+          history = [...history, { role: "user", text } as Turn].slice(-MAX_HISTORY);
+          saveHistory(historyKey, history);
+          setHuman(true);
+          schedulePoll(3000);
+          return;
+        }
         if (!received) answer.textContent = T.noAnswer;
         if (speakAnswers || spokenQuestion) speak(answer.textContent ?? "");
         spokenQuestion = false;
@@ -564,10 +636,7 @@ export function mount(opts: Options): Widget {
     setOpen(true);
     const q = text.trim().slice(0, 1000);
     if (!q || busy) return;
-    // after the welcome message, so a question asked before the chat was ever opened stays in order
-    void loadInfo().then(() => {
-      if (!busy) void send(q);
-    });
+    void sendAfterLoad(q);
   }
 
   // ---------- greeting bubble: once per visit, only while the chat has not been opened ----------
@@ -611,7 +680,7 @@ export function mount(opts: Options): Widget {
     const text = input.value.trim();
     if (!text || busy) return;
     input.value = "";
-    void send(text);
+    void sendAfterLoad(text);
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {

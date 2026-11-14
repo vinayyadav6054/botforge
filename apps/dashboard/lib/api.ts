@@ -287,6 +287,12 @@ export const api = {
   listConversations: (botId: string, before?: string) =>
     request<ConversationSummary[]>(`/bots/${botId}/conversations?take=20${before ? `&before=${encodeURIComponent(before)}` : ""}`),
   getConversation: (botId: string, id: string) => request<Conversation>(`/bots/${botId}/conversations/${id}`),
+  takeOver: (botId: string, id: string) =>
+    request<{ human: boolean; humanUntil: string | null }>(`/bots/${botId}/conversations/${id}/takeover`, { method: "POST" }),
+  handBack: (botId: string, id: string) =>
+    request<{ human: boolean }>(`/bots/${botId}/conversations/${id}/release`, { method: "POST" }),
+  reply: (botId: string, id: string, text: string) =>
+    request<ConversationMessage>(`/bots/${botId}/conversations/${id}/reply`, { method: "POST", body: JSON.stringify({ text }) }),
   deleteConversation: (botId: string, id: string) =>
     request<void>(`/bots/${botId}/conversations/${id}`, { method: "DELETE" }),
 
@@ -330,6 +336,16 @@ export interface ConversationSummary {
   channel: "web" | ChannelKind;
   contactName: string | null;
   contactId: string | null;
+  /** a person from the business is replying; the bot is paused */
+  human: boolean;
+}
+
+export interface ConversationMessage {
+  /** agent = a person from the business */
+  role: "user" | "assistant" | "agent";
+  text: string;
+  answered: boolean;
+  createdAt: string;
 }
 
 export interface Conversation {
@@ -337,7 +353,11 @@ export interface Conversation {
   startedAt: string;
   lastMessageAt: string;
   pageUrl: string | null;
-  messages: { role: "user" | "assistant"; text: string; answered: boolean; createdAt: string }[];
+  messages: ConversationMessage[];
+  channel: "web" | ChannelKind;
+  contactName: string | null;
+  human: boolean;
+  humanUntil: string | null;
 }
 
 export interface Me {

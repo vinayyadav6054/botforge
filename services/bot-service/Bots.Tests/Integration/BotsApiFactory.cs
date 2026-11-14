@@ -59,6 +59,7 @@ public class BotsApiFactory : WebApplicationFactory<Program>
             s.AddHttpClient<Bots.Api.ChannelPlatforms>().ConfigurePrimaryHttpMessageHandler(() => Platform);
             s.AddHttpClient<Bots.Api.IdentityAlerts>().ConfigurePrimaryHttpMessageHandler(() => Outbound);
             s.AddHttpClient<Bots.Api.WebhookSender>().ConfigurePrimaryHttpMessageHandler(() => Outbound);
+            s.AddHttpClient<Bots.Api.ChatRelay>().ConfigurePrimaryHttpMessageHandler(() => Outbound);
         });
     }
 

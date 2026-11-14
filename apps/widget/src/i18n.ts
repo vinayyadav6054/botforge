@@ -22,6 +22,8 @@ export interface Texts {
   micError: string;
   voiceFailed: string;
   upiCopied: string;    // {name} = the UPI ID
+  humanJoined: string;  // {name} = the business
+  withPerson: string;
 }
 
 const en: Texts = {
@@ -47,6 +49,8 @@ const en: Texts = {
   micError: "The microphone could not be used.",
   voiceFailed: "Sorry, I couldn't understand that. Please type your question.",
   upiCopied: "UPI ID {name} copied. Pay from any UPI app (GPay, PhonePe, Paytm).",
+  humanJoined: "You are now chatting with a person from {name}.",
+  withPerson: "Chatting with a person",
 };
 
 const hi: Texts = {
@@ -72,6 +76,8 @@ const hi: Texts = {
   micError: "माइक्रोफ़ोन का उपयोग नहीं हो सका।",
   voiceFailed: "माफ़ कीजिए, समझ नहीं आया। कृपया अपना सवाल लिखें।",
   upiCopied: "UPI ID {name} कॉपी हो गई। किसी भी UPI ऐप (GPay, PhonePe, Paytm) से भुगतान करें।",
+  humanJoined: "अब आप {name} के एक व्यक्ति से बात कर रहे हैं।",
+  withPerson: "एक व्यक्ति से बातचीत",
 };
 
 const mr: Texts = {
@@ -97,6 +103,8 @@ const mr: Texts = {
   micError: "मायक्रोफोन वापरता आला नाही.",
   voiceFailed: "माफ करा, समजले नाही. कृपया तुमचा प्रश्न लिहा.",
   upiCopied: "UPI ID {name} कॉपी झाला. कोणत्याही UPI ॲपने (GPay, PhonePe, Paytm) पैसे भरा.",
+  humanJoined: "आता तुम्ही {name} मधील एका व्यक्तीशी बोलत आहात.",
+  withPerson: "एका व्यक्तीशी गप्पा",
 };
 
 const ta: Texts = {
@@ -122,6 +130,8 @@ const ta: Texts = {
   micError: "மைக்ரோஃபோனைப் பயன்படுத்த முடியவில்லை.",
   voiceFailed: "மன்னிக்கவும், புரியவில்லை. உங்கள் கேள்வியை எழுதுங்கள்.",
   upiCopied: "UPI ID {name} நகலெடுக்கப்பட்டது. எந்த UPI செயலியிலும் (GPay, PhonePe, Paytm) பணம் செலுத்துங்கள்.",
+  humanJoined: "இப்போது நீங்கள் {name} நிறுவனத்தைச் சேர்ந்த ஒருவருடன் பேசுகிறீர்கள்.",
+  withPerson: "ஒருவருடன் உரையாடல்",
 };
 
 const te: Texts = {
@@ -147,6 +157,8 @@ const te: Texts = {
   micError: "మైక్రోఫోన్‌ను ఉపయోగించలేకపోయాం.",
   voiceFailed: "క్షమించండి, అర్థం కాలేదు. దయచేసి మీ ప్రశ్నను టైప్ చేయండి.",
   upiCopied: "UPI ID {name} కాపీ అయింది. ఏదైనా UPI యాప్ (GPay, PhonePe, Paytm) ద్వారా చెల్లించండి.",
+  humanJoined: "ఇప్పుడు మీరు {name} నుండి ఒక వ్యక్తితో మాట్లాడుతున్నారు.",
+  withPerson: "ఒక వ్యక్తితో చాట్",
 };
 
 export const TEXTS: Record<string, Texts> = { en, hi, mr, ta, te };

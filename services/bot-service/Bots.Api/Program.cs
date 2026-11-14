@@ -38,6 +38,7 @@ builder.Services.AddHttpClient<IRazorpayClient, RazorpayClient>(c => c.Timeout =
 builder.Services.AddHostedService<ConversationCleanup>();
 builder.Services.AddSingleton<SecretBox>();
 builder.Services.AddHttpClient<ChannelPlatforms>(c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddHttpClient<ChatRelay>(c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddSingleton<LeadAlertQueue>();
 builder.Services.AddHostedService<LeadAlertService>();
 builder.Services.AddScoped<LeadAlertSender>();
@@ -330,12 +331,13 @@ bots.MapGet("/{botId:guid}/conversations", async (Guid botId, DateTime? before, 
 {
     if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
     var size = Math.Clamp(take ?? 30, 1, 100);
+    var now = DateTime.UtcNow;
     var query = db.Conversations.Where(c => c.BotId == botId);
     if (before is { } b) query = query.Where(c => c.LastMessageAt < b.ToUniversalTime());
     var list = await query.OrderByDescending(c => c.LastMessageAt).Take(size)
         .Select(c => new ConversationSummaryDto(c.Id, c.StartedAt, c.LastMessageAt, c.MessageCount, c.UnansweredCount,
             c.Messages.Where(m => m.Role == "user").OrderBy(m => m.CreatedAt).Select(m => m.Text).FirstOrDefault(),
-            c.PageUrl, c.Channel, c.ContactName, c.ContactId))
+            c.PageUrl, c.Channel, c.ContactName, c.ContactId, c.HumanUntil != null && c.HumanUntil > now))
         .ToListAsync();
     return Results.Ok(list);
 });
@@ -344,9 +346,11 @@ bots.MapGet("/{botId:guid}/conversations/{conversationId:guid}", async (Guid bot
 {
     var c = await db.Conversations.Include(x => x.Messages).FirstOrDefaultAsync(x => x.Id == conversationId && x.BotId == botId);
     if (c is null) return Results.NotFound();
+    var human = Handover.IsHuman(c, DateTime.UtcNow);
     return Results.Ok(new ConversationDto(c.Id, c.StartedAt, c.LastMessageAt, c.PageUrl,
         c.Messages.OrderBy(m => m.CreatedAt).ThenBy(m => m.Role == "user" ? 0 : 1)
-            .Select(m => new ConversationMessageDto(m.Role, m.Text, m.Answered, m.CreatedAt)).ToList()));
+            .Select(m => new ConversationMessageDto(m.Role, m.Text, m.Answered, m.CreatedAt)).ToList(),
+        c.Channel, c.ContactName, human, human ? c.HumanUntil : null));
 });
 
 // a visitor may ask for their chat to be removed
@@ -358,6 +362,7 @@ bots.MapDelete("/{botId:guid}/conversations/{conversationId:guid}", async (Guid 
 
 bots.MapKnowledgeEndpoints();
 bots.MapChannelEndpoints(app);
+bots.MapHandoverEndpoints(app);
 app.MapAccountEndpoints();
 
 // ---------- internal endpoints for other services (never expose these through the public gateway) ----------
@@ -466,19 +471,22 @@ app.MapPost("/internal/bots/{publicKey}/conversations", async (string publicKey,
         return Results.Ok(new { stored = false });
     }
 
-    db.ConversationMessages.AddRange(
-        new ConversationMessage
-        {
-            ConversationId = conversation.Id, TenantId = bot.TenantId, Role = "user", Answered = req.Answered, CreatedAt = now,
-            Text = DocumentRules.Truncate(req.Question!.Trim(), ConversationRules.MaxQuestionChars)
-        },
-        new ConversationMessage
+    db.ConversationMessages.Add(new ConversationMessage
+    {
+        ConversationId = conversation.Id, TenantId = bot.TenantId, Role = "user", Answered = req.Answered, CreatedAt = now,
+        Text = DocumentRules.Truncate(req.Question!.Trim(), ConversationRules.MaxQuestionChars)
+    });
+    conversation.MessageCount += 1;
+    if (!req.VisitorOnly)
+    {
+        db.ConversationMessages.Add(new ConversationMessage
         {
             ConversationId = conversation.Id, TenantId = bot.TenantId, Role = "assistant", Answered = req.Answered, CreatedAt = now,
             Text = DocumentRules.Truncate(req.Answer!.Trim(), ConversationRules.MaxAnswerChars)
         });
-    conversation.MessageCount += 2;
-    if (!req.Answered) conversation.UnansweredCount += 1;
+        conversation.MessageCount += 1;
+        if (!req.Answered) conversation.UnansweredCount += 1;
+    }
     conversation.LastMessageAt = now;
     try
     {

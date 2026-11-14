@@ -22,11 +22,14 @@ builder.Services.AddCors(o =>
 
 var authPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:AuthPerMinute", 20);
 var chatPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:ChatPerMinute", 30);
+// the open widget checks for replies from a person every few seconds; that must not use up the chat limit
+var pollPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:PollPerMinute", 60);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy("auth", ctx => PerClientIp(ctx, authPerMinute));
     o.AddPolicy("chat", ctx => PerClientIp(ctx, chatPerMinute));
+    o.AddPolicy("poll", ctx => PerClientIp(ctx, pollPerMinute));
 });
 
 // behind a hosting proxy (Hugging Face, Render, a load balancer) every request comes from the proxy's IP,

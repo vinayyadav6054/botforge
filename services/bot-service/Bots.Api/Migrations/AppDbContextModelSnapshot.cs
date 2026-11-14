@@ -442,6 +442,10 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("contact_name");
 
+                    b.Property<DateTime?>("HumanUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("human_until");
+
                     b.Property<DateTime>("LastMessageAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_message_at");

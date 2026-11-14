@@ -126,6 +126,57 @@ describe("mount", () => {
     expect([...root.querySelectorAll(".msg.bot")].pop()!.textContent).toContain("a@ybl");
   });
 
+  it("hands over to a person: no bot bubble, then their replies appear", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url.endsWith("/info")) return new Response(JSON.stringify({ name: "Academy", welcomeMessage: "Hi!" }));
+        if (url.includes("/updates")) {
+          return new Response(JSON.stringify({ human: true, messages: [{ text: "Priya here, how can I help?", at: "2026-11-14T10:00:00Z" }] }));
+        }
+        return sse("event: meta\ndata: {}\n\n", "event: handover\ndata: {}\n\n", "event: done\ndata: {}\n\n");
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const widget = mount({ botKey: "bk_handover", apiBase: "http://gw/api", accent: "#000" });
+      const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+      widget.open();
+      for (let i = 0; i < 5; i++) await tick();
+      widget.ask("Can I talk to someone?");
+      for (let i = 0; i < 10; i++) await tick();
+
+      const texts = () => [...root.querySelectorAll(".msg")].map((m) => m.textContent);
+      expect(texts()).toEqual(["Hi!", "Can I talk to someone?", "You are now chatting with a person from Academy."]);
+      expect(root.querySelector(".status")!.textContent).toBe("Chatting with a person");
+
+      await vi.advanceTimersByTimeAsync(3100);
+      for (let i = 0; i < 5; i++) await tick();
+      expect(texts().at(-1)).toBe("Priya here, how can I help?");
+      expect(root.querySelector(".msg.agent")).not.toBeNull();
+      const poll = fetchMock.mock.calls.map((c) => String(c[0])).find((u) => u.includes("/updates"))!;
+      expect(poll).toMatch(/\/chat\/bk_handover\/conversations\/[0-9a-f-]{36}\/updates\?after=/);
+      // the next check only asks for newer replies
+      expect(sessionStorage.getItem("botforge:bk_handover:agentSince")).toBe("2026-11-14T10:00:00Z");
+      expect(JSON.parse(sessionStorage.getItem("botforge:bk_handover:history")!).at(-1))
+        .toEqual({ role: "assistant", text: "Priya here, how can I help?" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not check for replies before the visitor has written anything", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const fetchMock = vi.fn(async () => new Response(JSON.stringify({ name: "A", welcomeMessage: "Hi" })));
+      vi.stubGlobal("fetch", fetchMock);
+      mount({ botKey: "bk_quiet", apiBase: "http://gw/api", accent: "#000" }).open();
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/updates"))).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("hides the action bar when the business has no buttons", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ name: "A", welcomeMessage: "Hi" }))));
     const widget = mount({ botKey: "bk_noactions", apiBase: "http://gw/api", accent: "#000" });

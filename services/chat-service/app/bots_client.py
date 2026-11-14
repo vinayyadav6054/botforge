@@ -57,6 +57,17 @@ async def refund_answer(public_key: str) -> None:
 
 
 
+async def conversation_updates(public_key: str, conversation_id: str, after: str | None = None) -> dict:
+    """{human, messages}: whether a person from the business is handling the chat, and their replies after `after`."""
+    response = await _client.get(
+        f"{config.BOTS_SERVICE_URL}/internal/bots/{public_key}/conversations/{conversation_id}/updates",
+        params={"after": after} if after else None, headers={"X-Internal-Key": config.INTERNAL_API_KEY})
+    if response.status_code == 404:
+        return {"human": False, "messages": []}
+    response.raise_for_status()
+    return response.json()
+
+
 async def get_channel(channel_id: str) -> dict | None:
     """A connected messaging app with its decrypted secrets (bot service, internal only)."""
     response = await _client.get(f"{config.BOTS_SERVICE_URL}/internal/channels/{channel_id}",

@@ -131,6 +131,18 @@ CSV cells that start with `= + - @` are prefixed with `'` so spreadsheets do not
   UPI app on phones and copies the ID on computers. The same links are added to the AI's instructions, so it points
   visitors to them (on WhatsApp it sends the link).
 
+## Human handover
+
+- The owner can take over a conversation from the dashboard. `conversations.human_until` is set to two hours after
+  their last action; until then the chat service does not call the AI for that conversation: the visitor's message is
+  stored on its own (`visitorOnly`) and the website stream ends with a `handover` event (no answer bubble).
+- Owner replies are stored with role `agent`. Website: the open widget asks `GET /chat/{key}/conversations/{id}/updates`
+  every 4 s while a person is replying (every 15 s otherwise, only once the visitor has written), with its own gateway
+  rate limit so it never uses up the chat limit. Messaging apps: the bot service asks the chat service
+  (`POST /internal/channels/{id}/send`, internal key) to send the reply through the platform; WhatsApp's 24-hour rule is
+  explained to the owner when Meta refuses.
+- In the AI's history, `agent` turns count as the business speaking, so the bot continues naturally when handed back.
+
 ## Plans, usage and billing
 
 - `bots.subscriptions` has one row per tenant, created on first use with a 14-day trial. `Plans.Effective` turns it

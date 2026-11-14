@@ -4,17 +4,19 @@ using Microsoft.EntityFrameworkCore;
 namespace Bots.Api;
 
 /// <summary>One question and its answer, sent by the chat service after it answered a visitor.</summary>
+/// <summary>VisitorOnly: a person from the business is handling the chat, so there is no bot answer to store.</summary>
 public record RecordTurnRequest(Guid? ConversationId, string? Question, string? Answer, bool Answered = true, string? PageUrl = null,
-    string? Channel = null, string? ContactName = null, string? ContactId = null);
+    string? Channel = null, string? ContactName = null, string? ContactId = null, bool VisitorOnly = false);
 
 public record ConversationSummaryDto(Guid Id, DateTime StartedAt, DateTime LastMessageAt, int MessageCount,
     int UnansweredCount, string? FirstQuestion, string? PageUrl, string Channel = "web", string? ContactName = null,
-    string? ContactId = null);
+    string? ContactId = null, bool Human = false);
 
 public record ConversationMessageDto(string Role, string Text, bool Answered, DateTime CreatedAt);
 
 public record ConversationDto(Guid Id, DateTime StartedAt, DateTime LastMessageAt, string? PageUrl,
-    List<ConversationMessageDto> Messages);
+    List<ConversationMessageDto> Messages, string Channel = "web", string? ContactName = null, bool Human = false,
+    DateTime? HumanUntil = null);
 
 public static class ConversationRules
 {
@@ -27,7 +29,7 @@ public static class ConversationRules
     {
         if (req.ConversationId is null || req.ConversationId == Guid.Empty) return "conversationId is required.";
         if (string.IsNullOrWhiteSpace(req.Question)) return "question is required.";
-        if (req.Answer is null) return "answer is required.";
+        if (req.Answer is null && !req.VisitorOnly) return "answer is required.";
         return null;
     }
 }

@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from . import config
-from .bots_client import consume_answer, create_lead, record_turn, refund_answer, resolve_bot
+from .bots_client import consume_answer, conversation_updates, create_lead, record_turn, refund_answer, resolve_bot
 from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, to_english, transcribe
 from .llm import clean_actions, stream_answer
 from .retrieval import citations, get_model, retrieve
@@ -225,6 +225,30 @@ async def submit_lead(public_key: str, body: LeadRequest):
     raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
 
+async def human_is_replying(public_key: str, conversation_id: str) -> bool:
+    """Best effort: if the bot service cannot say, the bot answers as usual."""
+    try:
+        return bool((await conversation_updates(public_key, conversation_id)).get("human"))
+    except httpx.HTTPError:
+        return False
+
+
+@app.get("/chat/{public_key}/conversations/{conversation_id}/updates")
+async def chat_updates(public_key: str, conversation_id: str, after: str | None = None):
+    """The widget asks every few seconds while open: is a person replying, and what did they write since `after`."""
+    if not PUBLIC_KEY.match(public_key) or not re.match(CONVERSATION_ID, conversation_id):
+        raise HTTPException(status_code=404, detail="Unknown conversation")
+    if after is not None and not re.match(r"^[0-9T:.\-+Z]{10,40}$", after):
+        raise HTTPException(status_code=400, detail="Bad 'after'")
+    try:
+        data = await conversation_updates(public_key, conversation_id, after)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+    return {"human": bool(data.get("human")),
+            "messages": [{"text": m["text"], "at": m["createdAt"]} for m in data.get("messages", [])
+                         if isinstance(m, dict) and isinstance(m.get("text"), str)]}
+
+
 @app.post("/chat/{public_key}")
 async def chat(public_key: str, body: ChatRequest):
     question = body.message.strip()
@@ -232,11 +256,25 @@ async def chat(public_key: str, body: ChatRequest):
         raise HTTPException(status_code=400, detail="Message is empty")
 
     bot = await _get_bot(public_key)
+    conversation_id = body.conversationId or str(uuid.uuid4())
+
+    # a person from the business has taken over this chat: store the message for them, no AI answer
+    if body.conversationId and not body.playground and await human_is_replying(public_key, conversation_id):
+        try:
+            await record_turn(public_key, {"conversationId": conversation_id, "question": question, "answer": None,
+                                           "visitorOnly": True, "pageUrl": body.pageUrl})
+        except httpx.HTTPError:
+            log.warning("Could not store a message for the person handling the chat")
+
+        async def handed_over():
+            yield sse("meta", {"botName": bot["name"], "sources": 0, "conversationId": conversation_id})
+            yield sse("handover", {})
+            yield sse("done", {})
+        return StreamingResponse(handed_over(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     history = [(t.role, t.text) for t in body.history if t.text.strip()]
     chunks = await find_chunks(bot, question, history)
-
-    conversation_id = body.conversationId or str(uuid.uuid4())
 
     async def record(answer: str, answered: bool):
         # best effort: the visitor's answer must never fail because the history could not be saved

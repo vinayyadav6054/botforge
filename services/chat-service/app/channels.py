@@ -15,6 +15,7 @@ from collections import OrderedDict
 import httpx
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
 
 from . import bots_client, config
 
@@ -236,6 +237,13 @@ async def handle(channel: dict, msg: Incoming) -> None:
             return
         question = question[: config.MAX_QUESTION_CHARS]
 
+        # a person from the business has taken over: keep the message for them and let them reply
+        if await core.human_is_replying(channel["botPublicKey"], cid):
+            await bots_client.record_turn(channel["botPublicKey"], {
+                "conversationId": cid, "question": question, "answer": None, "visitorOnly": True,
+                "channel": kind, "contactName": msg.name, "contactId": msg.user_id})
+            return
+
         await show_typing(channel, msg.user_id)
         history = [(t["role"], t["text"]) for t in await bots_client.recent_turns(cid, 10)]
         reply, answered = await answer(bot, channel["botPublicKey"], question, history)
@@ -258,6 +266,39 @@ async def handle(channel: dict, msg: Incoming) -> None:
             await bots_client.channel_status(channel["id"], error)
         except httpx.HTTPError:
             pass
+
+
+# ---------- the owner's replies (bot service -> here -> the platform; never through the gateway) ----------
+
+class AgentMessage(BaseModel):
+    to: str = Field(min_length=1, max_length=100)
+    text: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/internal/channels/{channel_id}/send")
+async def send_agent_message(channel_id: str, body: AgentMessage, request: Request):
+    key = config.INTERNAL_API_KEY
+    if not key or not hmac.compare_digest(request.headers.get("X-Internal-Key", ""), key):
+        raise HTTPException(status_code=401)
+    try:
+        uuid.UUID(channel_id)
+        channel = await bots_client.get_channel(channel_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=503, detail="The bot service is not reachable.")
+    if channel is None:
+        raise HTTPException(status_code=404, detail="This messaging app is no longer connected.")
+    try:
+        await send_text(channel, body.to, body.text)
+    except (RuntimeError, httpx.HTTPError) as ex:
+        log.warning("Owner reply not delivered: %s", ex)
+        detail = str(ex)
+        if channel["kind"] == "whatsapp" and ("131047" in detail or "24 hours" in detail or "re-engagement" in detail):
+            detail = ("WhatsApp only allows free-form replies within 24 hours of the customer's last message. "
+                      "Call them, or wait until they write again.")
+        raise HTTPException(status_code=502, detail=detail[:300])
+    return {"sent": True}
 
 
 # ---------- webhook endpoints (public, through the gateway at /api/channels/...) ----------
