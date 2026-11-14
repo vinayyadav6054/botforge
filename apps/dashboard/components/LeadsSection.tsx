@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, Lead, LEAD_STATUSES, LeadStatus } from "@/lib/api";
+import Icon from "@/components/Icon";
 
 interface Turn {
   role: string;
@@ -87,8 +88,8 @@ export default function LeadsSection({ botId, enabled }: { botId: string; enable
   return (
     <section className="card" aria-label="Leads">
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>
-          Leads {newCount > 0 && <span className="badge processing">{newCount} new</span>}
+        <h2 style={{ margin: 0 }} className="section-title">
+          <span className="section-icon" aria-hidden><Icon name="phone" /></span>Leads {newCount > 0 && <span className="badge processing">{newCount} new</span>}
         </h2>
         <div className="row">
           <button className="btn secondary small" onClick={() => void load()}>Refresh</button>
@@ -101,7 +102,7 @@ export default function LeadsSection({ botId, enabled }: { botId: string; enable
       {error && <div className="alert error" role="alert">{error}</div>}
       {!enabled && (
         <p className="muted small">
-          Lead capture is off. Turn it on in <strong>Settings</strong> below so visitors can ask for a call back.
+          Lead capture is off. Turn it on in <strong>Settings</strong> so visitors can ask for a call back.
         </p>
       )}
 

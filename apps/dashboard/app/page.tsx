@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ChatDemo from "@/components/landing/ChatDemo";
 import NavCta from "@/components/landing/NavCta";
+import Reveal from "@/components/landing/Reveal";
 import Logo from "@/components/Logo";
 import { site, whatsappLink } from "@/lib/site";
 
@@ -63,6 +64,7 @@ export default function Landing() {
   const year = new Date().getFullYear();
   return (
     <div className="landing">
+      <Reveal />
       <header className="lnav">
         <div className="lwrap lnav-inner">
           <Logo />
@@ -143,7 +145,7 @@ export default function Landing() {
 
         <section id="demo" className="lsection">
           <div className="lwrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <p className="eyebrow">Live demo</p>
               <h2 className="display-2">Watch a visitor become a lead.</h2>
               <p className="muted">
@@ -151,7 +153,7 @@ export default function Landing() {
                 Tap a question or type your own.
               </p>
             </div>
-            <ChatDemo />
+            <div className="reveal"><ChatDemo /></div>
             <p className="center" style={{ marginTop: 20 }}>
               <Link href="/demo" className="link-arrow">Open the full demo website →</Link>
             </p>
@@ -160,13 +162,13 @@ export default function Landing() {
 
         <section id="how" className="lsection alt">
           <div className="lwrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <p className="eyebrow">How it works</p>
               <h2 className="display-2">From PDF to live assistant in three steps.</h2>
             </div>
             <ol className="steps">
               {STEPS.map((s, i) => (
-                <li key={s.title} className="step">
+                <li key={s.title} className="step reveal">
                   <span className="step-num">0{i + 1}</span>
                   <h3>{s.title}</h3>
                   <p className="muted">{s.text}</p>
@@ -178,13 +180,13 @@ export default function Landing() {
 
         <section className="lsection">
           <div className="lwrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <p className="eyebrow">Why owners keep it</p>
               <h2 className="display-2">Less repeating yourself. More enquiries.</h2>
             </div>
             <div className="features">
               {FEATURES.map((f) => (
-                <div key={f.title} className="feature">
+                <div key={f.title} className="feature reveal">
                   <span className="feature-icon" aria-hidden>{f.icon}</span>
                   <h3>{f.title}</h3>
                   <p className="muted">{f.text}</p>
@@ -196,14 +198,14 @@ export default function Landing() {
 
         <section id="pricing" className="lsection alt">
           <div className="lwrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <p className="eyebrow">Pricing</p>
               <h2 className="display-2">Less than one missed admission.</h2>
               <p className="muted">{site.trialNote}</p>
             </div>
             <div className="plans">
               {site.plans.map((p) => (
-                <div key={p.name} className={`plan${p.featured ? " featured" : ""}`}>
+                <div key={p.name} className={`plan reveal${p.featured ? " featured" : ""}`}>
                   {p.featured && <span className="plan-flag">Most popular</span>}
                   <h3>{p.name}</h3>
                   <p className="muted small">{p.blurb}</p>
@@ -232,13 +234,13 @@ export default function Landing() {
 
         <section id="faq" className="lsection">
           <div className="lwrap narrow">
-            <div className="section-head">
+            <div className="section-head reveal">
               <p className="eyebrow">FAQ</p>
               <h2 className="display-2">Questions owners ask us.</h2>
             </div>
             <div className="faq">
               {FAQ.map((f) => (
-                <details key={f.q}>
+                <details key={f.q} className="reveal">
                   <summary>{f.q}</summary>
                   <p className="muted">{f.a}</p>
                 </details>

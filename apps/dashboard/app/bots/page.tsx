@@ -99,7 +99,7 @@ function BotList() {
         </div>
       )}
       {bots && bots.length > 0 && (
-        <div className="grid">
+        <div className="grid stagger">
           {bots.map((b) => (
             <Link key={b.id} href={`/bots/${b.id}`} className="card bot-card">
               <div className="bot-card-top">

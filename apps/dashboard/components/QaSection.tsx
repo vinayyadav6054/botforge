@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, QaEntry, Unanswered } from "@/lib/api";
+import Icon from "@/components/Icon";
 
 export interface QaDraft {
   question: string;
@@ -102,7 +103,7 @@ export default function QaSection({ botId, draft, onDraftUsed }: { botId: string
   return (
     <section className="card" id="answers" aria-label="Answers">
       <div className="card-head">
-        <div className="section-title"><span className="section-icon" aria-hidden>✍️</span><h2>Your answers</h2></div>
+        <div className="section-title"><span className="section-icon" aria-hidden><Icon name="edit" /></span><h2>Your answers</h2></div>
         {editing === null && <button className="btn secondary small" onClick={() => open("new")}>+ Add answer</button>}
       </div>
       <p className="small muted">

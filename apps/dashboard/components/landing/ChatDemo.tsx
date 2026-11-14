@@ -43,7 +43,8 @@ function bestMatch(text: string, qa: DemoQA[]): DemoQA | null {
  */
 export default function ChatDemo({ initial = "coaching", compact = false }: { initial?: string; compact?: boolean }) {
   const [scenario, setScenario] = useState<DemoScenario>(SCENARIOS.find((s) => s.id === initial) ?? SCENARIOS[0]);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  // the welcome message shows before the demo starts playing, so the chat is never an empty box
+  const [msgs, setMsgs] = useState<Msg[]>(() => [{ kind: "bot", text: (SCENARIOS.find((s) => s.id === initial) ?? SCENARIOS[0]).welcome }]);
   const [typing, setTyping] = useState(false);
   const [reading, setReading] = useState<string | null>(null);
   const [asked, setAsked] = useState<string[]>([]);

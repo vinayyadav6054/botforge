@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useState } from "react";
 import { api, Bot } from "@/lib/api";
+import Icon from "@/components/Icon";
 
 const QUESTION_EXAMPLES = [
   "e.g. What are the fees?",
@@ -99,7 +100,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
   return (
     <form className="card" onSubmit={save} aria-label="Bot settings" id="settings">
       <div className="card-head">
-        <div className="section-title"><span className="section-icon" aria-hidden>⚙️</span><h2>Settings</h2></div>
+        <div className="section-title"><span className="section-icon" aria-hidden><Icon name="settings" /></span><h2>Settings</h2></div>
       </div>
       {error && <div className="alert error" role="alert">{error}</div>}
 

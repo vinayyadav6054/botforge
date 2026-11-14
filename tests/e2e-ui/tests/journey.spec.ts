@@ -61,11 +61,12 @@ test("owner signs up, builds a bot from a document and chats with it in the live
     mimeType: "text/plain",
     buffer: Buffer.from(FAQ),
   });
-  await expect(page.getByRole("cell", { name: "faq.txt", exact: true })).toBeVisible();
+  await expect(page.locator(".source-name", { hasText: "faq.txt" })).toBeVisible();
   await expect(page.getByText(/Ready · \d+ chunks?/)).toBeVisible({ timeout: 90_000 });
   await expect(page.getByText("1 of 1 document ready")).toBeVisible();
 
   // embed snippet contains the public key and the gateway URL
+  await page.getByRole("navigation", { name: "Bot sections" }).getByRole("button", { name: "Install" }).click();
   const snippet = await page.getByTestId("embed-snippet").textContent();
   expect(snippet).toMatch(new RegExp(`<script src="${GATEWAY}/widget.js" data-bot-key="bk_[0-9a-f]{32}" async></script>`));
 
@@ -89,7 +90,7 @@ test("owner signs up, builds a bot from a document and chats with it in the live
 
   // the bot shows up in the list, and survives a reload (session persisted)
   await page.reload();
-  await page.getByRole("link", { name: "← All bots" }).click();
+  await page.getByRole("link", { name: "All bots" }).click();
   await expect(page.getByRole("link", { name: /Coffee Helper/ })).toBeVisible();
 });
 
@@ -180,8 +181,9 @@ test("bot settings, document deletion and bot deletion", async ({ page }) => {
 
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete notes.md" }).click();
-  await expect(page.getByRole("cell", { name: "notes.md", exact: true })).toHaveCount(0);
+  await expect(page.locator(".source-name", { hasText: "notes.md" })).toHaveCount(0);
 
+  await page.getByRole("navigation", { name: "Bot sections" }).getByRole("button", { name: "Settings" }).click();
   const settings = page.getByRole("form", { name: "Bot settings" });
   await settings.getByLabel("Name", { exact: true }).fill("Renamed Bot");
   await settings.getByRole("button", { name: "Save changes" }).click();

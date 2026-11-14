@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, Channel, ChannelKind } from "@/lib/api";
+import Icon from "@/components/Icon";
 
 interface Field {
   name: string;
@@ -124,7 +125,7 @@ export default function ChannelsSection({ botId }: { botId: string }) {
   return (
     <section className="card" id="apps" aria-label="Messaging apps">
       <div className="card-head">
-        <div className="section-title"><span className="section-icon" aria-hidden>📲</span><h2>Messaging apps</h2></div>
+        <div className="section-title"><span className="section-icon" aria-hidden><Icon name="apps" /></span><h2>Messaging apps</h2></div>
       </div>
       <p className="small muted">
         Answer customers on WhatsApp, Instagram, Messenger and Telegram with the same knowledge, including voice notes.

@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, Conversation, ConversationSummary } from "@/lib/api";
+import Icon from "@/components/Icon";
 
 export const CHANNEL_ICON: Record<string, string> = { web: "🌐", whatsapp: "🟢", instagram: "📸", messenger: "💬", telegram: "✈️" };
 
@@ -75,7 +76,7 @@ export default function ConversationsSection({ botId, onCorrect }: { botId: stri
   return (
     <section className="card" aria-label="Conversations" id="conversations">
       <div className="card-head">
-        <div className="section-title"><span className="section-icon" aria-hidden>💬</span><h2>Conversations</h2></div>
+        <div className="section-title"><span className="section-icon" aria-hidden><Icon name="chat" /></span><h2>Conversations</h2></div>
         <div className="row">
           {gaps > 0 && (
             <label className="check small" style={{ fontWeight: 600 }}>

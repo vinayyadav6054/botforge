@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { playgroundAsk, SourceRef } from "@/lib/api";
+import Icon from "@/components/Icon";
 
 interface Turn {
   role: "user" | "assistant";
@@ -15,10 +16,11 @@ interface Turn {
  * Test chat inside the dashboard: the same answers visitors get, plus where each one came from.
  * Not saved as a visitor conversation; answers still count towards the monthly limit.
  */
-export default function Playground({ publicKey, ready, onCorrect }: {
+export default function Playground({ publicKey, ready, onCorrect, onAsked }: {
   publicKey: string;
   ready: boolean;
   onCorrect: (question: string, answer: string) => void;
+  onAsked?: () => void;
 }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
@@ -35,6 +37,7 @@ export default function Playground({ publicKey, ready, onCorrect }: {
     if (!q || busy) return;
     setInput("");
     setBusy(true);
+    onAsked?.();
     const history = turns.filter((t) => !t.error).slice(-10).map(({ role, text }) => ({ role, text }));
     setTurns((t) => [...t, { role: "user", text: q }, { role: "assistant", text: "" }]);
     const update = (fn: (t: Turn) => Turn) => setTurns((all) => [...all.slice(0, -1), fn(all[all.length - 1])]);
@@ -54,7 +57,7 @@ export default function Playground({ publicKey, ready, onCorrect }: {
   return (
     <section className="card" id="playground" aria-label="Playground">
       <div className="card-head">
-        <div className="section-title"><span className="section-icon" aria-hidden>🧪</span><h2>Playground</h2></div>
+        <div className="section-title"><span className="section-icon" aria-hidden><Icon name="flask" /></span><h2>Playground</h2></div>
         {turns.length > 0 && <button className="btn secondary small" onClick={() => setTurns([])}>Clear</button>}
       </div>
       <p className="small muted">
