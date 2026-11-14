@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import AddSource, { SYNC_OPTIONS } from "@/components/AddSource";
+import ChannelsSection from "@/components/ChannelsSection";
 import ConversationsSection from "@/components/ConversationsSection";
 import LeadsSection from "@/components/LeadsSection";
 import Playground from "@/components/Playground";
@@ -244,6 +245,7 @@ function BotDetail({ id }: { id: string }) {
           <a href="#knowledge">📄 Knowledge</a>
           <a href="#answers">✍️ Your answers</a>
           <a href="#playground">🧪 Playground</a>
+          <a href="#apps">📲 Messaging apps</a>
           <a href="#leads">📞 Leads</a>
           <a href="#conversations">💬 Conversations</a>
           <a href="#install">🧩 Install</a>
@@ -347,6 +349,8 @@ function BotDetail({ id }: { id: string }) {
           <QaSection botId={id} draft={draft} onDraftUsed={clearDraft} />
 
           <Playground publicKey={bot.publicKey} ready={readyCount > 0} onCorrect={correct} />
+
+          <ChannelsSection botId={id} />
 
           <div id="leads" style={{ scrollMarginTop: 84 }}>
             <LeadsSection botId={id} enabled={bot.leadCaptureEnabled} />

@@ -90,6 +90,30 @@ CSV cells that start with `= + - @` are prefixed with `'` so spreadsheets do not
 - After a grounded answer the chat service sends a `sources` event (distinct documents/pages, not Q&A) when the bot
   has `show_sources` on. Answers where the model says it lacks the information are logged as unanswered.
 
+## Messaging apps
+
+- `bots.channels` holds one connection per app account (`kind` whatsapp/instagram/messenger/telegram), with the access
+  tokens and app secret encrypted (AES-GCM, key derived from `Jwt:Key` with HKDF; rotating the JWT key means
+  reconnecting the apps). The dashboard never receives them; only `GET /internal/channels/{id}` (internal key) does.
+- Connecting checks the credentials with the platform; Telegram's webhook is registered automatically (with a secret
+  token), Meta apps get a callback URL and verify token to paste into their app. Messaging apps are part of the
+  Business and Pro plans (and the trial). The public address comes from `Channels:PublicUrl` (Render: `RENDER_EXTERNAL_URL`).
+- Webhooks: gateway `/api/channels/{kind}/{id}` → chat service. Telegram requests must carry the secret token; Meta
+  requests must carry a valid `X-Hub-Signature-256` (HMAC-SHA256 of the raw body with the app secret). The chat service
+  answers 200 at once and handles the message in the background: duplicate message ids are ignored, each customer is
+  limited to 20 messages a minute, voice notes are downloaded and transcribed, the last 10 turns of that customer's
+  conversation (id = UUIDv5 of channel + customer) give context, and the answer goes through the same quota, search and
+  prompt as the website chat. The first WhatsApp message creates a lead with the customer's number when lead capture is on.
+
+## Languages and voice
+
+- Questions in an Indian script, or with at least two common Hindi/Marathi words in Latin letters (Hinglish), are
+  translated to English with a short Gemini call and searched with both texts, so English documents still match.
+- The reply language follows the visitor unless the owner picks one (`reply_language`). The widget's own texts exist in
+  English, Hindi, Marathi, Tamil and Telugu. The bundle is pure ASCII and served as UTF-8, so it works on pages in any encoding.
+- `POST /chat/{key}/transcribe` turns microphone recordings (≤ 3 MB) into text with Gemini; the widget then asks the
+  question normally. Answers can be read aloud with the browser's speech synthesis (a spoken question is answered aloud).
+
 ## Plans, usage and billing
 
 - `bots.subscriptions` has one row per tenant, created on first use with a 14-day trial. `Plans.Effective` turns it

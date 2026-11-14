@@ -54,3 +54,26 @@ async def refund_answer(public_key: str) -> None:
         headers={"X-Internal-Key": config.INTERNAL_API_KEY},
     )
     response.raise_for_status()
+
+
+
+async def get_channel(channel_id: str) -> dict | None:
+    """A connected messaging app with its decrypted secrets (bot service, internal only)."""
+    response = await _client.get(f"{config.BOTS_SERVICE_URL}/internal/channels/{channel_id}",
+                                 headers={"X-Internal-Key": config.INTERNAL_API_KEY})
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    return response.json()
+
+
+async def recent_turns(conversation_id: str, take: int = 10) -> list[dict]:
+    response = await _client.get(f"{config.BOTS_SERVICE_URL}/internal/conversations/{conversation_id}/turns",
+                                 params={"take": take}, headers={"X-Internal-Key": config.INTERNAL_API_KEY})
+    response.raise_for_status()
+    return response.json()
+
+
+async def channel_status(channel_id: str, error: str | None) -> None:
+    await _client.post(f"{config.BOTS_SERVICE_URL}/internal/channels/{channel_id}/status",
+                       headers={"X-Internal-Key": config.INTERNAL_API_KEY}, json={"error": error})

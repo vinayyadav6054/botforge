@@ -17,20 +17,20 @@ export const site = {
       name: "Starter",
       price: "499",
       blurb: "For one website that gets regular questions.",
-      features: ["1 bot", "500 answers a month", "10 documents", "Lead capture + CSV export"],
+      features: ["1 bot", "500 answers a month", "10 documents", "Website chat, Hindi & Hinglish", "Lead capture + CSV export"],
     },
     {
       name: "Business",
       price: "1,499",
       blurb: "For growing businesses with several services.",
-      features: ["3 bots", "3,000 answers a month", "50 documents", "No “Powered by” badge", "WhatsApp setup help"],
+      features: ["3 bots", "3,000 answers a month", "50 documents", "WhatsApp, Instagram, Messenger, Telegram", "No “Powered by” badge"],
       featured: true,
     },
     {
       name: "Pro",
       price: "3,999",
       blurb: "For institutes, clinics and agencies with heavy traffic.",
-      features: ["10 bots", "15,000 answers a month", "200 documents", "Priority support", "Done-for-you setup"],
+      features: ["10 bots", "15,000 answers a month", "200 documents", "All messaging apps", "Priority support + done-for-you setup"],
     },
   ],
 };

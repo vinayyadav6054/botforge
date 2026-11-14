@@ -248,6 +248,9 @@ def test_widget_bundle_is_served():
     assert "javascript" in res.headers["content-type"]
     assert res.headers["access-control-allow-origin"] == "*"
     assert "data-botforge" in res.text or "botforge" in res.text.lower()
+    # works on customer pages in any encoding: declared UTF-8 and pure ASCII anyway (Hindi/Tamil texts are escaped)
+    assert "charset=utf-8" in res.headers["content-type"].lower()
+    assert all(b < 128 for b in res.content)
 
 
 def test_malformed_and_unknown_bot_keys(http):

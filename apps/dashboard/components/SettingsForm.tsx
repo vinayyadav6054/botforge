@@ -11,6 +11,8 @@ const QUESTION_EXAMPLES = [
 ];
 const COLORS = ["#4f46e5", "#c8461f", "#1d4ed8", "#0f766e", "#15803d", "#be185d", "#1f2937"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const LANGUAGES: [string, string][] = [["en", "English"], ["hi", "Hindi"], ["mr", "Marathi"], ["ta", "Tamil"], ["te", "Telugu"],
+  ["bn", "Bengali"], ["gu", "Gujarati"], ["kn", "Kannada"], ["ml", "Malayalam"], ["pa", "Punjabi"], ["ur", "Urdu"]];
 const ZONES = ["Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Kathmandu", "Asia/Dhaka", "Europe/London",
   "Europe/Berlin", "America/New_York", "America/Los_Angeles", "Australia/Sydney"];
 
@@ -80,6 +82,8 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         hoursDays: s.hoursDays,
         timeZone: s.timeZone,
         offlineMessage: s.offlineMessage,
+        replyLanguage: s.replyLanguage,
+        voiceEnabled: s.voiceEnabled,
       });
       setS({ ...b, suggestedQuestions: padQuestions(b.suggestedQuestions) });
       onSaved(b, "Settings saved.");
@@ -153,6 +157,23 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         <textarea id="customInstructions" maxLength={1000} value={s.customInstructions} onChange={(e) => set("customInstructions", e.target.value)}
           placeholder="e.g. Always invite people to the free demo class on Sunday. Call fees “course fees”. Answer in Hindi if the visitor writes in Hindi." />
         <p className="small muted" style={{ margin: "4px 0 0" }}>The bot still only answers from your documents; these shape how it answers.</p>
+      </div>
+      <div className="form-grid" style={{ marginTop: 6 }}>
+        <div className="field">
+          <label htmlFor="replyLanguage">Reply language</label>
+          <select id="replyLanguage" className="status-select wide" value={s.replyLanguage} onChange={(e) => set("replyLanguage", e.target.value)}>
+            <option value="auto">Same as the visitor (Hindi, Hinglish, Tamil…) — recommended</option>
+            {LANGUAGES.map(([code, label]) => <option key={code} value={code}>Always {label}</option>)}
+          </select>
+          <p className="small muted" style={{ margin: "4px 0 0" }}>The chat buttons and labels also switch to Hindi, Marathi, Tamil or Telugu.</p>
+        </div>
+        <div className="field">
+          <span className="small strong-label">Voice</span>
+          <label className="check small" htmlFor="voiceEnabled">
+            <input id="voiceEnabled" type="checkbox" checked={s.voiceEnabled} onChange={(e) => set("voiceEnabled", e.target.checked)} />
+            Let visitors speak their question and hear the answer
+          </label>
+        </div>
       </div>
       <label className="check" htmlFor="showSources">
         <input id="showSources" type="checkbox" checked={s.showSources} onChange={(e) => set("showSources", e.target.checked)} />

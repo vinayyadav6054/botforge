@@ -51,6 +51,7 @@ if [ -z "${PUBLIC_URL:-}" ]; then
   if [ -n "${SITE_ADDRESS:-}" ]; then PUBLIC_URL="https://${SITE_ADDRESS}"
   elif [ -n "${SPACE_HOST:-}" ]; then PUBLIC_URL="https://${SPACE_HOST}"; fi
 fi
+[ -n "${PUBLIC_API_URL:-}" ] || PUBLIC_API_URL="${PUBLIC_URL:-}"   # one address for dashboard and API here
 . /app/deploy/common-env.sh
 
 mkdir -p /data/storage /data/rabbitmq/mnesia /data/rabbitmq/log

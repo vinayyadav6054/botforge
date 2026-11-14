@@ -624,3 +624,15 @@ img.bot-avatar { object-fit: cover; background: #fff; border: 1px solid var(--bo
 .day-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
 .day { font: inherit; font-size: 13px; font-weight: 700; width: 48px; padding: 6px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; }
 .day.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ============ Phase 3: messaging apps ============ */
+.channel-row { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; background: var(--bg); }
+.channel-row.fresh { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.channel-top { display: flex; align-items: center; gap: 12px; }
+.channel-icon { font-size: 22px; }
+.webhook-details { margin-top: 10px; }
+.webhook-details summary { cursor: pointer; font-weight: 700; }
+.copy-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-top: 8px; }
+.copy-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--surface-2); padding: 6px 8px; border-radius: 6px; }
+.setup-steps { margin: 0 0 14px; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+@media (max-width: 600px) { .copy-row { grid-template-columns: 1fr; } }

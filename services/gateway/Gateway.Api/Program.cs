@@ -65,9 +65,12 @@ app.Use(async (ctx, next) =>
 var widgetPath = Path.GetFullPath(builder.Configuration["Gateway:WidgetPath"] ?? "widget", app.Environment.ContentRootPath);
 if (Directory.Exists(widgetPath))
 {
+    var types = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+    types.Mappings[".js"] = "text/javascript; charset=utf-8";   // customer pages may use another encoding
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(widgetPath),
+        ContentTypeProvider = types,
         OnPrepareResponse = c =>
         {
             c.Context.Response.Headers.AccessControlAllowOrigin = "*";

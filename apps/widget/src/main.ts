@@ -1,4 +1,5 @@
 import { BotInfo, ChatApi, LeadCapture, OpeningHours, SourceRef, Turn } from "./api";
+import { fill, pickLanguage, speechLang, Texts, TEXTS } from "./i18n";
 import { css } from "./styles";
 
 export interface Options {
@@ -17,6 +18,9 @@ const MINI_CHAT_ICON = svg(14, 2.4, BUBBLE_PATH);
 const CLOSE_ICON = svg(24, 2.4, '<path d="M18 6 6 18M6 6l12 12"/>');
 const SMALL_CLOSE_ICON = svg(17, 2.4, '<path d="M18 6 6 18M6 6l12 12"/>');
 const SEND_ICON = svg(17, 2.4, '<path d="M5 12h14M13 6l6 6-6 6"/>');
+const MIC_ICON = svg(18, 2.2, '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>');
+const SPEAKER_ICON = svg(17, 2.2, '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>');
+const MAX_RECORDING_MS = 30_000;
 const PHONE_ICON = svg(17, 2,
   '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>');
 const MAX_HISTORY = 10;
@@ -72,6 +76,7 @@ export function mount(opts: Options): Widget {
       <div class="header">
         <div class="avatar" aria-hidden="true">${MINI_CHAT_ICON}</div>
         <div class="who"><span class="title">Chat</span><span class="status">Online · replies instantly</span></div>
+        <button type="button" class="icon-btn speak" aria-label="Read answers aloud" title="Read answers aloud" aria-pressed="false" hidden>${SPEAKER_ICON}</button>
         <button type="button" class="icon-btn talk" aria-label="Request a call back" title="Request a call back" hidden>${PHONE_ICON}</button>
         <button type="button" class="icon-btn close" aria-label="Close chat">${SMALL_CLOSE_ICON}</button>
       </div>
@@ -80,6 +85,7 @@ export function mount(opts: Options): Widget {
       <form class="composer">
         <div class="pill">
           <textarea rows="1" placeholder="Type your question…" aria-label="Message" maxlength="1000"></textarea>
+          <button class="mic" type="button" aria-label="Speak your question" title="Speak your question" hidden>${MIC_ICON}</button>
           <button class="send" type="submit" aria-label="Send">${SEND_ICON}</button>
         </div>
       </form>
@@ -101,6 +107,13 @@ export function mount(opts: Options): Widget {
   const badge = $<HTMLElement>(".badge");
   const footer = $<HTMLElement>(".footer");
   const hoursBar = $<HTMLElement>(".hours");
+  const micBtn = $<HTMLButtonElement>(".mic");
+  const speakBtn = $<HTMLButtonElement>(".speak");
+  const status = $<HTMLElement>(".status");
+  let T: Texts = TEXTS.en;
+  let uiLang = "en";
+  let speakAnswers = false;
+  let recorder: MediaRecorder | null = null;
   const styleEl = root.querySelector("style")!;
   let logo = "";   // the owner's logo (data: URL), used instead of initials
 
@@ -113,7 +126,18 @@ export function mount(opts: Options): Widget {
     }));
   getInfo().then(applyLook).catch(() => undefined);
 
+  function applyTexts(info: BotInfo) {
+    uiLang = pickLanguage(info.language, typeof navigator !== "undefined" ? navigator.language : "en");
+    T = TEXTS[uiLang];
+    input.placeholder = T.placeholder;
+    status.textContent = T.online;
+    const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
+    micBtn.hidden = info.voice === false || !canRecord;
+    speakBtn.hidden = info.voice === false || typeof speechSynthesis === "undefined";
+  }
+
   function applyLook(info: BotInfo) {
+    applyTexts(info);
     const look = info.appearance;
     if (look?.color && /^#[0-9a-f]{6}$/i.test(look.color)) styleEl.textContent = css(look.color);
     const left = look?.position === "left";
@@ -184,6 +208,53 @@ export function mount(opts: Options): Widget {
     footer.hidden = false;
   }
 
+  let spokenQuestion = false;   // a question asked by voice gets its answer read aloud
+
+  function speak(text: string) {
+    if (typeof speechSynthesis === "undefined" || !text) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = speechLang(text, uiLang);
+    speechSynthesis.speak(u);
+  }
+
+  async function toggleRecording() {
+    if (recorder) {
+      recorder.stop();
+      return;
+    }
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      bubble("error", T.micError);
+      return;
+    }
+    const type = ["audio/webm", "audio/mp4", "audio/ogg"].find((t) => MediaRecorder.isTypeSupported?.(t)) ?? "";
+    const rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+    const parts: Blob[] = [];
+    rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      clearTimeout(limit);
+      recorder = null;
+      micBtn.classList.remove("recording");
+      input.placeholder = T.placeholder;
+      const text = await api.transcribe(new Blob(parts, { type: rec.mimeType || type || "audio/webm" }));
+      if (!text) {
+        bubble("error", T.voiceFailed);
+        return;
+      }
+      spokenQuestion = true;
+      ask(text);
+    };
+    const limit = setTimeout(() => rec.state === "recording" && rec.stop(), MAX_RECORDING_MS);
+    recorder = rec;
+    rec.start();
+    micBtn.classList.add("recording");
+    input.placeholder = T.listening;
+  }
+
   function showHours(hours: OpeningHours | undefined) {
     if (!hours?.enabled || !hours.message || isOpenNow(hours, new Date())) return;
     hoursBar.textContent = hours.message;
@@ -195,7 +266,7 @@ export function mount(opts: Options): Widget {
     if (!valid.length) return;
     const line = document.createElement("div");
     line.className = "sources";
-    line.append(valid.length > 1 ? "Sources: " : "Source: ");
+    line.append(`${valid.length > 1 ? T.sources : T.source}: `);
     valid.forEach((s, i) => {
       if (i) line.append(" · ");
       const label = s.location ? `${s.name} (${s.location})` : s.name;
@@ -265,7 +336,7 @@ export function mount(opts: Options): Widget {
       if (lead?.timing === "start" && !leadState && !history.length) showLeadForm();
     } catch {
       loading.remove();
-      bubble("error", "This assistant is not available right now.");
+      bubble("error", T.unavailable);
       loaded = false;
     }
   }
@@ -304,7 +375,9 @@ export function mount(opts: Options): Widget {
       },
       onSources: (items) => showSources(items),
       onDone: () => {
-        if (!received) answer.textContent = "Sorry, I don't have an answer for that.";
+        if (!received) answer.textContent = T.noAnswer;
+        if (speakAnswers || spokenQuestion) speak(answer.textContent ?? "");
+        spokenQuestion = false;
         const turns: Turn[] = [
           { role: "user", text },
           { role: "assistant", text: answer.textContent ?? "" },
@@ -332,7 +405,7 @@ export function mount(opts: Options): Widget {
     const wrap = document.createElement("label");
     wrap.className = "lead-field";
     const span = document.createElement("span");
-    span.textContent = required ? label : `${label} (optional)`;
+    span.textContent = required ? label : `${label} (${T.optional})`;
     const input = document.createElement("input");
     input.name = name;
     input.type = type;
@@ -357,10 +430,10 @@ export function mount(opts: Options): Widget {
     intro.className = "lead-intro";
     intro.textContent = lead.prompt;
 
-    const name = field("name", "Your name", "text", true, "name");
-    const phone = field("phone", "Phone number", "tel", true, "tel");
+    const name = field("name", T.name, "text", true, "name");
+    const phone = field("phone", T.phone, "tel", true, "tel");
     const course = field("course", lead.courseLabel || "Course / interest", "text", false, "off");
-    const email = field("email", "Email", "email", false, "email");
+    const email = field("email", T.email, "email", false, "email");
     email.input.placeholder = "e.g. asha@example.com";
     name.input.placeholder = "e.g. Asha Patil";
     phone.input.placeholder = "e.g. 98200 12345";
@@ -375,7 +448,7 @@ export function mount(opts: Options): Widget {
 
     const consent = document.createElement("p");
     consent.className = "lead-consent";
-    consent.textContent = `By submitting, you agree ${botName || "we"} may contact you about your enquiry.`;
+    consent.textContent = fill(T.consent, botName || "we");
     const error = document.createElement("p");
     error.className = "lead-error";
     error.setAttribute("role", "alert");
@@ -386,11 +459,11 @@ export function mount(opts: Options): Widget {
     const submit = document.createElement("button");
     submit.type = "submit";
     submit.className = "lead-submit";
-    submit.textContent = "Request a call back";
+    submit.textContent = T.submit;
     const skip = document.createElement("button");
     skip.type = "button";
     skip.className = "lead-skip";
-    skip.textContent = "No thanks, keep chatting";
+    skip.textContent = T.skip;
     actions.append(submit, skip);
 
     card.append(intro, name.wrap, phone.wrap);
@@ -416,11 +489,11 @@ export function mount(opts: Options): Widget {
       e.preventDefault();
       const n = name.input.value.trim();
       const p = phone.input.value.trim();
-      if (!n) return showError("Please enter your name.");
-      if (p.replace(/\D/g, "").length < 8) return showError("Please enter a valid phone number.");
+      if (!n) return showError(T.needName);
+      if (p.replace(/\D/g, "").length < 8) return showError(T.needPhone);
       error.hidden = true;
       submit.disabled = true;
-      submit.textContent = "Sending...";
+      submit.textContent = T.sending;
 
       const problem = await api.submitLead({
         name: n,
@@ -434,14 +507,14 @@ export function mount(opts: Options): Widget {
 
       if (problem) {
         submit.disabled = false;
-        submit.textContent = "Request a call back";
+        submit.textContent = T.submit;
         return showError(problem);
       }
       card.remove();
       leadCard = null;
       setLeadState("done");
       talk.hidden = true;
-      bubble("bot", `Thank you, ${n}! Our team will contact you soon.`).classList.add("success");
+      bubble("bot", fill(T.thanks, n)).classList.add("success");
     });
 
     setTimeout(() => name.input.focus(), 0);
@@ -469,6 +542,9 @@ export function mount(opts: Options): Widget {
 
   if (opts.greeting && !loadFlag(greetingKey)) {
     $<HTMLElement>(".greeting-text").textContent = opts.greeting;
+    // the default greeting follows the bot's language once its settings have loaded
+    if (opts.greeting === DEFAULT_GREETING)
+      getInfo().then(() => ($<HTMLElement>(".greeting-text").textContent = T.greeting)).catch(() => undefined);
     setTimeout(() => {
       if (!panel.hidden || loadFlag(greetingKey)) return;
       saveFlag(greetingKey, "1");
@@ -484,6 +560,12 @@ export function mount(opts: Options): Widget {
   });
 
   talk.addEventListener("click", () => showLeadForm());
+  speakBtn.addEventListener("click", () => {
+    speakAnswers = !speakAnswers;
+    speakBtn.setAttribute("aria-pressed", String(speakAnswers));
+    if (!speakAnswers && typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+  });
+  micBtn.addEventListener("click", () => void toggleRecording());
   launcher.addEventListener("click", () => setOpen(panel.hidden));
   $<HTMLButtonElement>(".close").addEventListener("click", () => setOpen(false));
   form.addEventListener("submit", (e) => {

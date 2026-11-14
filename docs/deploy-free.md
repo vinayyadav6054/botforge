@@ -103,6 +103,21 @@ Plans and limits (`services/bot-service/Bots.Api/Billing/Plans.cs`; prices also 
 After the trial or a plan ends, the bots stop answering (visitors are asked to contact the business) and no new bots or
 documents can be added; all data stays available.
 
+## 7. Messaging apps (WhatsApp, Instagram, Messenger, Telegram)
+
+Nothing to set on Render: it gives BotForge its public address (`RENDER_EXTERNAL_URL`), which the apps send messages to.
+Each business connects its own accounts in the dashboard (bot page → **Messaging apps**), with step-by-step help:
+
+- **Telegram:** create a bot with @BotFather and paste the token. Done.
+- **WhatsApp:** a Meta app with the WhatsApp product, a phone number not used in the WhatsApp app, a permanent access
+  token and the app secret. After connecting, paste the shown Callback URL and Verify token into WhatsApp → Configuration.
+- **Instagram / Messenger:** a Facebook Page (with a linked Instagram professional account for Instagram), a Page access
+  token and the app secret; then the same Callback URL / Verify token in the app's Webhooks.
+
+Meta apps used by other businesses need Meta's App Review for the messaging permissions; until then they work for the
+app's own accounts and testers. Meta charges for some WhatsApp conversations; replies to customers who wrote first are
+cheap or free in most cases. Check Meta's current pricing for India.
+
 ## Updating
 
 Push to `main`: Vercel and Render both redeploy automatically.

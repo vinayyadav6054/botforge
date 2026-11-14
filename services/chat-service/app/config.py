@@ -34,3 +34,7 @@ MAX_HISTORY_TURN_CHARS = 4000
 
 # "Powered by BotForge" link in the widget (shown on plans that keep the badge); empty = text without a link
 BRANDING_URL = os.getenv("BRANDING_URL", "").strip()
+
+# messaging apps (overridable for tests)
+TELEGRAM_API = os.getenv("TELEGRAM_API", "https://api.telegram.org").rstrip("/")
+GRAPH_API = os.getenv("GRAPH_API", "https://graph.facebook.com/v21.0").rstrip("/")

@@ -24,5 +24,8 @@ fi
 # The platform owner's key for the /admin page (set plans after UPI payments). Admin is off without it.
 [ -z "${ADMIN_API_KEY:-}" ] || export Admin__ApiKey="$ADMIN_API_KEY"
 
+# Messaging apps (WhatsApp, Instagram, Messenger, Telegram) send their webhooks to the backend's public address
+[ -z "${PUBLIC_API_URL:-}" ] || export Channels__PublicUrl="${PUBLIC_API_URL%/}"
+
 # identity -> bots (account deletion, monthly reports); all services run in this one container
 export Services__BotsUrl=http://127.0.0.1:5215

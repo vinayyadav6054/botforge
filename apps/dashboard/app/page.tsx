@@ -28,9 +28,9 @@ const STEPS = [
 const FEATURES = [
   { icon: "📄", title: "Answers only from your documents", text: "No made-up prices or promises. If it isn't in your files, the bot says so and points the visitor to you." },
   { icon: "📞", title: "Turns visitors into leads", text: "Visitors leave their name and number in the chat. You get the whole conversation with it." },
-  { icon: "💬", title: "WhatsApp in one tap", text: "Open any lead straight in WhatsApp or call them from your phone. Mark them contacted or converted." },
+  { icon: "💬", title: "On WhatsApp and Instagram too", text: "The same assistant answers on WhatsApp, Instagram, Messenger and Telegram, including voice notes. Every WhatsApp chat becomes a lead." },
   { icon: "⚡", title: "Instant, streaming replies", text: "Answers stream in within seconds, at 2 PM or 2 AM, on mobile and desktop." },
-  { icon: "🎯", title: "Suggested questions", text: "Show the questions customers ask most as buttons, so visitors get answers with one tap." },
+  { icon: "🗣️", title: "Hindi, Hinglish and voice", text: "Customers can type or speak in Hindi, Hinglish, Marathi, Tamil and more. Answers come in their language." },
   { icon: "🔒", title: "Your data stays yours", text: "Every business gets its own private workspace. Export your leads to Excel any time." },
 ];
 

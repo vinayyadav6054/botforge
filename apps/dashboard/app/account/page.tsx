@@ -32,6 +32,7 @@ function planFeatures(p: Plan) {
     `${p.answersPerMonth.toLocaleString()} answers a month`,
     `${p.documents} documents`,
     p.removeBranding ? "No “Powered by” badge" : "“Powered by BotForge” badge",
+    p.messagingApps ? "WhatsApp, Instagram, Messenger, Telegram" : "Website chat only",
   ];
 }
 

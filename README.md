@@ -118,6 +118,9 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | POST/PATCH | `/bots/{id}/sources[/{docId}]` | JWT | `{kind: website\|google\|notion\|youtube, url, token?, syncIntervalDays?}` / `{syncIntervalDays}` |
 | GET/POST/PUT/DELETE | `/bots/{id}/qa[/{qaId}]` | JWT | owner answers `{question, answer, fromQuestion?}` |
 | GET/POST | `/bots/{id}/unanswered`, `/bots/{id}/unanswered/dismiss` | JWT | questions the knowledge did not answer (90 days) / `{question}` |
+| GET/POST/DELETE | `/bots/{id}/channels[/{channelId}]` | JWT | messaging apps: `{kind: whatsapp\|instagram\|messenger\|telegram, …credentials}` |
+| GET/POST | `/channels/{kind}/{channelId}` | Meta signature / Telegram secret | webhooks from the messaging apps |
+| POST | `/chat/{publicKey}/transcribe` | public | audio body (webm, ogg, mp4, wav; ≤ 3 MB) → `{text}` |
 | GET/DELETE | `/bots/{id}/documents/{docId}` | JWT | status (`Uploaded`, `Ready`, `Failed`, `UploadedUnqueued`) / delete |
 | POST | `/bots/{id}/documents/{docId}/reprocess` | JWT | queue again |
 | GET | `/chat/{publicKey}/info` | public | `{name, welcomeMessage}` |

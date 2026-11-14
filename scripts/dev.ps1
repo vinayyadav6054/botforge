@@ -138,6 +138,15 @@ function Start-App {
     $env:BRANDING_URL = "http://localhost:$DashboardPort"
     # local only: let the website source read pages on this machine (e.g. the demo site); production blocks them
     $env:ALLOW_PRIVATE_SOURCES = "true"
+    # messaging apps need a public https address for webhooks; locally only via a tunnel (cloudflared, ngrok):
+    #   $env:PUBLIC_API_URL = "https://<your-tunnel>"; ./scripts/dev.ps1 restart
+    if ($env:PUBLIC_API_URL) { $env:Channels__PublicUrl = $env:PUBLIC_API_URL }
+    # end-to-end tests of messaging apps: a fake Telegram/Meta server run by tests/e2e (FAKE_PLATFORM_URL=http://localhost:5999)
+    if ($env:FAKE_PLATFORM_URL) {
+        $env:Channels__TelegramApi = $env:FAKE_PLATFORM_URL; $env:TELEGRAM_API = $env:FAKE_PLATFORM_URL
+        $env:Channels__GraphApi = $env:FAKE_PLATFORM_URL; $env:GRAPH_API = $env:FAKE_PLATFORM_URL
+        if (-not $env:PUBLIC_API_URL) { $env:Channels__PublicUrl = "http://localhost:5000" }
+    }
     # identity calls the bot service (account deletion, monthly reports) with the bot service's internal key
     $botsSecrets = dotnet user-secrets list --project (Join-Path $root "services/bot-service/Bots.Api") 2>$null
     $internal = ($botsSecrets | Where-Object { $_ -like "Internal:ApiKey = *" }) -replace '^Internal:ApiKey = ', ''

@@ -95,6 +95,24 @@ def retrieval_query(question: str, history: list[tuple[str, str]]) -> str:
     return f"{previous}\n{question}" if previous else question
 
 
+async def check_quota(public_key: str) -> str | None:
+    """None when the plan allows another AI answer, otherwise the message to show instead."""
+    try:
+        ok, reason = await consume_answer(public_key)
+    except httpx.HTTPError:
+        log.warning("Usage check failed; answering anyway")
+        return None
+    return None if ok else (LIMIT_REACHED if reason == "limit" else NOT_AVAILABLE)
+
+
+async def give_back(public_key: str) -> None:
+    """The AI call failed after the answer was counted."""
+    try:
+        await refund_answer(public_key)
+    except httpx.HTTPError:
+        log.warning("Could not refund a failed answer")
+
+
 async def find_chunks(bot: dict, question: str, history: list[tuple[str, str]]):
     """Searches with the question, plus its English translation when it is in Hindi, Hinglish, Tamil..."""
     query = retrieval_query(question, history)
@@ -157,6 +175,8 @@ async def bot_info(public_key: str):
             "avatar": avatar if isinstance(avatar, str) and re.fullmatch(
                 r"data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}", avatar) else None,
         },
+        "language": (bot.get("style") or {}).get("replyLanguage") or "auto",
+        "voice": bot.get("voiceEnabled") is not False,
         "hours": {
             "enabled": bool(hours.get("enabled")),
             "start": hours.get("start") or "09:00",
@@ -228,13 +248,7 @@ async def chat(public_key: str, body: ChatRequest):
             log.warning("Could not store a conversation turn")
 
     async def allowed() -> str | None:
-        """None when the plan allows another AI answer, otherwise the message to show instead."""
-        try:
-            ok, reason = await consume_answer(public_key)
-        except httpx.HTTPError:
-            log.warning("Usage check failed; answering anyway")
-            return None
-        return None if ok else (LIMIT_REACHED if reason == "limit" else NOT_AVAILABLE)
+        return await check_quota(public_key)
 
     async def events():
         yield sse("meta", {"botName": bot["name"], "sources": len(chunks), "conversationId": conversation_id})
@@ -255,10 +269,7 @@ async def chat(public_key: str, body: ChatRequest):
                 yield sse("token", {"text": token})
         except Exception as ex:
             log.exception("Gemini call failed")
-            try:
-                await refund_answer(public_key)
-            except httpx.HTTPError:
-                log.warning("Could not refund a failed answer")
+            await give_back(public_key)
             busy = getattr(ex, "code", None) in (429, 503)
             message = ("The assistant is busy right now. Please try again in a moment."
                        if busy else "Sorry, something went wrong. Please try again.")
@@ -303,3 +314,9 @@ async def transcribe_voice(public_key: str, request: Request):
         log.exception("Transcription failed")
         raise HTTPException(status_code=503, detail="Could not understand the recording. Please type your question.")
     return {"text": text}
+
+
+# messaging apps (WhatsApp, Instagram, Messenger, Telegram) post their webhooks here
+from .channels import router as channels_router  # noqa: E402
+
+app.include_router(channels_router)

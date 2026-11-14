@@ -43,6 +43,10 @@ export interface BotInfo {
   branding?: { show?: boolean; url?: string };
   appearance?: Appearance;
   hours?: OpeningHours;
+  /** "auto" or a language code: the widget's own texts follow it */
+  language?: string;
+  /** microphone and read-aloud buttons */
+  voice?: boolean;
 }
 
 /** Sent with every message so the owner sees the whole visit as one conversation. */
@@ -85,6 +89,22 @@ export class ChatApi {
     const res = await fetch(this.url("/info"));
     if (!res.ok) throw new Error(`info failed: ${res.status}`);
     return res.json();
+  }
+
+  /** Speech to text for the microphone button; null when nothing could be understood. */
+  async transcribe(audio: Blob): Promise<string | null> {
+    try {
+      const res = await fetch(this.url("/transcribe"), {
+        method: "POST",
+        headers: { "Content-Type": (audio.type || "audio/webm").split(";")[0] },
+        body: audio,
+      });
+      if (!res.ok) return null;
+      const body = await res.json();
+      return typeof body?.text === "string" && body.text.trim() ? body.text.trim() : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Saves the visitor's details. Resolves to null on success, or a message to show. */

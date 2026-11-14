@@ -44,6 +44,8 @@ done
 
 # email links and the widget badge point at the (first) dashboard address unless PUBLIC_URL says otherwise
 [ -n "${PUBLIC_URL:-}" ] || PUBLIC_URL="${Gateway__DashboardOrigins__0:-}"
+# Render sets RENDER_EXTERNAL_URL (https://<service>.onrender.com): webhooks for messaging apps go there
+[ -n "${PUBLIC_API_URL:-}" ] || PUBLIC_API_URL="${RENDER_EXTERNAL_URL:-}"
 . /app/deploy/common-env.sh
 
 mkdir -p /data/storage

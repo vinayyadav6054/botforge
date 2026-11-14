@@ -174,6 +174,7 @@ textarea:focus-visible { outline: none; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes rec { 0%, 100% { box-shadow: 0 0 0 0 rgba(229,72,77,.5); } 50% { box-shadow: 0 0 0 6px rgba(229,72,77,0); } }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes ring { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.45); opacity: 0; } }
 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
@@ -187,6 +188,16 @@ textarea:focus-visible { outline: none; }
   .launcher[aria-expanded="true"] { display: none; }
   .greeting { right: 16px; }
 }
+
+/* voice: microphone in the composer, read-aloud toggle in the header */
+.mic {
+  width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; flex-shrink: 0; cursor: pointer;
+  background: transparent; color: #7a8190; display: grid; place-items: center;
+}
+.mic:hover { color: ${accent}; }
+.mic[hidden], .speak[hidden] { display: none; }
+.mic.recording { background: #e5484d; color: #fff; animation: rec 1.2s ease-in-out infinite; }
+.speak[aria-pressed="true"] { background: rgba(255,255,255,.34); }
 
 /* owner settings: left placement, logo, opening hours, sources under answers */
 .launcher.left, .greeting.left, .panel.left { right: auto; left: 20px; }

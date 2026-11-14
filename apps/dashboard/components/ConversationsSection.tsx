@@ -3,6 +3,8 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, Conversation, ConversationSummary } from "@/lib/api";
 
+export const CHANNEL_ICON: Record<string, string> = { web: "🌐", whatsapp: "🟢", instagram: "📸", messenger: "💬", telegram: "✈️" };
+
 function when(iso: string) {
   return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
@@ -102,7 +104,10 @@ export default function ConversationsSection({ botId, onCorrect }: { botId: stri
           {shown.map((c) => (
             <Fragment key={c.id}>
               <button className="convo-item" aria-expanded={open === c.id} onClick={() => void toggle(c.id)}>
-                <span className="q">{c.firstQuestion ?? "(no question)"}</span>
+                <span className="q">
+                  <span aria-label={c.channel} title={c.channel}>{CHANNEL_ICON[c.channel] ?? "🌐"}</span>{" "}
+                  {c.contactName && <strong>{c.contactName}: </strong>}{c.firstQuestion ?? "(no question)"}
+                </span>
                 <span className="meta">{when(c.lastMessageAt)}</span>
                 <span className="meta">
                   {c.messageCount / 2} question{c.messageCount === 2 ? "" : "s"}

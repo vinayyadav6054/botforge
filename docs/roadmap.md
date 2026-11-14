@@ -12,6 +12,9 @@ What BotForge does today, and what can be added, ordered by how much each item h
 - Password reset, email verification, monthly report email; conversation history with unanswered questions
 - "Powered by BotForge" badge (removed on Business and Pro), Privacy Policy, Terms, data export, account deletion
 - Landing page with live demo, demo website
+- WhatsApp, Instagram, Messenger and Telegram answer from the same knowledge (voice notes too); WhatsApp chats become leads
+- Hindi, Hinglish and other Indian languages: questions are also searched in English, reply language setting,
+  widget texts in Hindi, Marathi, Tamil and Telugu; microphone and read-aloud in the website chat
 - Knowledge from websites (crawler), Google Docs/Sheets/Slides/Drive links, Notion, YouTube captions, Excel/CSV,
   with scheduled re-sync; table rows keep their column names
 - Hybrid search (keyword + meaning), owner-written answers that take priority, unanswered-questions list,
@@ -47,7 +50,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
 - **Lead form settings**: choose fields, ask at the start or after N messages
 - **Better retrieval**: hybrid keyword + vector search, re-ranking, better chunking of tables
 
-## Phase 3: more channels (most important for India)
+## Phase 3: more channels (done, except the phone-call bot)
 
 - **WhatsApp Business API** bot from the same documents (via Meta Cloud API or Gupshup / Interakt)
 - **Instagram and Facebook Messenger** auto-replies

@@ -92,6 +92,7 @@ public class GatewayTests(GatewayFactory factory) : IClassFixture<GatewayFactory
     [InlineData("/api/bots", "/bots")]
     [InlineData("/api/bots/123/documents?x=1", "/bots/123/documents")]
     [InlineData("/api/chat/bk_abc/info", "/chat/bk_abc/info")]
+    [InlineData("/api/channels/whatsapp/abc", "/channels/whatsapp/abc")]
     [InlineData("/api/account", "/account")]
     [InlineData("/api/account/export", "/account/export")]
     [InlineData("/api/billing/razorpay/webhook", "/billing/razorpay/webhook")]

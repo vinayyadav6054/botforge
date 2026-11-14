@@ -124,6 +124,7 @@ export default function LeadsSection({ botId, enabled }: { botId: string; enable
                       <td className="muted" style={{ whiteSpace: "nowrap" }}>{formatWhen(l.createdAt)}</td>
                       <td>
                         {l.name}
+                        {l.channel && l.channel !== "web" && <span className="badge processing" style={{ marginLeft: 6 }}>{l.channel}</span>}
                         {l.email && <div className="small muted">{l.email}</div>}
                       </td>
                       <td style={{ whiteSpace: "nowrap" }}>

@@ -44,6 +44,21 @@ export interface Bot {
   hoursDays: number[];
   timeZone: string;
   offlineMessage: string;
+  replyLanguage: string;
+  voiceEnabled: boolean;
+}
+
+export type ChannelKind = "whatsapp" | "instagram" | "messenger" | "telegram";
+
+export interface Channel {
+  id: string;
+  kind: ChannelKind;
+  displayName: string;
+  webhookUrl: string;
+  verifyToken: string | null;
+  createdAt: string;
+  lastMessageAt: string | null;
+  lastError: string | null;
 }
 
 /** PUT /bots/{id}: any subset; "" clears widgetColor / avatarDataUrl. */
@@ -88,6 +103,7 @@ export interface Lead {
   transcript: string; // JSON array of {role, text}
   status: LeadStatus | string;
   createdAt: string;
+  channel: "web" | ChannelKind;
 }
 
 export interface BotDocument {
@@ -243,6 +259,12 @@ export const api = {
   dismissUnanswered: (botId: string, question: string) =>
     request<object>(`/bots/${botId}/unanswered/dismiss`, { method: "POST", body: JSON.stringify({ question }) }),
 
+  // messaging apps
+  listChannels: (botId: string) => request<Channel[]>(`/bots/${botId}/channels`),
+  addChannel: (botId: string, body: Record<string, string>) =>
+    request<Channel>(`/bots/${botId}/channels`, { method: "POST", body: JSON.stringify(body) }),
+  deleteChannel: (botId: string, id: string) => request<void>(`/bots/${botId}/channels/${id}`, { method: "DELETE" }),
+
   // conversations
   listConversations: (botId: string, before?: string) =>
     request<ConversationSummary[]>(`/bots/${botId}/conversations?take=20${before ? `&before=${encodeURIComponent(before)}` : ""}`),
@@ -287,6 +309,9 @@ export interface ConversationSummary {
   unansweredCount: number;
   firstQuestion: string | null;
   pageUrl: string | null;
+  channel: "web" | ChannelKind;
+  contactName: string | null;
+  contactId: string | null;
 }
 
 export interface Conversation {
@@ -314,6 +339,8 @@ export interface Plan {
   answersPerMonth: number;
   removeBranding: boolean;
   priceInr: number;
+  websitePages: number;
+  messagingApps: boolean;
 }
 
 export interface Account {

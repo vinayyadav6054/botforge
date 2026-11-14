@@ -94,7 +94,9 @@ def test_health(client):
 
 def test_info_returns_public_bot_data_only(client):
     body = client.get(f"/chat/{KEY}/info").json()
-    assert set(body) == {"name", "welcomeMessage", "leadCapture", "suggestedQuestions", "branding", "appearance", "hours"}
+    assert set(body) == {"name", "welcomeMessage", "leadCapture", "suggestedQuestions", "branding", "appearance", "hours",
+                         "language", "voice"}
+    assert (body["language"], body["voice"]) == ("auto", True)
     assert "tenantId" not in str(body) and "botId" not in str(body)   # no ids leak
     assert body["leadCapture"] == {"enabled": False, "prompt": "", "afterMessages": 0, "timing": "after",
                                    "askEmail": False, "askCourse": True, "courseLabel": "Course / interest"}
