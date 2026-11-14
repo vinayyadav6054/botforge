@@ -166,7 +166,7 @@ app.MapPost("/auth/forgot-password", async (ForgotPasswordRequest req, AppDbCont
     {
         var token = await links.CreateAsync(user.Id, TokenPurpose.ResetPassword);
         try { await email.SendAsync(EmailTemplates.Reset(user.Email, appOptions.Value.Link("/reset-password", token))); }
-        catch (Exception ex) { log.LogError(ex, "Could not send a password reset email"); }
+        catch (Exception ex) { log.LogError(ex, "Could not send a password reset email: {Reason}", ex.Message); }
     }
     return Results.Ok(new { ok = true });
 });
@@ -256,7 +256,7 @@ static async Task<bool> SendVerificationAsync(User user, AccountTokens links, IE
     }
     catch (Exception ex)
     {
-        log.LogError(ex, "Could not send the verification email");
+        log.LogError(ex, "Could not send the verification email: {Reason}", ex.Message);
         return false;
     }
 }
