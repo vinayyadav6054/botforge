@@ -8,7 +8,7 @@ from google.genai import types
 from . import config
 
 # a hung request must not keep the visitor waiting forever (milliseconds)
-_client = genai.Client(api_key=config.GEMINI_API_KEY, http_options=types.HttpOptions(timeout=30_000))
+_client = genai.Client(api_key=config.GEMINI_API_KEY, http_options=types.HttpOptions(timeout=30_000, api_version="v1beta"))
 log = logging.getLogger("chat")
 
 SYSTEM_TEMPLATE = """You are the virtual assistant for "{bot_name}".

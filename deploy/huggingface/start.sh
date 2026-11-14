@@ -25,8 +25,8 @@ export \
   RABBITMQ_HOST=127.0.0.1 RABBITMQ_USER=guest RABBITMQ_PASSWORD=guest \
   Storage__RootPath=/data/storage STORAGE_ROOT=/data/storage \
   BOTS_SERVICE_URL=http://127.0.0.1:5215 \
-  GEMINI_MODEL="${GEMINI_MODEL:-gemini-flash-lite-latest}" \
-  GEMINI_FALLBACK_MODELS="${GEMINI_FALLBACK_MODELS:-gemini-flash-latest}" \
+  GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.1-flash-lite}" \
+  GEMINI_FALLBACK_MODELS="${GEMINI_FALLBACK_MODELS:-gemini-flash-lite-latest}" \
   Gateway__TrustForwardedHeaders=true \
   Gateway__WidgetPath=/app/widget \
   Gateway__RateLimits__AuthPerMinute="${AUTH_PER_MINUTE:-20}" \

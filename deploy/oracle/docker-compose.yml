@@ -35,8 +35,8 @@ services:
       DATABASE_URL: postgresql://botforge:${POSTGRES_PASSWORD}@postgres:5432/botforge?sslmode=disable
       GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY in deploy/oracle/.env}
       JWT_KEY: ${JWT_KEY:?set JWT_KEY in deploy/oracle/.env}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
-      GEMINI_FALLBACK_MODELS: ${GEMINI_FALLBACK_MODELS:-gemini-flash-latest}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_FALLBACK_MODELS: ${GEMINI_FALLBACK_MODELS:-gemini-flash-lite-latest}
       SITE_ADDRESS: ${SITE_ADDRESS}
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}

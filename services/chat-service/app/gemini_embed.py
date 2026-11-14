@@ -25,7 +25,7 @@ def _get_client():
     if _client is None:
         from google import genai
         from google.genai import types
-        _client = genai.Client(api_key=config.GEMINI_API_KEY, http_options=types.HttpOptions(timeout=60_000))
+        _client = genai.Client(api_key=config.GEMINI_API_KEY, http_options=types.HttpOptions(timeout=60_000, api_version="v1beta"))
     return _client
 
 

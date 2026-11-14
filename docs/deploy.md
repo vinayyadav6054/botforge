@@ -64,8 +64,8 @@ $b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create
    | `GEMINI_API_KEY` | your key from https://aistudio.google.com/apikey |
    | `JWT_KEY` | the value from step 2 |
 
-   Optional variables: `GEMINI_MODEL` (default `gemini-flash-lite-latest`) and `GEMINI_FALLBACK_MODELS`
-   (default `gemini-flash-latest`, comma-separated).
+   Optional variables: `GEMINI_MODEL` (default `gemini-3.1-flash-lite`) and `GEMINI_FALLBACK_MODELS`
+   (default `gemini-flash-lite-latest`, comma-separated).
 6. The Space builds automatically. The first build takes about 10–15 minutes; watch progress in the **Logs** tab.
    When it shows **Running**, open the app at its direct URL **`https://<username>-botforge.hf.space`**. Don't use
    the huggingface.co/spaces page, which wraps the app in a frame.
