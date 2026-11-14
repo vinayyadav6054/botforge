@@ -45,7 +45,7 @@ COPY --from=widget /widget/dist /app/widget
 COPY services/chat-service/app /app/chat/app
 COPY services/ingestion-service/app /app/ingestion/app
 COPY deploy/render /app/deploy
-COPY deploy/huggingface/dbenv.py /app/deploy/dbenv.py
+COPY deploy/render/dbenv.py /app/deploy/dbenv.py
 COPY deploy/common/env.sh /app/deploy/common-env.sh
 
 RUN useradd -m -u 1000 user \

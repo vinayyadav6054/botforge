@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useState } from "react";
 import { api, Bot } from "@/lib/api";
-import Icon from "@/components/Icon";
+import Icon, { IconName } from "@/components/Icon";
 
 const QUESTION_EXAMPLES = [
   "e.g. What are the fees?",
@@ -16,6 +16,16 @@ const LANGUAGES: [string, string][] = [["en", "English"], ["hi", "Hindi"], ["mr"
   ["bn", "Bengali"], ["gu", "Gujarati"], ["kn", "Kannada"], ["ml", "Malayalam"], ["pa", "Punjabi"], ["ur", "Urdu"]];
 const ZONES = ["Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Kathmandu", "Asia/Dhaka", "Europe/London",
   "Europe/Berlin", "America/New_York", "America/Los_Angeles", "Australia/Sydney"];
+
+type Group = "basics" | "answers" | "leads" | "buttons" | "hours";
+/** One group at a time keeps the form short; everything is saved together. */
+const GROUPS: { id: Group; label: string; icon: IconName }[] = [
+  { id: "basics", label: "Basics & look", icon: "spark" },
+  { id: "answers", label: "How it answers", icon: "chat" },
+  { id: "leads", label: "Leads & alerts", icon: "users" },
+  { id: "buttons", label: "Booking & payment", icon: "layers" },
+  { id: "hours", label: "Opening hours", icon: "home" },
+];
 
 /** Always four boxes in the form; the bot keeps only the filled ones. */
 function padQuestions(qs: string[] | undefined): string[] {
@@ -37,8 +47,13 @@ async function logoDataUrl(file: File): Promise<string> {
 export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: Bot, message: string) => void }) {
   const [s, setS] = useState({ ...bot, suggestedQuestions: padQuestions(bot.suggestedQuestions) });
   const [saving, setSaving] = useState(false);
+  const [group, setGroup] = useState<Group>("basics");
+  const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const set = <K extends keyof typeof s>(key: K, value: (typeof s)[K]) => setS((x) => ({ ...x, [key]: value }));
+  const set = <K extends keyof typeof s>(key: K, value: (typeof s)[K]) => {
+    setS((x) => ({ ...x, [key]: value }));
+    setDirty(true);
+  };
 
   async function onLogo(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -95,6 +110,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         paymentLabel: s.paymentLabel.trim() || "Pay fees",
       });
       setS({ ...b, suggestedQuestions: padQuestions(b.suggestedQuestions) });
+      setDirty(false);
       onSaved(b, "Settings saved.");
     } catch (err) {
       setError((err as Error).message);
@@ -111,6 +127,17 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         <div className="section-title"><span className="section-icon" aria-hidden><Icon name="settings" /></span><h2>Settings</h2></div>
       </div>
       {error && <div className="alert error" role="alert">{error}</div>}
+
+      <div className="settings-tabs" role="tablist" aria-label="Settings groups">
+        {GROUPS.map((x) => (
+          <button key={x.id} type="button" role="tab" aria-selected={group === x.id} onClick={() => setGroup(x.id)}>
+            <Icon name={x.icon} size={15} /> {x.label}
+          </button>
+        ))}
+      </div>
+
+      {group === "basics" && (
+        <div className="settings-group">
 
       <div className="form-grid">
         <div className="field">
@@ -135,6 +162,50 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         </div>
       </fieldset>
 
+      {/* ---------- look ---------- */}
+      <h3 className="subhead">Look</h3>
+      <div className="look-grid">
+        <div>
+          <span className="small strong-label">Colour</span>
+          <div className="swatches" role="group" aria-label="Chat colour">
+            {COLORS.map((c) => (
+              <button key={c} type="button" className="swatch" style={{ background: c }} aria-pressed={color === c}
+                aria-label={c} title={c} onClick={() => set("widgetColor", c)} />
+            ))}
+            <input type="color" value={color} onChange={(e) => set("widgetColor", e.target.value)} aria-label="Custom colour" className="color-input" />
+          </div>
+          <span className="small strong-label" style={{ marginTop: 14 }}>Side of the screen</span>
+          <div className="row">
+            {(["right", "left"] as const).map((p) => (
+              <label key={p} className="check small">
+                <input type="radio" name="position" checked={s.widgetPosition === p} onChange={() => set("widgetPosition", p)} />
+                {p === "right" ? "Bottom right" : "Bottom left"}
+              </label>
+            ))}
+          </div>
+          <span className="small strong-label" style={{ marginTop: 14 }}>Logo</span>
+          <div className="row">
+            <label className="btn secondary small" style={{ cursor: "pointer" }}>
+              {s.avatarDataUrl ? "Change logo" : "Upload logo"}
+              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onLogo} aria-label="Logo" />
+            </label>
+            {s.avatarDataUrl && <button type="button" className="btn danger small" onClick={() => set("avatarDataUrl", null)}>Remove</button>}
+          </div>
+        </div>
+        <div className="look-preview" aria-hidden>
+          <div className="lkp-head" style={{ background: color }}>
+            <span className="lkp-avatar">{s.avatarDataUrl ? <img src={s.avatarDataUrl} alt="" /> : s.name.slice(0, 2).toUpperCase()}</span>
+            <strong>{s.name}</strong>
+          </div>
+          <div className="lkp-body"><span className="lkp-msg">{s.welcomeMessage || "Hi! How can I help you today?"}</span></div>
+          <span className="lkp-launcher" style={{ background: color, [s.widgetPosition === "left" ? "left" : "right"]: 10 }}>💬</span>
+        </div>
+      </div>
+
+        </div>
+      )}
+      {group === "answers" && (
+        <div className="settings-group">
       {/* ---------- personality ---------- */}
       <h3 className="subhead">Personality and rules</h3>
       <div className="form-grid">
@@ -189,119 +260,10 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         Show where answers come from (e.g. “Source: Fee_List.pdf, page 2”)
       </label>
 
-      {/* ---------- look ---------- */}
-      <h3 className="subhead">Look</h3>
-      <div className="look-grid">
-        <div>
-          <span className="small strong-label">Colour</span>
-          <div className="swatches" role="group" aria-label="Chat colour">
-            {COLORS.map((c) => (
-              <button key={c} type="button" className="swatch" style={{ background: c }} aria-pressed={color === c}
-                aria-label={c} title={c} onClick={() => set("widgetColor", c)} />
-            ))}
-            <input type="color" value={color} onChange={(e) => set("widgetColor", e.target.value)} aria-label="Custom colour" className="color-input" />
-          </div>
-          <span className="small strong-label" style={{ marginTop: 14 }}>Side of the screen</span>
-          <div className="row">
-            {(["right", "left"] as const).map((p) => (
-              <label key={p} className="check small">
-                <input type="radio" name="position" checked={s.widgetPosition === p} onChange={() => set("widgetPosition", p)} />
-                {p === "right" ? "Bottom right" : "Bottom left"}
-              </label>
-            ))}
-          </div>
-          <span className="small strong-label" style={{ marginTop: 14 }}>Logo</span>
-          <div className="row">
-            <label className="btn secondary small" style={{ cursor: "pointer" }}>
-              {s.avatarDataUrl ? "Change logo" : "Upload logo"}
-              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onLogo} aria-label="Logo" />
-            </label>
-            {s.avatarDataUrl && <button type="button" className="btn danger small" onClick={() => set("avatarDataUrl", null)}>Remove</button>}
-          </div>
-        </div>
-        <div className="look-preview" aria-hidden>
-          <div className="lp-head" style={{ background: color }}>
-            <span className="lp-avatar">{s.avatarDataUrl ? <img src={s.avatarDataUrl} alt="" /> : s.name.slice(0, 2).toUpperCase()}</span>
-            <strong>{s.name}</strong>
-          </div>
-          <div className="lp-body"><span className="lp-msg">{s.welcomeMessage || "Hi! How can I help you today?"}</span></div>
-          <span className="lp-launcher" style={{ background: color, [s.widgetPosition === "left" ? "left" : "right"]: 10 }}>💬</span>
-        </div>
-      </div>
-
-      {/* ---------- hours ---------- */}
-      <h3 className="subhead">Opening hours</h3>
-      <label className="check" htmlFor="hoursEnabled">
-        <input id="hoursEnabled" type="checkbox" checked={s.hoursEnabled} onChange={(e) => set("hoursEnabled", e.target.checked)} />
-        Show a message when you are closed (the bot keeps answering)
-      </label>
-      {s.hoursEnabled && (
-        <div className="hours-grid">
-          <div className="row">
-            <label className="small" htmlFor="hoursStart">Open</label>
-            <input id="hoursStart" type="time" value={s.hoursStart} onChange={(e) => set("hoursStart", e.target.value)} />
-            <label className="small" htmlFor="hoursEnd">Close</label>
-            <input id="hoursEnd" type="time" value={s.hoursEnd} onChange={(e) => set("hoursEnd", e.target.value)} />
-            <select className="status-select" value={s.timeZone} onChange={(e) => set("timeZone", e.target.value)} aria-label="Time zone">
-              {[...new Set([s.timeZone, ...ZONES])].map((z) => <option key={z} value={z}>{z}</option>)}
-            </select>
-          </div>
-          <div className="day-toggles" role="group" aria-label="Open on">
-            {DAYS.map((d, i) => {
-              const day = i + 1;
-              const on = s.hoursDays.includes(day);
-              return (
-                <button key={d} type="button" className={`day${on ? " on" : ""}`} aria-pressed={on}
-                  onClick={() => set("hoursDays", on ? s.hoursDays.filter((x) => x !== day) : [...s.hoursDays, day].sort())}>
-                  {d}
-                </button>
-              );
-            })}
-          </div>
-          <div className="field">
-            <label htmlFor="offlineMessage">Message while closed</label>
-            <input id="offlineMessage" type="text" maxLength={300} value={s.offlineMessage} onChange={(e) => set("offlineMessage", e.target.value)} />
-          </div>
         </div>
       )}
-
-      {/* ---------- action buttons ---------- */}
-      <h3 className="subhead">Buttons in the chat</h3>
-      <p className="small muted" style={{ marginTop: -4 }}>
-        Shown above the message box, and the bot points visitors to them when they want to book or pay
-        (on WhatsApp it sends the link). Leave a link empty to hide its button.
-      </p>
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="bookingUrl">Booking link</label>
-          <input id="bookingUrl" type="url" maxLength={500} value={s.bookingUrl ?? ""} placeholder="https://calendly.com/your-name"
-            onChange={(e) => set("bookingUrl", e.target.value)} />
-          <span className="small muted">Calendly, Google Calendar booking page, Practo, or any form.</span>
-        </div>
-        <div className="field">
-          <label htmlFor="bookingLabel">Button text</label>
-          <input id="bookingLabel" type="text" maxLength={40} value={s.bookingLabel} placeholder="Book a visit"
-            onChange={(e) => set("bookingLabel", e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="paymentUrl">Payment link</label>
-          <input id="paymentUrl" type="url" maxLength={500} value={s.paymentUrl ?? ""} placeholder="https://rzp.io/l/your-fees"
-            onChange={(e) => set("paymentUrl", e.target.value)} />
-          <span className="small muted">A Razorpay, Cashfree or Instamojo payment page.</span>
-        </div>
-        <div className="field">
-          <label htmlFor="upiId">UPI ID</label>
-          <input id="upiId" type="text" maxLength={300} value={s.upiId ?? ""} placeholder="yourname@okaxis"
-            onChange={(e) => set("upiId", e.target.value)} />
-          <span className="small muted">Opens GPay / PhonePe / Paytm on phones; on computers it copies the ID.</span>
-        </div>
-        <div className="field">
-          <label htmlFor="paymentLabel">Payment button text</label>
-          <input id="paymentLabel" type="text" maxLength={40} value={s.paymentLabel} placeholder="Pay fees"
-            onChange={(e) => set("paymentLabel", e.target.value)} />
-        </div>
-      </div>
-
+      {group === "leads" && (
+        <div className="settings-group">
       {/* ---------- leads ---------- */}
       <h3 className="subhead">Lead capture</h3>
       <div className="field">
@@ -400,7 +362,92 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         <CopyButton text={SHEETS_SCRIPT} />
       </details>
 
-      <div style={{ marginTop: 18 }}>
+        </div>
+      )}
+      {group === "buttons" && (
+        <div className="settings-group">
+      {/* ---------- action buttons ---------- */}
+      <h3 className="subhead">Buttons in the chat</h3>
+      <p className="small muted" style={{ marginTop: -4 }}>
+        Shown above the message box, and the bot points visitors to them when they want to book or pay
+        (on WhatsApp it sends the link). Leave a link empty to hide its button.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="bookingUrl">Booking link</label>
+          <input id="bookingUrl" type="url" maxLength={500} value={s.bookingUrl ?? ""} placeholder="https://calendly.com/your-name"
+            onChange={(e) => set("bookingUrl", e.target.value)} />
+          <span className="small muted">Calendly, Google Calendar booking page, Practo, or any form.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="bookingLabel">Button text</label>
+          <input id="bookingLabel" type="text" maxLength={40} value={s.bookingLabel} placeholder="Book a visit"
+            onChange={(e) => set("bookingLabel", e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="paymentUrl">Payment link</label>
+          <input id="paymentUrl" type="url" maxLength={500} value={s.paymentUrl ?? ""} placeholder="https://rzp.io/l/your-fees"
+            onChange={(e) => set("paymentUrl", e.target.value)} />
+          <span className="small muted">A Razorpay, Cashfree or Instamojo payment page.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="upiId">UPI ID</label>
+          <input id="upiId" type="text" maxLength={300} value={s.upiId ?? ""} placeholder="yourname@okaxis"
+            onChange={(e) => set("upiId", e.target.value)} />
+          <span className="small muted">Opens GPay / PhonePe / Paytm on phones; on computers it copies the ID.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="paymentLabel">Payment button text</label>
+          <input id="paymentLabel" type="text" maxLength={40} value={s.paymentLabel} placeholder="Pay fees"
+            onChange={(e) => set("paymentLabel", e.target.value)} />
+        </div>
+      </div>
+
+        </div>
+      )}
+      {group === "hours" && (
+        <div className="settings-group">
+      {/* ---------- hours ---------- */}
+      <h3 className="subhead">Opening hours</h3>
+      <label className="check" htmlFor="hoursEnabled">
+        <input id="hoursEnabled" type="checkbox" checked={s.hoursEnabled} onChange={(e) => set("hoursEnabled", e.target.checked)} />
+        Show a message when you are closed (the bot keeps answering)
+      </label>
+      {s.hoursEnabled && (
+        <div className="hours-grid">
+          <div className="row">
+            <label className="small" htmlFor="hoursStart">Open</label>
+            <input id="hoursStart" type="time" value={s.hoursStart} onChange={(e) => set("hoursStart", e.target.value)} />
+            <label className="small" htmlFor="hoursEnd">Close</label>
+            <input id="hoursEnd" type="time" value={s.hoursEnd} onChange={(e) => set("hoursEnd", e.target.value)} />
+            <select className="status-select" value={s.timeZone} onChange={(e) => set("timeZone", e.target.value)} aria-label="Time zone">
+              {[...new Set([s.timeZone, ...ZONES])].map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
+          </div>
+          <div className="day-toggles" role="group" aria-label="Open on">
+            {DAYS.map((d, i) => {
+              const day = i + 1;
+              const on = s.hoursDays.includes(day);
+              return (
+                <button key={d} type="button" className={`day${on ? " on" : ""}`} aria-pressed={on}
+                  onClick={() => set("hoursDays", on ? s.hoursDays.filter((x) => x !== day) : [...s.hoursDays, day].sort())}>
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+          <div className="field">
+            <label htmlFor="offlineMessage">Message while closed</label>
+            <input id="offlineMessage" type="text" maxLength={300} value={s.offlineMessage} onChange={(e) => set("offlineMessage", e.target.value)} />
+          </div>
+        </div>
+      )}
+
+        </div>
+      )}
+
+      <div className="save-bar">
+        <span className={dirty ? "dirty" : "muted small"}>{dirty ? "You have unsaved changes" : "All changes saved"}</span>
         <button className="btn" type="submit" disabled={saving || !s.name.trim()}>{saving ? "Saving..." : "Save changes"}</button>
       </div>
     </form>

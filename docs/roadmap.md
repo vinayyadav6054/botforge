@@ -21,7 +21,7 @@ What BotForge does today, and what can be added, ordered by how much each item h
   sources under answers, test playground
 - Personality (tone, length, topics to avoid, extra instructions), lead form options, widget colour/side/logo,
   opening-hours message
-- Gateway with rate limits and CORS; free hosting guides (Render + Vercel, own server, Hugging Face)
+- Gateway with rate limits and CORS; free hosting guide (Render + Vercel)
 
 ## Phase 1: needed before charging customers (done)
 

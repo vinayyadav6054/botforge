@@ -28,7 +28,7 @@ and [docs/roadmap.md](docs/roadmap.md) for future scope.
 | `apps/widget` | Embeddable widget (TypeScript, ~8 kB gzipped, Shadow DOM), plus `sales-demo.html` for prospect demos |
 | `tests/e2e`, `tests/e2e-ui` | End-to-end tests (API journeys, Playwright browser tests) |
 | `scripts/dev.ps1`, `scripts/test.ps1` | Run the whole stack / the whole test suite |
-| `deploy/` | Free hosting: `render` (Vercel + Render), `oracle` (own server), `huggingface` |
+| `deploy/` | Free hosting on Render (backend) + Vercel (dashboard); `common/env.sh` maps optional settings |
 
 ## Prerequisites
 
@@ -143,9 +143,7 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 
 ## Deploy (free)
 
-- **Vercel + Render + Neon + CloudAMQP**, no credit card: [docs/deploy-free.md](docs/deploy-free.md)
-- Any Linux server (e.g. Oracle Cloud Always Free) with HTTPS: `deploy/oracle/setup.sh`
-- Hugging Face Spaces (single container): [docs/deploy.md](docs/deploy.md)
+- **Vercel + Render + Neon + CloudAMQP + Brevo**, no credit card: [docs/deploy-free.md](docs/deploy-free.md)
 
 ## Production notes
 

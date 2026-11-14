@@ -1,12 +1,19 @@
 import Link from "next/link";
 
-/** Brand mark: a speech bubble with a spark (the "forge"), plus the word mark. */
+/** Brand mark: a speech bubble with a spark (the "forge"), in the brand gradient, plus the word mark. */
 export function Mark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden focusable="false" className="mark">
-      <rect x="1" y="1" width="30" height="26" rx="9" fill="var(--accent)" />
-      <path d="M9 27 L9 31 L14 27 Z" fill="var(--accent)" />
-      <path d="M17.5 6.5 L12 15.5 h4.2 L14.5 21.5 L20.5 12 h-4.3 Z" fill="var(--on-accent)" />
+      <defs>
+        <linearGradient id="bf-mark" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#5b5bf6" />
+          <stop offset=".6" stopColor="#8b5cf6" />
+          <stop offset="1" stopColor="#22c3ee" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="26" rx="9" fill="url(#bf-mark)" />
+      <path d="M9 27 L9 31 L14 27 Z" fill="#7a5cf6" />
+      <path d="M17.5 6.5 L12 15.5 h4.2 L14.5 21.5 L20.5 12 h-4.3 Z" fill="#ffffff" />
     </svg>
   );
 }
