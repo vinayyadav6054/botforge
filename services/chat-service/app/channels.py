@@ -198,8 +198,8 @@ async def answer(bot: dict, public_key: str, question: str, history: list[tuple[
         return blocked, False
     try:
         tokens = [t async for t in core.stream_answer(bot["name"], question, chunks, history, style=bot.get("style"))]
-    except Exception:
-        log.exception("Gemini call failed (messaging app)")
+    except Exception as ex:
+        log.exception("Gemini call failed (messaging app): %s: %s", type(ex).__name__, str(ex)[:500])
         await core.give_back(public_key)
         return "Sorry, I could not answer right now. Please try again in a moment.", False
     text = "".join(tokens).strip()

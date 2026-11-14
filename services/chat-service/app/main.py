@@ -268,7 +268,8 @@ async def chat(public_key: str, body: ChatRequest):
                 answer.append(token)
                 yield sse("token", {"text": token})
         except Exception as ex:
-            log.exception("Gemini call failed")
+            # the reason on the same line: hosted log search shows only matching lines
+            log.exception("Gemini call failed: %s: %s", type(ex).__name__, str(ex)[:500])
             await give_back(public_key)
             busy = getattr(ex, "code", None) in (429, 503)
             message = ("The assistant is busy right now. Please try again in a moment."
@@ -310,8 +311,8 @@ async def transcribe_voice(public_key: str, request: Request):
         raise HTTPException(status_code=400, detail="Empty recording")
     try:
         text = await transcribe(bytes(audio), mime)
-    except Exception:
-        log.exception("Transcription failed")
+    except Exception as ex:
+        log.exception("Transcription failed: %s: %s", type(ex).__name__, str(ex)[:500])
         raise HTTPException(status_code=503, detail="Could not understand the recording. Please type your question.")
     return {"text": text}
 
