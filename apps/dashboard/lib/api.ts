@@ -46,6 +46,16 @@ export interface Bot {
   offlineMessage: string;
   replyLanguage: string;
   voiceEnabled: boolean;
+  alertEmailEnabled: boolean;
+  /** null = the owner's own address */
+  alertEmail: string | null;
+  webhookUrl: string | null;
+  webhookSecret: string | null;
+  bookingUrl: string | null;
+  bookingLabel: string;
+  paymentUrl: string | null;
+  upiId: string | null;
+  paymentLabel: string;
 }
 
 export type ChannelKind = "whatsapp" | "instagram" | "messenger" | "telegram";
@@ -61,12 +71,18 @@ export interface Channel {
   lastError: string | null;
 }
 
-/** PUT /bots/{id}: any subset; "" clears widgetColor / avatarDataUrl. */
-export type BotSettings = Partial<Omit<Bot, "id" | "publicKey" | "createdAt" | "widgetColor" | "avatarDataUrl">> & {
+type Clearable = "widgetColor" | "avatarDataUrl" | "alertEmail" | "webhookUrl" | "bookingUrl" | "paymentUrl" | "upiId";
+
+/** PUT /bots/{id}: any subset; "" clears the optional texts and links. */
+export type BotSettings = Partial<Omit<Bot, "id" | "publicKey" | "createdAt" | "webhookSecret" | Clearable>> & {
   name: string;
-  widgetColor?: string;
-  avatarDataUrl?: string;
-};
+} & Partial<Record<Clearable, string>>;
+
+export interface AlertTestResult {
+  ok: boolean;
+  status: number | null;
+  error: string | null;
+}
 
 export type SourceKind = "website" | "google" | "notion" | "youtube";
 
@@ -224,6 +240,8 @@ export const api = {
     request<Bot>("/bots", { method: "POST", body: JSON.stringify({ name, welcomeMessage }) }),
   updateBot: (id: string, settings: BotSettings) =>
     request<Bot>(`/bots/${id}`, { method: "PUT", body: JSON.stringify(settings) }),
+  testAlert: (botId: string, kind: "email" | "webhook") =>
+    request<AlertTestResult>(`/bots/${botId}/alerts/test`, { method: "POST", body: JSON.stringify({ kind }) }),
   deleteBot: (id: string) => request<void>(`/bots/${id}`, { method: "DELETE" }),
 
   listDocuments: (botId: string) => request<BotDocument[]>(`/bots/${botId}/documents`),

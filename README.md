@@ -129,6 +129,7 @@ Integration tests never touch the `botforge` database; they recreate `botforge_t
 | GET | `/bots/{id}/leads` | JWT | enquiries, newest first (max 1000) |
 | PATCH/DELETE | `/bots/{id}/leads/{leadId}` | JWT | `{status: New\|Contacted\|Converted\|Junk}` / delete (data removal requests) |
 | GET | `/bots/{id}/leads/export` | JWT | CSV (UTF-8 with BOM, formula-safe) |
+| POST | `/bots/{id}/alerts/test` | JWT | `{kind: email\|webhook}`: sends a sample lead, answers `{ok, status, error}` |
 | GET/DELETE | `/bots/{id}/conversations[/{cid}]` | JWT | visitor chats (newest first, `?before=&take=`), one chat, delete |
 | POST | `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email` | – | `{email}` / `{token, password}` / `{token}` |
 | POST | `/auth/resend-verification`, `/auth/delete-account` | JWT | – / `{password}` (deletes everything) |

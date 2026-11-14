@@ -52,6 +52,20 @@ public class Bot
     public string ReplyLanguage { get; set; } = "auto";
     /// <summary>Microphone and read-aloud buttons in the website chat.</summary>
     public bool VoiceEnabled { get; set; } = true;
+
+    // lead alerts: an email for every new lead (to the owner, or AlertEmail), and an optional signed webhook
+    public bool AlertEmailEnabled { get; set; } = true;
+    public string? AlertEmail { get; set; }
+    public string? WebhookUrl { get; set; }
+    /// <summary>Signs webhook bodies (HMAC-SHA256), so the receiver can check they came from BotForge.</summary>
+    public string? WebhookSecret { get; set; }
+
+    // action buttons in the chat, also given to the AI so it can share them when a visitor asks
+    public string? BookingUrl { get; set; }
+    public string BookingLabel { get; set; } = "Book a visit";
+    public string? PaymentUrl { get; set; }
+    public string? UpiId { get; set; }
+    public string PaymentLabel { get; set; } = "Pay fees";
 }
 
 /// <summary>An answer written by the owner; the bot prefers it when a visitor asks a matching question.</summary>

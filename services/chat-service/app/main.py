@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from . import config
 from .bots_client import consume_answer, create_lead, record_turn, refund_answer, resolve_bot
 from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, to_english, transcribe
-from .llm import stream_answer
+from .llm import clean_actions, stream_answer
 from .retrieval import citations, get_model, retrieve
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -175,6 +175,7 @@ async def bot_info(public_key: str):
             "avatar": avatar if isinstance(avatar, str) and re.fullmatch(
                 r"data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}", avatar) else None,
         },
+        "actions": clean_actions(bot.get("actions")),
         "language": (bot.get("style") or {}).get("replyLanguage") or "auto",
         "voice": bot.get("voiceEnabled") is not False,
         "hours": {
@@ -264,7 +265,8 @@ async def chat(public_key: str, body: ChatRequest):
             return
         answer = []
         try:
-            async for token in stream_answer(bot["name"], question, chunks, history, style=bot.get("style")):
+            async for token in stream_answer(bot["name"], question, chunks, history, style=bot.get("style"),
+                                            actions=bot.get("actions")):
                 answer.append(token)
                 yield sse("token", {"text": token})
         except Exception as ex:

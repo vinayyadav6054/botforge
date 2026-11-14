@@ -94,6 +94,47 @@ describe("mount", () => {
     expect([...root.querySelectorAll(".msg")].map((m) => m.textContent)).toEqual(["Welcome!", "Fees?", "Rs 500."]);
   });
 
+  it("shows the business's booking and payment buttons, and only safe links", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      name: "Academy", welcomeMessage: "Hi!",
+      actions: [
+        { kind: "booking", label: "Book a <b>demo</b>", url: "https://calendly.com/a" },
+        { kind: "payment", label: "Bad", url: "javascript:alert(1)" },
+        { kind: "upi", label: "Pay fees", url: "upi://pay?pa=a%40ybl&pn=A&cu=INR", upiId: "a@ybl" },
+      ],
+    }))));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+
+    const widget = mount({ botKey: "bk_actions", apiBase: "http://gw/api", accent: "#000" });
+    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    widget.open();
+    for (let i = 0; i < 5; i++) await tick();
+
+    const links = [...root.querySelectorAll<HTMLAnchorElement>(".actions a")];
+    expect(links.map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
+      ["Book a <b>demo</b>", "https://calendly.com/a"],
+      ["Pay fees", "upi://pay?pa=a%40ybl&pn=A&cu=INR"],
+    ]);
+    expect(links[0].target).toBe("_blank");
+    expect(links[0].rel).toBe("noopener noreferrer");
+    expect(root.querySelector(".actions")!.hasAttribute("hidden")).toBe(false);
+
+    // on a computer the UPI button copies the ID instead of opening a phone-only link
+    links[1].click();
+    expect(writeText).toHaveBeenCalledWith("a@ybl");
+    expect([...root.querySelectorAll(".msg.bot")].pop()!.textContent).toContain("a@ybl");
+  });
+
+  it("hides the action bar when the business has no buttons", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ name: "A", welcomeMessage: "Hi" }))));
+    const widget = mount({ botKey: "bk_noactions", apiBase: "http://gw/api", accent: "#000" });
+    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    widget.open();
+    for (let i = 0; i < 5; i++) await tick();
+    expect(root.querySelector(".actions")!.hasAttribute("hidden")).toBe(true);
+  });
+
   it("renders bot text as text, never as HTML", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ name: "<b>x</b>", welcomeMessage: "<img src=x onerror=alert(1)>" }))));

@@ -22,6 +22,7 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
     public const string Issuer = "botforge-identity";
     public const string Audience = "botforge";
     public const string AdminKey = "integration-admin-key";
+    public const string InternalKey = "integration-internal-key";
 
     public FakeEmailSender Emails { get; } = new();
     public FakeBotsClient Bots { get; } = new();
@@ -41,6 +42,7 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Issuer", Issuer);
         builder.UseSetting("Jwt:Audience", Audience);
         builder.UseSetting("Admin:ApiKey", AdminKey);
+        builder.UseSetting("Internal:ApiKey", InternalKey);
         builder.UseSetting("App:DashboardUrl", "https://dash.example");
         builder.UseSetting("Reports:Enabled", "false");   // tests call MonthlyReportService.SendDueAsync directly
         builder.ConfigureTestServices(s =>

@@ -114,6 +114,23 @@ CSV cells that start with `= + - @` are prefixed with `'` so spreadsheets do not
 - `POST /chat/{key}/transcribe` turns microphone recordings (≤ 3 MB) into text with Gemini; the widget then asks the
   question normally. Answers can be read aloud with the browser's speech synthesis (a spoken question is answered aloud).
 
+## Lead alerts, booking and payment buttons
+
+- Saving a lead (website form or first WhatsApp message) only puts its id in an in-memory queue; a background worker in
+  the bot service then sends the alerts, so the visitor never waits.
+- **Email:** the bot service does not know the owner's address, so it calls the identity service
+  (`POST /internal/tenants/{id}/lead-alert`, internal key), which emails the owner (or the bot's `alert_email`) with the
+  lead, one-tap Call / WhatsApp links and the chat. Email goes through Brevo's HTTPS API or SMTP.
+- **Webhook:** optional per bot. Flat JSON (`event`, `name`, `phone`, `email`, `course`, `channel`, `botName`,
+  `transcript`, ...) signed with `X-BotForge-Signature: sha256=HMAC(secret, body)`. Server errors and timeouts are retried
+  twice; 4xx is not. The HTTP client resolves the host and refuses private, loopback, link-local and CGNAT addresses at
+  connect time (so DNS cannot point it inside the server), unless `Webhooks:AllowPrivate` is set (Development only).
+  Google Sheets works through a small Apps Script web app (shown in the dashboard); Zapier / Make catch hooks work as is.
+- **Buttons:** a booking link, a payment link and a UPI ID per bot become `actions` in `/chat/{key}/info` (re-checked by
+  the chat service: http(s) or `upi://pay?` only). The widget shows them above the message box; the UPI button opens a
+  UPI app on phones and copies the ID on computers. The same links are added to the AI's instructions, so it points
+  visitors to them (on WhatsApp it sends the link).
+
 ## Plans, usage and billing
 
 - `bots.subscriptions` has one row per tenant, created on first use with a 14-day trial. `Plans.Effective` turns it

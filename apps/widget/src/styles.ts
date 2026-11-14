@@ -115,6 +115,17 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px
 }
 .chip:hover { background: ${a("12")}; border-color: ${accent}; }
 
+.actions { display: flex; gap: 6px; padding: 8px 12px 0; overflow-x: auto; scrollbar-width: none; }
+.actions::-webkit-scrollbar { display: none; }
+.action {
+  flex: none; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 99px; text-decoration: none;
+  background: ${a("12")}; color: ${accent}; border: 1.5px solid ${a("40")}; white-space: nowrap; line-height: 1.3;
+  transition: background .15s, color .15s;
+}
+.action:hover { background: ${accent}; color: #fff; }
+.action.booking::before { content: "\\1F4C5"; margin-right: 6px; }
+.action.payment::before, .action.upi::before { content: "\\20B9"; margin-right: 5px; font-weight: 800; }
+
 .msg-loading { padding: 10px 13px; border-radius: 16px; background: #fff; box-shadow: 0 0 0 1px rgba(17,24,39,.05); }
 .typing { display: inline-flex; gap: 4px; padding: 4px 2px; }
 .typing span { width: 7px; height: 7px; border-radius: 50%; background: #b3b9c4; animation: bounce 1.2s infinite ease-in-out; }

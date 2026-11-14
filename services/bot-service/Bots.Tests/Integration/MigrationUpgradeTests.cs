@@ -57,6 +57,10 @@ public class MigrationUpgradeTests
         Assert.False(string.IsNullOrEmpty(bot.OfflineMessage));
         Assert.Equal("auto", bot.ReplyLanguage);
         Assert.True(bot.VoiceEnabled);
+        Assert.True(bot.AlertEmailEnabled);            // Phase 4: existing bots get lead alerts
+        Assert.Equal("Book a visit", bot.BookingLabel);
+        Assert.Equal("Pay fees", bot.PaymentLabel);
+        Assert.Null(bot.WebhookUrl);
 
         var doc = await db.Documents.IgnoreQueryFilters().AsNoTracking().SingleAsync(d => d.BotId == botId);
         Assert.Equal("file", doc.Kind);

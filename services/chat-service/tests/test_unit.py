@@ -38,9 +38,10 @@ def fakes(monkeypatch):
         state["retrieve_calls"].append((tenant_id, bot_id, query, top_k))
         return state["chunks"]
 
-    async def stream_answer(name, question, chunks, history=None, style=None):
+    async def stream_answer(name, question, chunks, history=None, style=None, actions=None):
         state["llm_calls"].append((name, question, chunks, history))
         state["style"] = style
+        state["actions"] = actions
         for t in state["tokens"]:
             yield t
         if state["error"]:
@@ -95,7 +96,7 @@ def test_health(client):
 def test_info_returns_public_bot_data_only(client):
     body = client.get(f"/chat/{KEY}/info").json()
     assert set(body) == {"name", "welcomeMessage", "leadCapture", "suggestedQuestions", "branding", "appearance", "hours",
-                         "language", "voice"}
+                         "language", "voice", "actions"}
     assert (body["language"], body["voice"]) == ("auto", True)
     assert "tenantId" not in str(body) and "botId" not in str(body)   # no ids leak
     assert body["leadCapture"] == {"enabled": False, "prompt": "", "afterMessages": 0, "timing": "after",
@@ -108,6 +109,32 @@ def test_info_returns_public_bot_data_only(client):
 def test_info_includes_suggested_questions_cleaned(client, fakes):
     fakes["bot"] = {**BOT, "suggestedQuestions": [" Fees? ", "", 7, None, "a", "b", "c", "d"]}
     assert client.get(f"/chat/{KEY}/info").json()["suggestedQuestions"] == ["Fees?", "a", "b", "c"]
+
+
+ACTIONS = [
+    {"kind": "booking", "label": "Book a demo\nclass", "url": "https://calendly.com/x"},
+    {"kind": "upi", "label": "Pay fees", "url": "upi://pay?pa=a%40ybl&pn=X&cu=INR", "upiId": "a@ybl"},
+    {"kind": "payment", "label": "Evil", "url": "javascript:alert(1)"},
+    {"kind": "unknown", "label": "x", "url": "https://x.example"},
+]
+
+
+def test_info_includes_only_safe_action_buttons(client, fakes):
+    fakes["bot"] = {**BOT, "actions": ACTIONS}
+    assert client.get(f"/chat/{KEY}/info").json()["actions"] == [
+        {"kind": "booking", "label": "Book a demo class", "url": "https://calendly.com/x"},
+        {"kind": "upi", "label": "Pay fees", "url": "upi://pay?pa=a%40ybl&pn=X&cu=INR", "upiId": "a@ybl"},
+    ]
+
+
+def test_action_links_reach_the_model(client, fakes):
+    fakes["bot"] = {**BOT, "actions": ACTIONS}
+    chat(client)
+    assert fakes["actions"] == ACTIONS
+    prompt = llm.build_system("Bot", {}, ACTIONS)
+    assert "https://calendly.com/x" in prompt and "UPI ID a@ybl" in prompt
+    assert "javascript:" not in prompt
+    assert "Links the business wants you to share" not in llm.build_system("Bot", {}, [])
 
 
 def test_info_includes_lead_capture_settings(client, fakes):

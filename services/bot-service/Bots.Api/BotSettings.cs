@@ -38,6 +38,18 @@ public class UpdateBotRequest
     public string? OfflineMessage { get; set; }
     public string? ReplyLanguage { get; set; }
     public bool? VoiceEnabled { get; set; }
+
+    public bool? AlertEmailEnabled { get; set; }
+    /// <summary>"" = the owner's address.</summary>
+    public string? AlertEmail { get; set; }
+    /// <summary>"" turns the webhook off.</summary>
+    public string? WebhookUrl { get; set; }
+    /// <summary>"" clears these.</summary>
+    public string? BookingUrl { get; set; }
+    public string? BookingLabel { get; set; }
+    public string? PaymentUrl { get; set; }
+    public string? UpiId { get; set; }
+    public string? PaymentLabel { get; set; }
 }
 
 public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicKey, DateTime CreatedAt,
@@ -46,14 +58,18 @@ public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicK
     string Tone, string AnswerLength, string TopicsToAvoid, string CustomInstructions, bool ShowSources,
     string? WidgetColor, string WidgetPosition, string? AvatarDataUrl,
     bool HoursEnabled, string HoursStart, string HoursEnd, List<int> HoursDays, string TimeZone, string OfflineMessage,
-    string ReplyLanguage, bool VoiceEnabled)
+    string ReplyLanguage, bool VoiceEnabled,
+    bool AlertEmailEnabled, string? AlertEmail, string? WebhookUrl, string? WebhookSecret,
+    string? BookingUrl, string BookingLabel, string? PaymentUrl, string? UpiId, string PaymentLabel)
 {
     public static BotDto From(Bot b) => new(b.Id, b.Name, b.WelcomeMessage, b.PublicKey, b.CreatedAt,
         b.LeadCaptureEnabled, b.LeadPrompt, b.LeadAfterMessages, b.SuggestedQuestions,
         b.LeadAskEmail, b.LeadAskCourse, b.LeadCourseLabel, b.LeadTiming,
         b.Tone, b.AnswerLength, b.TopicsToAvoid, b.CustomInstructions, b.ShowSources,
         b.WidgetColor, b.WidgetPosition, b.AvatarDataUrl,
-        b.HoursEnabled, b.HoursStart, b.HoursEnd, b.HoursDays, b.TimeZone, b.OfflineMessage, b.ReplyLanguage, b.VoiceEnabled);
+        b.HoursEnabled, b.HoursStart, b.HoursEnd, b.HoursDays, b.TimeZone, b.OfflineMessage, b.ReplyLanguage, b.VoiceEnabled,
+        b.AlertEmailEnabled, b.AlertEmail, b.WebhookUrl, b.WebhookSecret,
+        b.BookingUrl, b.BookingLabel, b.PaymentUrl, b.UpiId, b.PaymentLabel);
 }
 
 public static partial class BotSettingsRules
@@ -69,6 +85,13 @@ public static partial class BotSettingsRules
     [GeneratedRegex("^([01][0-9]|2[0-3]):[0-5][0-9]$")] private static partial Regex Time();
     [GeneratedRegex(@"^[A-Za-z_]+(/[A-Za-z0-9_+\-]+){0,2}$")] private static partial Regex Zone();
     [GeneratedRegex("^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$")] private static partial Regex Avatar();
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")] private static partial Regex Email();
+    [GeneratedRegex(@"^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$")] private static partial Regex Upi();
+
+    /// <summary>An absolute http(s) address of at most 500 characters.</summary>
+    public static bool IsWebUrl(string url) =>
+        url.Length <= 500 && Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp)
+        && !string.IsNullOrEmpty(u.Host);
 
     public static string? Validate(UpdateBotRequest r)
     {
@@ -88,6 +111,14 @@ public static partial class BotSettingsRules
         if (r.TimeZone is { } zone && (zone.Length > 60 || !Zone().IsMatch(zone))) return "Time zone must look like Asia/Kolkata.";
         if (r.OfflineMessage?.Trim().Length > 300) return "The closed message must be at most 300 characters.";
         if (r.ReplyLanguage is { } lang && !Languages.Contains(lang)) return "Unknown reply language.";
+        if (!string.IsNullOrWhiteSpace(r.AlertEmail) && (r.AlertEmail.Trim().Length > 200 || !Email().IsMatch(r.AlertEmail.Trim())))
+            return "The alert email address does not look right.";
+        if (!string.IsNullOrWhiteSpace(r.WebhookUrl) && !IsWebUrl(r.WebhookUrl.Trim())) return "The webhook must be a web address starting with https://.";
+        if (!string.IsNullOrWhiteSpace(r.BookingUrl) && !IsWebUrl(r.BookingUrl.Trim())) return "The booking link must be a web address starting with https://.";
+        if (!string.IsNullOrWhiteSpace(r.PaymentUrl) && !IsWebUrl(r.PaymentUrl.Trim())) return "The payment link must be a web address starting with https://.";
+        if (!string.IsNullOrWhiteSpace(r.UpiId) && !Upi().IsMatch(r.UpiId.Trim())) return "The UPI ID must look like yourname@okaxis.";
+        if (r.BookingLabel is { } bl && (bl.Trim().Length is 0 or > 40)) return "The booking button text must be 1-40 characters.";
+        if (r.PaymentLabel is { } pl && (pl.Trim().Length is 0 or > 40)) return "The payment button text must be 1-40 characters.";
         return null;
     }
 
@@ -113,5 +144,21 @@ public static partial class BotSettingsRules
         if (r.OfflineMessage is { } offline && offline.Trim().Length > 0) bot.OfflineMessage = offline.Trim();
         if (r.ReplyLanguage is { } language) bot.ReplyLanguage = language;
         if (r.VoiceEnabled is { } voice) bot.VoiceEnabled = voice;
+        if (r.AlertEmailEnabled is { } alerts) bot.AlertEmailEnabled = alerts;
+        if (r.AlertEmail is { } to) bot.AlertEmail = Blank(to)?.ToLowerInvariant();
+        if (r.WebhookUrl is { } hook)
+        {
+            bot.WebhookUrl = Blank(hook);
+            // a secret the first time a webhook is set; it stays when the address changes
+            if (bot.WebhookUrl is not null && bot.WebhookSecret is null)
+                bot.WebhookSecret = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        }
+        if (r.BookingUrl is { } booking) bot.BookingUrl = Blank(booking);
+        if (r.BookingLabel is { } bl) bot.BookingLabel = bl.Trim();
+        if (r.PaymentUrl is { } pay) bot.PaymentUrl = Blank(pay);
+        if (r.UpiId is { } upi) bot.UpiId = Blank(upi);
+        if (r.PaymentLabel is { } pl) bot.PaymentLabel = pl.Trim();
     }
+
+    private static string? Blank(string s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }

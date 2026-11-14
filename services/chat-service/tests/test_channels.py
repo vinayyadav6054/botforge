@@ -65,7 +65,7 @@ def world(monkeypatch):
     async def check_quota(key):
         return state["quota"]
 
-    async def stream_answer(name, question, chunks, history=None, style=None):
+    async def stream_answer(name, question, chunks, history=None, style=None, actions=None):
         state["llm_history"] = history
         yield state["answer"]
 

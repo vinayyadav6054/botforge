@@ -47,6 +47,15 @@ export interface BotInfo {
   language?: string;
   /** microphone and read-aloud buttons */
   voice?: boolean;
+  /** the business's buttons: book a visit, pay fees, pay by UPI */
+  actions?: ChatAction[];
+}
+
+export interface ChatAction {
+  kind: "booking" | "payment" | "upi";
+  label: string;
+  url: string;
+  upiId?: string;
 }
 
 /** Sent with every message so the owner sees the whole visit as one conversation. */

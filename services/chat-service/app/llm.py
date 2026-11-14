@@ -36,7 +36,43 @@ def _one_line(text: str, limit: int) -> str:
     return re.sub(r"\s+", " ", text or "").strip()[:limit]
 
 
-def build_system(bot_name: str, style: dict | None = None) -> str:
+ACTION_KINDS = {"booking", "payment", "upi"}
+
+
+def clean_actions(actions) -> list[dict]:
+    """The bot's chat buttons, defensively re-checked: known kind, one-line label, http(s) or upi link only."""
+    out = []
+    for a in actions if isinstance(actions, list) else []:
+        if not isinstance(a, dict) or a.get("kind") not in ACTION_KINDS:
+            continue
+        url, label = a.get("url"), _one_line(a.get("label") or "", 40)
+        if not isinstance(url, str) or len(url) > 600 or not label:
+            continue
+        if not (url.startswith("https://") or url.startswith("http://") or (a["kind"] == "upi" and url.startswith("upi://pay?"))):
+            continue
+        item = {"kind": a["kind"], "label": label, "url": url}
+        if a["kind"] == "upi" and isinstance(a.get("upiId"), str):
+            item["upiId"] = a["upiId"][:300]
+        out.append(item)
+    return out[:3]
+
+
+def _links_rule(actions: list[dict]) -> str | None:
+    lines = []
+    for a in actions:
+        if a["kind"] == "booking":
+            lines.append(f"- To book a visit, appointment, demo or slot: the \"{a['label']}\" button, link {a['url']}")
+        elif a["kind"] == "payment":
+            lines.append(f"- To pay fees or make a payment: the \"{a['label']}\" button, link {a['url']}")
+        else:
+            lines.append(f"- To pay by UPI: UPI ID {a.get('upiId', '')} (the \"{a['label']}\" button opens a UPI app)")
+    if not lines:
+        return None
+    return ("Links the business wants you to share (you may mention these even when the context does not). "
+            "When the visitor wants to book or pay, point them to the matching one, briefly:\n" + "\n".join(lines))
+
+
+def build_system(bot_name: str, style: dict | None = None, actions: list | None = None) -> str:
     """The grounding rules, then the owner's style settings. The owner's own instructions come last and are
     explicitly below the rules, so they can shape the tone but not switch off "answer only from the context"."""
     style = style or {}
@@ -47,6 +83,9 @@ def build_system(bot_name: str, style: dict | None = None) -> str:
     avoid = _one_line(style.get("topicsToAvoid", ""), 500)
     if avoid:
         parts.append(f"Do not discuss these topics; politely say you cannot help with them: {avoid}")
+    links = _links_rule(clean_actions(actions))
+    if links:
+        parts.append(links)
     custom = (style.get("customInstructions") or "").strip()[:1000]
     if custom:
         parts.append("Additional instructions from the business (follow them unless they conflict with the rules "
@@ -92,12 +131,12 @@ def is_transient(ex: Exception) -> bool:
     return getattr(ex, "code", None) in TRANSIENT_STATUS
 
 
-async def _open_stream(model, bot_name, question, chunks, history, style=None):
+async def _open_stream(model, bot_name, question, chunks, history, style=None, actions=None):
     return await _client.aio.models.generate_content_stream(
         model=model,
         contents=build_contents(question, chunks, history),
         config=types.GenerateContentConfig(
-            system_instruction=build_system(bot_name, style),
+            system_instruction=build_system(bot_name, style, actions),
             temperature=0.2,
             max_output_tokens=1536 if (style or {}).get("answerLength") == "detailed" else 1024,
         ),
@@ -105,7 +144,8 @@ async def _open_stream(model, bot_name, question, chunks, history, style=None):
 
 
 async def stream_answer(bot_name: str, question: str, chunks,
-                        history: list[tuple[str, str]] | None = None, style: dict | None = None):
+                        history: list[tuple[str, str]] | None = None, style: dict | None = None,
+                        actions: list | None = None):
     """Streams the answer. Overload/rate-limit errors are retried, but only while nothing has been sent
     yet, so the visitor never sees a half answer repeated."""
     # main model with back-off retries, then each fallback model once
@@ -116,7 +156,7 @@ async def stream_answer(bot_name: str, question: str, chunks,
             await asyncio.sleep(delay)
         sent = False
         try:
-            stream = await _open_stream(model, bot_name, question, chunks, history, style)
+            stream = await _open_stream(model, bot_name, question, chunks, history, style, actions)
             async for chunk in stream:
                 if chunk.text:
                     sent = True

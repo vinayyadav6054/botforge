@@ -29,6 +29,8 @@ public class BotsApiFactory : WebApplicationFactory<Program>
     public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "botforge-it-" + Guid.NewGuid().ToString("N"));
     public FakePublisher Publisher { get; } = new();
     public FakePlatform Platform { get; } = new();
+    /// <summary>Lead alert emails (to the identity service) and webhooks.</summary>
+    public FakeOutbound Outbound { get; } = new();
     public string ConnectionString { get; }
 
     public BotsApiFactory()
@@ -55,6 +57,8 @@ public class BotsApiFactory : WebApplicationFactory<Program>
             s.RemoveAll<IEventPublisher>();
             s.AddSingleton<IEventPublisher>(Publisher);
             s.AddHttpClient<Bots.Api.ChannelPlatforms>().ConfigurePrimaryHttpMessageHandler(() => Platform);
+            s.AddHttpClient<Bots.Api.IdentityAlerts>().ConfigurePrimaryHttpMessageHandler(() => Outbound);
+            s.AddHttpClient<Bots.Api.WebhookSender>().ConfigurePrimaryHttpMessageHandler(() => Outbound);
         });
     }
 
@@ -163,4 +167,21 @@ public class FakePlatform : HttpMessageHandler
         else return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
         return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
     }
+}
+
+/// <summary>Records outgoing calls; answers 200 unless Status says otherwise for that address.</summary>
+public class FakeOutbound : HttpMessageHandler
+{
+    public ConcurrentQueue<(string Url, Dictionary<string, string> Headers, string Body)> Calls { get; } = new();
+    public Func<Uri, System.Net.HttpStatusCode>? Status { get; set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        var headers = request.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value));
+        Calls.Enqueue((request.RequestUri!.ToString(), headers, request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct)));
+        return new HttpResponseMessage(Status?.Invoke(request.RequestUri!) ?? System.Net.HttpStatusCode.OK) { Content = new StringContent("{}") };
+    }
+
+    public List<(string Url, Dictionary<string, string> Headers, string Body)> To(string urlPart) =>
+        Calls.Where(c => c.Url.Contains(urlPart)).ToList();
 }

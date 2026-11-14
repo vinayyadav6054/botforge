@@ -238,6 +238,38 @@ app.MapGet("/admin/tenants", async (HttpRequest request, IConfiguration config, 
     return Results.Ok(tenants);
 });
 
+// ---------- internal: lead alerts (called by the bot service, which does not know the owner's email) ----------
+
+app.MapPost("/internal/tenants/{tenantId:guid}/lead-alert", async (Guid tenantId, LeadAlertRequest req, HttpRequest request,
+    AppDbContext db, IEmailSender email, IOptions<AppOptions> appOptions, IConfiguration config, ILogger<Program> log) =>
+{
+    var expected = config["Internal:ApiKey"] ?? "";
+    var provided = request.Headers["X-Internal-Key"].ToString();
+    if (expected.Length == 0 || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.UTF8.GetBytes(provided), System.Text.Encoding.UTF8.GetBytes(expected)))
+        return Results.Unauthorized();
+
+    // the owner's own address unless the bot names another one (e.g. the front desk)
+    var to = req.To?.Trim().ToLowerInvariant();
+    if (string.IsNullOrEmpty(to))
+        to = await db.Users.Where(u => u.TenantId == tenantId && u.Role == "Owner").OrderBy(u => u.CreatedAt)
+            .Select(u => u.Email).FirstOrDefaultAsync();
+    if (to is null) return Results.NotFound();
+    if (!TenantRules.IsValidEmail(to)) return Results.BadRequest(new { error = "Invalid alert address." });
+
+    var leadsUrl = $"{appOptions.Value.DashboardUrl.TrimEnd('/')}/bots/{req.BotId}#leads";
+    try
+    {
+        await email.SendAsync(EmailTemplates.LeadAlert(to, req, leadsUrl));
+        return Results.Ok(new { sent = true });
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "Could not send a lead alert: {Reason}", ex.Message);
+        return Results.Json(new { error = "The email could not be sent." }, statusCode: 502);
+    }
+});
+
 app.Run();
 
 static async Task<User?> CurrentUserAsync(ClaimsPrincipal p, AppDbContext db) =>

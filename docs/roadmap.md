@@ -58,13 +58,13 @@ What BotForge does today, and what can be added, ordered by how much each item h
 - **Multilingual**: Hindi, Hinglish, Marathi, Tamil, and others; detect the visitor's language
 - **Voice**: speech-to-text questions and spoken answers; later a phone call bot (IVR)
 
-## Phase 4: from chatbot to sales assistant
+## Phase 4: from chatbot to sales assistant (in progress)
 
 - **Human handover**: live chat inbox where staff take over a conversation
-- **Instant lead alerts** on WhatsApp, email or Telegram to the owner
-- **CRM integration**: Google Sheets, Zoho, HubSpot, LeadSquared; webhooks and Zapier / Make
-- **Appointment booking**: Google Calendar, Calendly; reminders
-- **Payments in chat**: Razorpay or UPI link for fees, deposits, orders
+- **Instant lead alerts** to the owner: email and webhooks done (Google Sheets, Zapier, Make); WhatsApp / Telegram to the owner later
+- **CRM integration**: Google Sheets and any CRM through the signed webhook (done); native Zoho, HubSpot, LeadSquared later
+- **Appointment booking**: booking-link button (Calendly, Google booking page, any form) done; own calendar and reminders later
+- **Payments in chat**: payment-link and UPI buttons (done)
 - **Follow-ups**: automatic WhatsApp or email message to leads that did not convert
 - **Order and booking status** lookups for shops (Shopify, WooCommerce)
 

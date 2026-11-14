@@ -133,6 +133,57 @@ public static class EmailTemplates
             <p style="color:#6b6159;font-size:13px">The link is valid for 1 hour. If it was not you, ignore this email; your password stays the same.</p>
             """));
 
+    private static readonly Dictionary<string, string> ChannelNames = new()
+    {
+        ["web"] = "your website", ["whatsapp"] = "WhatsApp", ["instagram"] = "Instagram",
+        ["messenger"] = "Messenger", ["telegram"] = "Telegram",
+    };
+
+    /// <summary>"New lead" alert for the owner, with one-tap call and WhatsApp links and the chat that led to it.</summary>
+    public static EmailMessage LeadAlert(string to, Identity.Api.Auth.LeadAlertRequest l, string leadsUrl)
+    {
+        var digits = new string(l.Phone.Where(char.IsDigit).ToArray());
+        // WhatsApp links need the country code: a 10-digit number without one is an Indian mobile
+        var whatsapp = !l.Phone.TrimStart().StartsWith('+') && digits.Length == 10 ? "91" + digits : digits;
+        var tel = (l.Phone.TrimStart().StartsWith('+') ? "+" : "") + digits;   // only digits and +: safe in a link as is
+        var source = ChannelNames.GetValueOrDefault(l.Channel, l.Channel);
+        var details = new List<(string Label, string Value)> { ("Name", l.Name), ("Phone", l.Phone) };
+        if (!string.IsNullOrWhiteSpace(l.Email)) details.Add(("Email", l.Email!));
+        if (!string.IsNullOrWhiteSpace(l.Course)) details.Add(("Interested in", l.Course!));
+        details.Add(("Came from", source));
+        if (!string.IsNullOrWhiteSpace(l.PageUrl)) details.Add(("Page", l.PageUrl!));
+        var turns = (l.Transcript ?? []).TakeLast(8).ToList();
+
+        var text = $"New enquiry for {l.BotName}\n\n" + string.Join("\n", details.Select(d => $"{d.Label}: {d.Value}")) +
+                   (turns.Count > 0 ? "\n\nThe chat:\n" + string.Join("\n", turns.Select(t => $"{(t.Role == "user" ? "Visitor" : "Bot")}: {t.Text}")) : "") +
+                   $"\n\nCall back soon: people who get a call within an hour are far more likely to join.\nAll leads: {leadsUrl}";
+
+        var rows = string.Join("", details.Select(d =>
+            $"""<tr><td style="padding:6px 0;color:#6b6159;width:120px;vertical-align:top">{E(d.Label)}</td><td style="padding:6px 0;font-weight:700">{E(d.Value)}</td></tr>"""));
+        var chat = turns.Count == 0 ? "" : $"""
+            <div style="margin-top:18px;border-top:1px solid #e6dccd;padding-top:14px">
+              <div style="color:#6b6159;font-size:13px;margin-bottom:8px">The chat</div>
+              {string.Join("", turns.Select(t => t.Role == "user"
+                  ? $"""<p style="margin:6px 0 6px 40px;background:#fbe5da;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""
+                  : $"""<p style="margin:6px 40px 6px 0;background:#f0e9dd;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""))}
+            </div>
+            """;
+        var actions = $"""
+            <p style="margin:20px 0 6px">
+              <a href="tel:{tel}" style="background:#c8461f;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">Call {E(l.Name)}</a>
+              <a href="https://wa.me/{whatsapp}" style="background:#1e7a3c;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">WhatsApp</a>
+              <a href="{E(leadsUrl)}" style="color:#c8461f;font-weight:700;padding:11px 4px;display:inline-block">All leads →</a>
+            </p>
+            """;
+        return new EmailMessage(to, $"New lead: {l.Name} · {l.Phone} ({l.BotName})", text,
+            Layout($"New enquiry for {l.BotName}", $"""
+                <table style="width:100%;border-collapse:collapse">{rows}</table>
+                {actions}
+                <p style="color:#6b6159;font-size:13px">Call back soon: people who get a call within an hour are far more likely to join.</p>
+                {chat}
+                """));
+    }
+
     public record ReportNumbers(string Business, string Month, string Plan, int Answers, int Conversations, int Leads, int Unanswered);
 
     public static EmailMessage MonthlyReport(string to, ReportNumbers n, string dashboardUrl)

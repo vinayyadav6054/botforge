@@ -85,6 +85,14 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         offlineMessage: s.offlineMessage,
         replyLanguage: s.replyLanguage,
         voiceEnabled: s.voiceEnabled,
+        alertEmailEnabled: s.alertEmailEnabled,
+        alertEmail: s.alertEmail ?? "",
+        webhookUrl: s.webhookUrl ?? "",
+        bookingUrl: s.bookingUrl ?? "",
+        bookingLabel: s.bookingLabel.trim() || "Book a visit",
+        paymentUrl: s.paymentUrl ?? "",
+        upiId: s.upiId ?? "",
+        paymentLabel: s.paymentLabel.trim() || "Pay fees",
       });
       setS({ ...b, suggestedQuestions: padQuestions(b.suggestedQuestions) });
       onSaved(b, "Settings saved.");
@@ -257,6 +265,43 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         </div>
       )}
 
+      {/* ---------- action buttons ---------- */}
+      <h3 className="subhead">Buttons in the chat</h3>
+      <p className="small muted" style={{ marginTop: -4 }}>
+        Shown above the message box, and the bot points visitors to them when they want to book or pay
+        (on WhatsApp it sends the link). Leave a link empty to hide its button.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="bookingUrl">Booking link</label>
+          <input id="bookingUrl" type="url" maxLength={500} value={s.bookingUrl ?? ""} placeholder="https://calendly.com/your-name"
+            onChange={(e) => set("bookingUrl", e.target.value)} />
+          <span className="small muted">Calendly, Google Calendar booking page, Practo, or any form.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="bookingLabel">Button text</label>
+          <input id="bookingLabel" type="text" maxLength={40} value={s.bookingLabel} placeholder="Book a visit"
+            onChange={(e) => set("bookingLabel", e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="paymentUrl">Payment link</label>
+          <input id="paymentUrl" type="url" maxLength={500} value={s.paymentUrl ?? ""} placeholder="https://rzp.io/l/your-fees"
+            onChange={(e) => set("paymentUrl", e.target.value)} />
+          <span className="small muted">A Razorpay, Cashfree or Instamojo payment page.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="upiId">UPI ID</label>
+          <input id="upiId" type="text" maxLength={300} value={s.upiId ?? ""} placeholder="yourname@okaxis"
+            onChange={(e) => set("upiId", e.target.value)} />
+          <span className="small muted">Opens GPay / PhonePe / Paytm on phones; on computers it copies the ID.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="paymentLabel">Payment button text</label>
+          <input id="paymentLabel" type="text" maxLength={40} value={s.paymentLabel} placeholder="Pay fees"
+            onChange={(e) => set("paymentLabel", e.target.value)} />
+        </div>
+      </div>
+
       {/* ---------- leads ---------- */}
       <h3 className="subhead">Lead capture</h3>
       <div className="field">
@@ -308,9 +353,102 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         </>
       )}
 
+      {/* ---------- alerts ---------- */}
+      <h3 className="subhead">Lead alerts</h3>
+      <p className="small muted" style={{ marginTop: -4 }}>
+        Get every new enquiry the moment it arrives, with one-tap Call and WhatsApp buttons. Owners who call back within an hour
+        convert far more leads.
+      </p>
+      <div className="field">
+        <label className="check" htmlFor="alertEmailEnabled">
+          <input id="alertEmailEnabled" type="checkbox" checked={s.alertEmailEnabled} onChange={(e) => set("alertEmailEnabled", e.target.checked)} />
+          Email me each new lead
+        </label>
+      </div>
+      {s.alertEmailEnabled && (
+        <div className="field">
+          <label htmlFor="alertEmail">Send to (optional)</label>
+          <div className="row" style={{ flexWrap: "nowrap" }}>
+            <input id="alertEmail" type="email" maxLength={200} value={s.alertEmail ?? ""} placeholder="Your account email"
+              onChange={(e) => set("alertEmail", e.target.value)} />
+            <AlertTest botId={bot.id} kind="email" dirty={(s.alertEmail ?? "") !== (bot.alertEmail ?? "") || s.alertEmailEnabled !== bot.alertEmailEnabled} />
+          </div>
+          <span className="small muted">For example your front desk or counsellor. Empty = your account email.</span>
+        </div>
+      )}
+      <div className="field">
+        <label htmlFor="webhookUrl">Webhook: Google Sheets, Zapier, Make or your CRM (optional)</label>
+        <div className="row" style={{ flexWrap: "nowrap" }}>
+          <input id="webhookUrl" type="url" maxLength={500} value={s.webhookUrl ?? ""} placeholder="https://script.google.com/macros/s/…/exec"
+            onChange={(e) => set("webhookUrl", e.target.value)} />
+          <AlertTest botId={bot.id} kind="webhook" dirty={(s.webhookUrl ?? "") !== (bot.webhookUrl ?? "")} disabled={!bot.webhookUrl && !s.webhookUrl} />
+        </div>
+        <span className="small muted">
+          Each lead is POSTed as JSON (name, phone, email, course, channel, botName, transcript, createdAt).
+          {bot.webhookSecret && <> Signature header <code>X-BotForge-Signature</code> = HMAC-SHA256 with secret <code>{bot.webhookSecret}</code>.</>}
+        </span>
+      </div>
+      <details className="sheets-help">
+        <summary>Send leads to a Google Sheet (5 minutes, no coding)</summary>
+        <ol className="small">
+          <li>Open a new Google Sheet. Menu <strong>Extensions → Apps Script</strong>.</li>
+          <li>Delete what is there, paste the code below and click <strong>Save</strong>.</li>
+          <li><strong>Deploy → New deployment</strong> → type <strong>Web app</strong>, Execute as <strong>Me</strong>, Who has access <strong>Anyone</strong> → Deploy, and allow access.</li>
+          <li>Copy the <strong>Web app URL</strong>, paste it into Webhook above, Save changes, then <strong>Send test</strong>. A row appears in the sheet.</li>
+        </ol>
+        <pre className="snippet">{SHEETS_SCRIPT}</pre>
+        <CopyButton text={SHEETS_SCRIPT} />
+      </details>
+
       <div style={{ marginTop: 18 }}>
         <button className="btn" type="submit" disabled={saving || !s.name.trim()}>{saving ? "Saving..." : "Save changes"}</button>
       </div>
     </form>
+  );
+}
+
+/** Apps Script for "send leads to a Google Sheet": appends one row per lead. */
+const SHEETS_SCRIPT = `function doPost(e) {
+  var lead = JSON.parse(e.postData.contents);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Date", "Name", "Phone", "Email", "Interested in", "Came from", "Bot", "Chat"]);
+  }
+  sheet.appendRow([new Date(lead.createdAt), lead.name, "'" + lead.phone, lead.email || "",
+    lead.course || "", lead.channel, lead.botName, lead.transcript]);
+  return ContentService.createTextOutput("ok");
+}`;
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button type="button" className="btn secondary small" style={{ marginTop: 8 }} onClick={() => {
+      navigator.clipboard.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 2000); }).catch(() => undefined);
+    }}>{done ? "Copied!" : "Copy code"}</button>
+  );
+}
+
+/** Sends a sample lead to the saved email or webhook and says what happened. */
+function AlertTest({ botId, kind, dirty, disabled }: { botId: string; kind: "email" | "webhook"; dirty: boolean; disabled?: boolean }) {
+  const [state, setState] = useState<"idle" | "sending" | { ok: boolean; text: string }>("idle");
+  async function run() {
+    setState("sending");
+    try {
+      const r = await api.testAlert(botId, kind);
+      setState(r.ok
+        ? { ok: true, text: kind === "email" ? "Sent. Check the inbox (and spam)." : `Delivered (${r.status}).` }
+        : { ok: false, text: r.error ?? "It did not work." });
+    } catch (e) {
+      setState({ ok: false, text: (e as Error).message });
+    }
+  }
+  return (
+    <div className="alert-test">
+      <button type="button" className="btn secondary small" onClick={run} disabled={disabled || dirty || state === "sending"}
+        title={dirty ? "Save changes first" : undefined}>
+        {state === "sending" ? "Sending…" : "Send test"}
+      </button>
+      {typeof state === "object" && <span className={`small ${state.ok ? "ok-text" : "err-text"}`} role="status">{state.text}</span>}
+    </div>
   );
 }

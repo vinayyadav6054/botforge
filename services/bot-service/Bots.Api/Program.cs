@@ -38,6 +38,12 @@ builder.Services.AddHttpClient<IRazorpayClient, RazorpayClient>(c => c.Timeout =
 builder.Services.AddHostedService<ConversationCleanup>();
 builder.Services.AddSingleton<SecretBox>();
 builder.Services.AddHttpClient<ChannelPlatforms>(c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddSingleton<LeadAlertQueue>();
+builder.Services.AddHostedService<LeadAlertService>();
+builder.Services.AddScoped<LeadAlertSender>();
+builder.Services.AddHttpClient<IdentityAlerts>(c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient<WebhookSender>(c => c.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => WebhookSender.Handler(builder.Configuration.GetValue("Webhooks:AllowPrivate", false)));
 if (builder.Configuration.GetValue("Sources:AutoSync", true))
     builder.Services.AddHostedService<SourceSync>();
 if (builder.Configuration.GetValue("RabbitMq:ConsumeStatusEvents", true))
@@ -261,6 +267,24 @@ bots.MapDelete("/{botId:guid}/documents/{docId:guid}", async (
 
 // ---------- leads (dashboard) ----------
 
+// "Send a test": a sample lead to the alert email or the webhook, answered right away so the owner sees what happened
+bots.MapPost("/{botId:guid}/alerts/test", async (Guid botId, TestAlertRequest req, AppDbContext db,
+    IdentityAlerts identity, WebhookSender webhooks, CancellationToken ct) =>
+{
+    var bot = await db.Bots.FirstOrDefaultAsync(b => b.Id == botId, ct);
+    if (bot is null) return Results.NotFound();
+    var sample = LeadAlertSender.Sample(bot);
+    AlertResult result;
+    if (req.Kind == "email") result = await identity.SendAsync(bot, sample, ct);
+    else if (req.Kind == "webhook")
+    {
+        if (bot.WebhookUrl is null || bot.WebhookSecret is null) return Results.BadRequest(new { error = "Save a webhook address first." });
+        result = await webhooks.SendAsync(bot.WebhookUrl, bot.WebhookSecret, LeadWebhook.Body(bot, sample), retries: false, ct);
+    }
+    else return Results.BadRequest(new { error = "Kind must be email or webhook." });
+    return Results.Ok(new { ok = result.Ok, status = result.Status, error = result.Error });
+});
+
 bots.MapGet("/{botId:guid}/leads", async (Guid botId, AppDbContext db) =>
 {
     if (!await db.Bots.AnyAsync(b => b.Id == botId)) return Results.NotFound();
@@ -359,6 +383,7 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
                           replyLanguage = b.ReplyLanguage },
             b.VoiceEnabled,
             b.ShowSources,
+            b.BookingUrl, b.BookingLabel, b.PaymentUrl, b.UpiId, b.PaymentLabel,
             appearance = new { color = b.WidgetColor, position = b.WidgetPosition, avatar = b.AvatarDataUrl },
             hours = new
             {
@@ -374,6 +399,7 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
     {
         bot.botId, bot.tenantId, bot.name, bot.welcomeMessage, bot.leadCapture, bot.suggestedQuestions,
         bot.style, showSources = bot.ShowSources, bot.appearance, bot.hours, voiceEnabled = bot.VoiceEnabled,
+        actions = BotActions.For(bot.name, bot.BookingUrl, bot.BookingLabel, bot.PaymentUrl, bot.UpiId, bot.PaymentLabel),
         showBranding = !plan.RemoveBranding,
         active = plan.AnswersPerMonth > 0
     });
@@ -468,7 +494,7 @@ app.MapPost("/internal/bots/{publicKey}/conversations", async (string publicKey,
 
 // a website visitor left their details in the widget (forwarded by the chat service)
 app.MapPost("/internal/bots/{publicKey}/leads", async (
-    string publicKey, CreateLeadRequest req, HttpRequest request, AppDbContext db, IConfiguration config) =>
+    string publicKey, CreateLeadRequest req, HttpRequest request, AppDbContext db, IConfiguration config, LeadAlertQueue alerts) =>
 {
     if (!KeyCheck.HasInternalKey(request, config)) return Results.Unauthorized();
 
@@ -489,6 +515,7 @@ app.MapPost("/internal/bots/{publicKey}/leads", async (
     lead.BotId = bot.Id;
     db.Leads.Add(lead);
     await db.SaveChangesAsync();
+    alerts.Enqueue(lead.Id);
     return Results.Created($"/bots/{bot.Id}/leads/{lead.Id}", new { id = lead.Id, duplicate = false });
 });
 

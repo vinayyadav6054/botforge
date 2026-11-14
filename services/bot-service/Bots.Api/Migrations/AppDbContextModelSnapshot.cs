@@ -110,6 +110,14 @@ namespace Bots.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AlertEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("alert_email");
+
+                    b.Property<bool>("AlertEmailEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("alert_email_enabled");
+
                     b.Property<string>("AnswerLength")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -119,6 +127,15 @@ namespace Bots.Api.Migrations
                     b.Property<string>("AvatarDataUrl")
                         .HasColumnType("text")
                         .HasColumnName("avatar_data_url");
+
+                    b.Property<string>("BookingLabel")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("booking_label");
+
+                    b.Property<string>("BookingUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("booking_url");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -197,6 +214,15 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("offline_message");
 
+                    b.Property<string>("PaymentLabel")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("payment_label");
+
+                    b.Property<string>("PaymentUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("payment_url");
+
                     b.Property<string>("PublicKey")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -242,9 +268,21 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("topics_to_avoid");
 
+                    b.Property<string>("UpiId")
+                        .HasColumnType("text")
+                        .HasColumnName("upi_id");
+
                     b.Property<bool>("VoiceEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("voice_enabled");
+
+                    b.Property<string>("WebhookSecret")
+                        .HasColumnType("text")
+                        .HasColumnName("webhook_secret");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("webhook_url");
 
                     b.Property<string>("WelcomeMessage")
                         .IsRequired()

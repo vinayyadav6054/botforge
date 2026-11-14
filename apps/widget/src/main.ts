@@ -1,4 +1,4 @@
-import { BotInfo, ChatApi, LeadCapture, OpeningHours, SourceRef, Turn } from "./api";
+import { BotInfo, ChatAction, ChatApi, LeadCapture, OpeningHours, SourceRef, Turn } from "./api";
 import { fill, pickLanguage, speechLang, Texts, TEXTS } from "./i18n";
 import { css } from "./styles";
 
@@ -82,6 +82,7 @@ export function mount(opts: Options): Widget {
       </div>
       <div class="hours" role="status" hidden></div>
       <div class="messages" aria-live="polite"></div>
+      <div class="actions" role="group" aria-label="Quick actions" hidden></div>
       <form class="composer">
         <div class="pill">
           <textarea rows="1" placeholder="Type your question…" aria-label="Message" maxlength="1000"></textarea>
@@ -100,6 +101,7 @@ export function mount(opts: Options): Widget {
   const list = $<HTMLElement>(".messages");
   const form = $<HTMLFormElement>("form.composer");
   const talk = $<HTMLButtonElement>(".talk");
+  const actionBar = $<HTMLElement>(".actions");
   const input = $<HTMLTextAreaElement>("textarea");
   const sendBtn = $<HTMLButtonElement>(".send");
   const avatar = $<HTMLElement>(".avatar");
@@ -329,6 +331,7 @@ export function mount(opts: Options): Widget {
       if (short) avatar.textContent = short;
       lead = info.leadCapture?.enabled ? info.leadCapture : null;
       showBranding(info.branding);
+      showActions(info.actions);
       talk.hidden = !lead || leadState === "done";
       if (!history.length) {
         bubble("bot", info.welcomeMessage);
@@ -342,6 +345,35 @@ export function mount(opts: Options): Widget {
       bubble("error", T.unavailable);
       infoPending = null;
     }
+  }
+
+  // ---------- action buttons: book a visit, pay fees, pay by UPI ----------
+  function showActions(actions: ChatAction[] | undefined) {
+    actionBar.textContent = "";
+    for (const a of Array.isArray(actions) ? actions.slice(0, 3) : []) {
+      if (!a || typeof a.label !== "string" || typeof a.url !== "string") continue;
+      const safe = a.kind === "upi" ? a.url.startsWith("upi://pay?") : /^https?:\/\//i.test(a.url);
+      if (!safe) continue;
+      const link = document.createElement("a");
+      link.className = `action ${a.kind}`;
+      link.textContent = a.label; // text, never HTML
+      link.href = a.url;
+      if (a.kind === "upi") {
+        if (a.upiId) link.title = `UPI: ${a.upiId}`;
+        // upi:// links only open on phones; on a computer, copy the UPI ID instead
+        link.addEventListener("click", (e) => {
+          if (window.matchMedia?.("(pointer: coarse)").matches || !a.upiId) return;
+          e.preventDefault();
+          void navigator.clipboard?.writeText(a.upiId).catch(() => undefined);
+          bubble("bot", fill(T.upiCopied, a.upiId));
+        });
+      } else {
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      }
+      actionBar.appendChild(link);
+    }
+    actionBar.hidden = !actionBar.childElementCount;
   }
 
   function setOpen(open: boolean) {

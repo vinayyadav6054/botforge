@@ -197,7 +197,8 @@ async def answer(bot: dict, public_key: str, question: str, history: list[tuple[
     if blocked:
         return blocked, False
     try:
-        tokens = [t async for t in core.stream_answer(bot["name"], question, chunks, history, style=bot.get("style"))]
+        tokens = [t async for t in core.stream_answer(bot["name"], question, chunks, history, style=bot.get("style"),
+                                                         actions=bot.get("actions"))]
     except Exception as ex:
         log.exception("Gemini call failed (messaging app): %s: %s", type(ex).__name__, str(ex)[:500])
         await core.give_back(public_key)

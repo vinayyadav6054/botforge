@@ -968,3 +968,12 @@ h2.section-title { font-size: 17px; }
 .share-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .share-link { flex: 1; min-width: 220px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font: 13px ui-monospace, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 700px) { .try-page { align-items: start; padding-top: 40px; padding-bottom: 110px; } }
+
+/* lead alerts */
+.alert-test { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; flex: none; }
+.ok-text { color: var(--ok); font-weight: 700; }
+.err-text { color: var(--danger); font-weight: 700; }
+.sheets-help { margin: 6px 0 4px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 12px; background: var(--bg); }
+.sheets-help summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.sheets-help ol { padding-left: 20px; display: grid; gap: 4px; margin: 12px 0; }
+.sheets-help .snippet { white-space: pre; overflow-x: auto; font-size: 12px; }

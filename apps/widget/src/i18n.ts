@@ -21,6 +21,7 @@ export interface Texts {
   listening: string;
   micError: string;
   voiceFailed: string;
+  upiCopied: string;    // {name} = the UPI ID
 }
 
 const en: Texts = {
@@ -45,6 +46,7 @@ const en: Texts = {
   listening: "Listening… tap the mic to stop",
   micError: "The microphone could not be used.",
   voiceFailed: "Sorry, I couldn't understand that. Please type your question.",
+  upiCopied: "UPI ID {name} copied. Pay from any UPI app (GPay, PhonePe, Paytm).",
 };
 
 const hi: Texts = {
@@ -69,6 +71,7 @@ const hi: Texts = {
   listening: "सुन रहे हैं… रोकने के लिए माइक दबाएँ",
   micError: "माइक्रोफ़ोन का उपयोग नहीं हो सका।",
   voiceFailed: "माफ़ कीजिए, समझ नहीं आया। कृपया अपना सवाल लिखें।",
+  upiCopied: "UPI ID {name} कॉपी हो गई। किसी भी UPI ऐप (GPay, PhonePe, Paytm) से भुगतान करें।",
 };
 
 const mr: Texts = {
@@ -93,6 +96,7 @@ const mr: Texts = {
   listening: "ऐकत आहे… थांबवण्यासाठी माइक दाबा",
   micError: "मायक्रोफोन वापरता आला नाही.",
   voiceFailed: "माफ करा, समजले नाही. कृपया तुमचा प्रश्न लिहा.",
+  upiCopied: "UPI ID {name} कॉपी झाला. कोणत्याही UPI ॲपने (GPay, PhonePe, Paytm) पैसे भरा.",
 };
 
 const ta: Texts = {
@@ -117,6 +121,7 @@ const ta: Texts = {
   listening: "கேட்கிறது… நிறுத்த மைக்கைத் தட்டவும்",
   micError: "மைக்ரோஃபோனைப் பயன்படுத்த முடியவில்லை.",
   voiceFailed: "மன்னிக்கவும், புரியவில்லை. உங்கள் கேள்வியை எழுதுங்கள்.",
+  upiCopied: "UPI ID {name} நகலெடுக்கப்பட்டது. எந்த UPI செயலியிலும் (GPay, PhonePe, Paytm) பணம் செலுத்துங்கள்.",
 };
 
 const te: Texts = {
@@ -141,6 +146,7 @@ const te: Texts = {
   listening: "వింటోంది… ఆపడానికి మైక్‌ను నొక్కండి",
   micError: "మైక్రోఫోన్‌ను ఉపయోగించలేకపోయాం.",
   voiceFailed: "క్షమించండి, అర్థం కాలేదు. దయచేసి మీ ప్రశ్నను టైప్ చేయండి.",
+  upiCopied: "UPI ID {name} కాపీ అయింది. ఏదైనా UPI యాప్ (GPay, PhonePe, Paytm) ద్వారా చెల్లించండి.",
 };
 
 export const TEXTS: Record<string, Texts> = { en, hi, mr, ta, te };
