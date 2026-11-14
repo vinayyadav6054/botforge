@@ -154,7 +154,7 @@ export function mount(opts: Options): Widget {
 
   let history: Turn[] = loadHistory(historyKey);
   let busy = false;
-  let loaded = false;
+  let infoPending: Promise<void> | null = null; // settled once the welcome message is shown
   let botName = "";
   let lead: LeadCapture | null = null;
   let leadState = loadFlag(leadKey); // "done" | "dismissed" | null
@@ -307,9 +307,12 @@ export function mount(opts: Options): Widget {
     chips = null;
   }
 
-  async function loadInfo() {
-    if (loaded) return;
-    loaded = true;
+  function loadInfo(): Promise<void> {
+    if (!infoPending) infoPending = fetchInfo();
+    return infoPending;
+  }
+
+  async function fetchInfo() {
     // typing dots while the bot loads, so the panel never looks empty on a slow connection
     const loading = document.createElement("div");
     loading.className = "row bot loading";
@@ -337,7 +340,7 @@ export function mount(opts: Options): Widget {
     } catch {
       loading.remove();
       bubble("error", T.unavailable);
-      loaded = false;
+      infoPending = null;
     }
   }
 
@@ -529,7 +532,10 @@ export function mount(opts: Options): Widget {
     setOpen(true);
     const q = text.trim().slice(0, 1000);
     if (!q || busy) return;
-    void send(q);
+    // after the welcome message, so a question asked before the chat was ever opened stays in order
+    void loadInfo().then(() => {
+      if (!busy) void send(q);
+    });
   }
 
   // ---------- greeting bubble: once per visit, only while the chat has not been opened ----------

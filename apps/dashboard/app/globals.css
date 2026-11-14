@@ -945,3 +945,26 @@ img.bot-avatar { object-fit: cover; background: #fff; border: 1px solid var(--bo
 h2.section-title { font-size: 17px; }
 /* the "Test your bot" button stays next to the name: on the right, the open chat panel would cover it */
 .bot-hero-row { justify-content: flex-start; gap: 16px 32px; }
+
+/* ============ Shareable demo page (/try/{key}) ============ */
+.try-page { --w: var(--accent); position: relative; min-height: 100vh; overflow: hidden; display: grid; align-items: center; padding: 32px clamp(16px, 6vw, 96px); background: var(--bg); }
+.try-glow { position: absolute; inset: -20% -10% auto auto; width: 70vw; height: 70vw; max-width: 900px; max-height: 900px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--w) 22%, transparent), transparent 65%); filter: blur(20px); animation: drift 16s ease-in-out infinite alternate; pointer-events: none; }
+.try-card { position: relative; max-width: 620px; animation: rise .6s cubic-bezier(.2, .8, .2, 1) both; }
+.try-card.center { margin: 0 auto; text-align: center; }
+.try-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.try-avatar { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--w); color: #fff; font-weight: 800; font-size: 22px; object-fit: cover; box-shadow: 0 10px 30px color-mix(in srgb, var(--w) 35%, transparent); }
+.try-tag { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; font-weight: 700; }
+.try-card .display-2 { font-size: clamp(32px, 5vw, 54px); }
+.try-card .display-2 em { color: var(--w); }
+.try-lead { font-size: 18px; color: var(--muted); margin-bottom: 26px; }
+.try-label { font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+.try-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.try-chip { font: inherit; font-size: 14px; font-weight: 600; padding: 9px 15px; border-radius: 99px; cursor: pointer; border: 1px solid color-mix(in srgb, var(--w) 45%, var(--border)); background: var(--surface); color: var(--text); transition: transform .2s, background .2s, color .2s, box-shadow .2s; }
+.try-chip:hover:not(:disabled) { background: var(--w); color: #fff; transform: translateY(-2px); box-shadow: 0 8px 20px color-mix(in srgb, var(--w) 30%, transparent); }
+.try-chip:disabled { opacity: .5; cursor: default; }
+.try-chip.ghost { border-style: dashed; }
+.try-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
+.try-foot .btn { background: var(--w); }
+.share-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.share-link { flex: 1; min-width: 220px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font: 13px ui-monospace, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .try-page { align-items: start; padding-top: 40px; padding-bottom: 110px; } }

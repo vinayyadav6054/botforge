@@ -1,5 +1,6 @@
 """Indian languages: questions in Hindi, Hinglish, Marathi, Tamil... are also searched in English (most business
 documents are English), and voice messages are turned into text. Both use a small, fast Gemini call."""
+import asyncio
 import logging
 import re
 
@@ -8,6 +9,8 @@ from google.genai import types
 from . import config
 
 log = logging.getLogger("chat")
+
+TRANSLATE_TIMEOUT = 5.0  # seconds
 
 LANGUAGES = {
     "en": "English", "hi": "Hindi", "mr": "Marathi", "ta": "Tamil", "te": "Telugu", "bn": "Bengali",
@@ -44,14 +47,15 @@ async def to_english(text: str) -> str | None:
     if not needs_translation(text):
         return None
     try:
-        res = await _client().aio.models.generate_content(
+        # only a search helper: when Gemini is slow, answer with the original text instead of making the visitor wait
+        res = await asyncio.wait_for(_client().aio.models.generate_content(
             model=config.GEMINI_MODEL,
             contents=text,
             config=types.GenerateContentConfig(
                 system_instruction="Translate the user's message to English. Hinglish is Hindi written in English "
                                    "letters. Output only the translation, nothing else.",
                 temperature=0, max_output_tokens=200),
-        )
+        ), timeout=TRANSLATE_TIMEOUT)
         out = (res.text or "").strip()
         return out[:1000] or None
     except Exception:

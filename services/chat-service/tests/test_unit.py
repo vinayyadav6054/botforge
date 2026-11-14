@@ -630,6 +630,19 @@ def test_questions_needing_translation_are_detected(text, expected):
     assert language.needs_translation(text) is expected
 
 
+async def test_slow_translation_is_skipped_instead_of_making_the_visitor_wait(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    async def hangs(**_):
+        await asyncio.sleep(10)
+
+    fake = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(generate_content=hangs)))
+    monkeypatch.setattr(language, "_client", lambda: fake)
+    monkeypatch.setattr(language, "TRANSLATE_TIMEOUT", 0.05)
+    assert await asyncio.wait_for(language.to_english("fees kitni hai?"), timeout=2) is None
+
+
 def test_translated_question_is_added_to_the_search(client, fakes):
     fakes["english"] = "What is the fee for JEE?"
     chat(client)

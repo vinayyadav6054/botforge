@@ -75,6 +75,25 @@ describe("mount", () => {
     ]);
   });
 
+  it("ask() before the chat was opened keeps the welcome message first", async () => {
+    let releaseInfo!: () => void;
+    const info = new Promise<Response>((r) => {
+      releaseInfo = () => r(new Response(JSON.stringify({ name: "Demo Bot", welcomeMessage: "Welcome!" })));
+    });
+    vi.stubGlobal("fetch", vi.fn()
+      .mockReturnValueOnce(info)
+      .mockResolvedValueOnce(sse('event: token\ndata: {"text":"Rs 500."}\n\n', "event: done\ndata: {}\n\n")));
+
+    const widget = mount({ botKey: "bk_order", apiBase: "http://gw/api", accent: "#000" });
+    const root = document.querySelector("[data-botforge]")!.shadowRoot!;
+    widget.ask("Fees?");
+    await tick();
+    releaseInfo();   // the bot's settings arrive after the question was asked
+    for (let i = 0; i < 10; i++) await tick();
+
+    expect([...root.querySelectorAll(".msg")].map((m) => m.textContent)).toEqual(["Welcome!", "Fees?", "Rs 500."]);
+  });
+
   it("renders bot text as text, never as HTML", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ name: "<b>x</b>", welcomeMessage: "<img src=x onerror=alert(1)>" }))));

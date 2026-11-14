@@ -222,6 +222,18 @@ function BotDetail({ id }: { id: string }) {
 
   const snippet = bot ? `<script src="${gatewayOrigin()}/widget.js" data-bot-key="${bot.publicKey}" async></script>` : "";
 
+  const demoLink = bot ? `${typeof window === "undefined" ? "" : window.location.origin}/try/${bot.publicKey}` : "";
+  const [demoCopied, setDemoCopied] = useState(false);
+  async function copyDemo() {
+    try {
+      await navigator.clipboard.writeText(demoLink);
+      setDemoCopied(true);
+      setTimeout(() => setDemoCopied(false), 2000);
+    } catch {
+      setError("Could not copy. Select the link and copy it manually.");
+    }
+  }
+
   async function copySnippet() {
     try {
       await navigator.clipboard.writeText(snippet);
@@ -542,6 +554,24 @@ function BotDetail({ id }: { id: string }) {
       {/* ---------- Install ---------- */}
       {show("install") && (
         <div className="view" hidden={tab !== "install"}>
+          <section className="card">
+            <div className="card-head">
+              <div className="section-title"><span className="section-icon" aria-hidden><Icon name="globe" /></span><h2>Demo link</h2></div>
+            </div>
+            <p className="muted">
+              A page where anyone can chat with this bot, without installing anything. Send it to a business owner on WhatsApp so they
+              can try an assistant built from their own information. Chats there count like normal chats, and leads arrive in Leads.
+            </p>
+            <div className="share-row">
+              <span className="share-link" data-testid="demo-link">{demoLink}</span>
+              <button className="btn secondary small" onClick={copyDemo}>{demoCopied ? <><Icon name="check" size={14} /> Copied!</> : "Copy"}</button>
+              <a className="btn small" target="_blank" rel="noopener noreferrer"
+                href={`https://wa.me/?text=${encodeURIComponent(`Namaste! I made a free AI assistant for ${bot.name}. It answers your customers' questions 24x7 from your own information. Try it here: ${demoLink}`)}`}>
+                Send on WhatsApp
+              </a>
+              <a className="btn ghost small" href={demoLink} target="_blank" rel="noopener noreferrer">Open</a>
+            </div>
+          </section>
           <section className="card" id="install">
             <div className="card-head">
               <div className="section-title"><span className="section-icon" aria-hidden><Icon name="code" /></span><h2>Add to your website</h2></div>
