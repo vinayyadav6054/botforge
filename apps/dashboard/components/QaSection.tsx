@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, QaEntry, Unanswered } from "@/lib/api";
 import Icon from "@/components/Icon";
+import { AnimatedList } from "@/components/AppMotion";
 
 export interface QaDraft {
   question: string;
@@ -135,7 +136,7 @@ export default function QaSection({ botId, draft, onDraftUsed }: { botId: string
       ) : items.length === 0 && editing === null ? (
         <p className="empty small" style={{ padding: 12 }}>No answers yet.</p>
       ) : (
-        <div className="qa-list">
+        <AnimatedList className="qa-list">
           {items.map((qa) =>
             editing === qa.id ? (
               <div key={qa.id}>{form}</div>
@@ -152,7 +153,7 @@ export default function QaSection({ botId, draft, onDraftUsed }: { botId: string
               </div>
             ),
           )}
-        </div>
+        </AnimatedList>
       )}
     </section>
   );

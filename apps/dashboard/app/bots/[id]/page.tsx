@@ -7,6 +7,7 @@ import AddSource, { SYNC_OPTIONS } from "@/components/AddSource";
 import ChannelsSection from "@/components/ChannelsSection";
 import ConversationsSection from "@/components/ConversationsSection";
 import CountUp from "@/components/CountUp";
+import { ActivePill, AnimatedList, Celebrate, Tilt, Toast } from "@/components/AppMotion";
 import Icon, { IconName } from "@/components/Icon";
 import LeadsSection from "@/components/LeadsSection";
 import Playground from "@/components/Playground";
@@ -94,6 +95,9 @@ function BotDetail({ id }: { id: string }) {
   const [visited, setVisited] = useState<Set<Tab>>(new Set());
   const [newLeads, setNewLeads] = useState(0);
   const [channels, setChannels] = useState(0);
+  const [dir, setDir] = useState<"fwd" | "back">("fwd");
+  const [celebrate, setCelebrate] = useState(false);
+  const wasReady = useRef<boolean | null>(null);
   const [, rerender] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -124,7 +128,11 @@ function BotDetail({ id }: { id: string }) {
   }, [docs, tab]);
 
   const open = useCallback((next: Tab, scroll = true) => {
-    setTab(next);
+    setTab((current) => {
+      const from = TABS.findIndex((t) => t.id === current), to = TABS.findIndex((t) => t.id === next);
+      setDir(to >= from ? "fwd" : "back");
+      return next;
+    });
     setVisited((v) => (v.has(next) ? v : new Set(v).add(next)));
     history.replaceState(null, "", `#${next}`);
     if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -137,6 +145,17 @@ function BotDetail({ id }: { id: string }) {
     const t = setInterval(() => loadDocs().catch(() => undefined), 2000);
     return () => clearInterval(t);
   }, [processing, loadDocs]);
+
+  // a small celebration when the first document becomes ready while the owner watches
+  useEffect(() => {
+    if (docs === null) return;
+    const ready = docs.some((d) => d.status === "Ready");
+    if (wasReady.current === false && ready) {
+      setCelebrate(true);
+      setTimeout(() => setCelebrate(false), 1400);
+    }
+    wasReady.current = ready;
+  }, [docs]);
 
   // live preview: load the real widget from the gateway on this page (it reads the saved look itself)
   useEffect(() => {
@@ -309,6 +328,7 @@ function BotDetail({ id }: { id: string }) {
       <nav className="side-links" aria-label="Bot sections">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => open(t.id)} aria-current={tab === t.id ? "page" : undefined}>
+            {tab === t.id && <ActivePill group="bot" />}
             <Icon name={t.icon} /> {t.label}
             {badge(t.id) !== null && <span className={`count${t.id === "leads" ? " hot" : ""}`}>{badge(t.id)}</span>}
           </button>
@@ -345,6 +365,7 @@ function BotDetail({ id }: { id: string }) {
         <div className="tabstrip" role="tablist" aria-label="Bot sections (phone)">
           {TABS.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? "active" : ""} onClick={() => open(t.id)}>
+              {tab === t.id && <ActivePill group="strip" />}
               <Icon name={t.icon} size={15} /> {t.label}
               {badge(t.id) !== null && <span className="count">{badge(t.id)}</span>}
             </button>
@@ -353,7 +374,7 @@ function BotDetail({ id }: { id: string }) {
       </div>
 
       {error && <div className="alert error" role="alert">{error}</div>}
-      {notice && <div className="alert ok toast" role="status">{notice}</div>}
+      <Toast message={notice} />
       {preview && (
         <div className="alert ok" role="status">
           Preview is on: use the chat bubble in the bottom corner, exactly as visitors will.
@@ -362,28 +383,28 @@ function BotDetail({ id }: { id: string }) {
 
       {/* ---------- Overview ---------- */}
       {show("overview") && (
-        <div className="view" hidden={tab !== "overview"}>
+        <div className="view" data-dir={dir} hidden={tab !== "overview"}>
           <div className="stats stagger">
-            <button className="stat link" onClick={() => open("knowledge")}>
+            <Tilt as="button" type="button" className="stat link" onClick={() => open("knowledge")}>
               <div className="label"><Icon name="layers" size={14} /> Sources</div>
               <div className="value"><CountUp value={list.length} /></div>
               <div className="hint">{readyCount} ready to answer</div>
-            </button>
-            <button className="stat link" onClick={() => open("knowledge")}>
+            </Tilt>
+            <Tilt as="button" type="button" className="stat link" onClick={() => open("knowledge")}>
               <div className="label"><Icon name="book" size={14} /> Knowledge pieces</div>
               <div className="value"><CountUp value={chunks} /></div>
               <div className="hint">searched for every question</div>
-            </button>
-            <button className="stat link" onClick={() => open("leads")}>
+            </Tilt>
+            <Tilt as="button" type="button" className="stat link" onClick={() => open("leads")}>
               <div className="label"><Icon name="users" size={14} /> New leads</div>
               <div className="value"><CountUp value={newLeads} /></div>
               <div className="hint">{bot.leadCaptureEnabled ? "waiting for your call" : "lead capture is off"}</div>
-            </button>
-            <button className="stat link" onClick={() => open("apps")}>
+            </Tilt>
+            <Tilt as="button" type="button" className="stat link" onClick={() => open("apps")}>
               <div className="label"><Icon name="apps" size={14} /> Messaging apps</div>
               <div className="value"><CountUp value={channels} /></div>
               <div className="hint">{channels ? "connected" : "WhatsApp, Instagram, Telegram"}</div>
-            </button>
+            </Tilt>
           </div>
 
           <div className="overview-grid">
@@ -437,9 +458,10 @@ function BotDetail({ id }: { id: string }) {
 
       {/* ---------- Knowledge ---------- */}
       {show("knowledge") && (
-        <div className="view" hidden={tab !== "knowledge"}>
+        <div className="view" data-dir={dir} hidden={tab !== "knowledge"}>
           <div className="split">
-            <section className="card" id="knowledge">
+            <section className="card" id="knowledge" style={{ position: "relative" }}>
+              <Celebrate show={celebrate} />
               <div className="card-head">
                 <div className="section-title"><span className="section-icon" aria-hidden><Icon name="upload" /></span><h2>Add knowledge</h2></div>
               </div>
@@ -483,7 +505,7 @@ function BotDetail({ id }: { id: string }) {
                   <a className="btn secondary small" href="/samples/sunrise-academy.txt" download>Try a sample document</a>
                 </div>
               ) : (
-                <ul className="source-list stagger">
+                <AnimatedList as="ul" className="source-list">
                   {list.map((d) => (
                     <li key={d.id} className="source-item">
                       <span className={`file-icon k-${d.kind}`} aria-hidden>{KIND_LABEL[d.kind] ?? d.fileName.split(".").pop()?.slice(0, 4).toUpperCase()}</span>
@@ -521,7 +543,7 @@ function BotDetail({ id }: { id: string }) {
                       </div>
                     </li>
                   ))}
-                </ul>
+                </AnimatedList>
               )}
             </section>
           </div>
@@ -530,7 +552,7 @@ function BotDetail({ id }: { id: string }) {
 
       {/* ---------- Test & answers ---------- */}
       {show("answers") && (
-        <div className="view" hidden={tab !== "answers"}>
+        <div className="view" data-dir={dir} hidden={tab !== "answers"}>
           <div className="split">
             <Playground publicKey={bot.publicKey} ready={readyCount > 0} onCorrect={correct} onAsked={tested} />
             <QaSection botId={id} draft={draft} onDraftUsed={clearDraft} />
@@ -539,26 +561,26 @@ function BotDetail({ id }: { id: string }) {
       )}
 
       {show("leads") && (
-        <div className="view" hidden={tab !== "leads"} id="leads">
+        <div className="view" data-dir={dir} hidden={tab !== "leads"} id="leads">
           <LeadsSection botId={id} enabled={bot.leadCaptureEnabled} />
         </div>
       )}
 
       {show("conversations") && (
-        <div className="view" hidden={tab !== "conversations"}>
+        <div className="view" data-dir={dir} hidden={tab !== "conversations"}>
           <ConversationsSection botId={id} onCorrect={correct} />
         </div>
       )}
 
       {show("apps") && (
-        <div className="view" hidden={tab !== "apps"}>
+        <div className="view" data-dir={dir} hidden={tab !== "apps"}>
           <ChannelsSection botId={id} />
         </div>
       )}
 
       {/* ---------- Install ---------- */}
       {show("install") && (
-        <div className="view" hidden={tab !== "install"}>
+        <div className="view" data-dir={dir} hidden={tab !== "install"}>
           <section className="card">
             <div className="card-head">
               <div className="section-title"><span className="section-icon" aria-hidden><Icon name="globe" /></span><h2>Demo link</h2></div>
@@ -603,7 +625,7 @@ function BotDetail({ id }: { id: string }) {
 
       {/* ---------- Settings ---------- */}
       {show("settings") && (
-        <div className="view" hidden={tab !== "settings"}>
+        <div className="view" data-dir={dir} hidden={tab !== "settings"}>
           <SettingsForm key={bot.id} bot={bot} onSaved={(b, message) => { setBot(b); flash(message); }} />
           <section className="card danger-zone" id="danger">
             <h2>Danger zone</h2>

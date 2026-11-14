@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import { api, Bot } from "@/lib/api";
+import { AnimatedList, Tilt } from "@/components/AppMotion";
 
 function BotList() {
   const router = useRouter();
@@ -99,9 +100,10 @@ function BotList() {
         </div>
       )}
       {bots && bots.length > 0 && (
-        <div className="grid stagger">
+        <AnimatedList className="grid stagger">
           {bots.map((b) => (
-            <Link key={b.id} href={`/bots/${b.id}`} className="card bot-card">
+            <Tilt key={b.id} className="tilt-wrap" max={5}>
+            <Link href={`/bots/${b.id}`} className="card bot-card">
               <div className="bot-card-top">
                 <span className="bot-avatar" aria-hidden>{initials(b.name)}</span>
                 <div style={{ minWidth: 0 }}>
@@ -120,6 +122,7 @@ function BotList() {
                 <span className="open">Open →</span>
               </div>
             </Link>
+            </Tilt>
           ))}
           {!showForm && (
             <button className="new-card" onClick={() => setShowForm(true)} aria-label="Create another bot">
@@ -127,7 +130,7 @@ function BotList() {
               Another bot
             </button>
           )}
-        </div>
+        </AnimatedList>
       )}
     </>
   );

@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { api, Bot } from "@/lib/api";
 import Icon, { IconName } from "@/components/Icon";
+import { ActivePill } from "@/components/AppMotion";
 
 const QUESTION_EXAMPLES = [
   "e.g. What are the fees?",
@@ -131,6 +132,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
       <div className="settings-tabs" role="tablist" aria-label="Settings groups">
         {GROUPS.map((x) => (
           <button key={x.id} type="button" role="tab" aria-selected={group === x.id} onClick={() => setGroup(x.id)}>
+            {group === x.id && <ActivePill group="settings" />}
             <Icon name={x.icon} size={15} /> {x.label}
           </button>
         ))}

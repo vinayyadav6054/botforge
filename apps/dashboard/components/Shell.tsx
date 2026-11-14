@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ActivePill, ClickRipples, PageTransition } from "@/components/AppMotion";
 import Icon from "@/components/Icon";
 import Logo from "@/components/Logo";
 import { Account, api, clearSession, getSession, Me, Session } from "@/lib/api";
@@ -78,8 +79,12 @@ export default function Shell({ children, subnav }: { children: React.ReactNode;
         </div>
 
         <nav className="side-links" aria-label="Main">
-          <Link href="/bots" className={pathname === "/bots" ? "active" : ""}><Icon name="bots" /> Bots</Link>
-          <Link href="/account" className={pathname?.startsWith("/account") ? "active" : ""}><Icon name="plan" /> Plan &amp; account</Link>
+          <Link href="/bots" className={pathname === "/bots" ? "active" : ""}>
+            {pathname === "/bots" && <ActivePill group="main" />}<Icon name="bots" /> Bots
+          </Link>
+          <Link href="/account" className={pathname?.startsWith("/account") ? "active" : ""}>
+            {pathname?.startsWith("/account") && <ActivePill group="main" />}<Icon name="plan" /> Plan &amp; account
+          </Link>
         </nav>
 
         {subnav && <div className="side-sub">{subnav}</div>}
@@ -153,7 +158,8 @@ export default function Shell({ children, subnav }: { children: React.ReactNode;
           </div>
         )}
 
-        <main className="container">{children}</main>
+        <main className="container"><PageTransition id={pathname ?? ""}>{children}</PageTransition></main>
+        <ClickRipples />
       </div>
     </div>
   );

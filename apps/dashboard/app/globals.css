@@ -1136,3 +1136,79 @@ label { font-weight: 650; }
 @media (prefers-reduced-motion: reduce) {
   .btn::after { display: none; }
 }
+
+/* ============ App motion ============ */
+/* pages: the PageTransition component animates them now */
+.workspace .container { animation: none; }
+
+/* the highlight that glides between menu items */
+.side-links a, .side-links button, .settings-tabs button, .tabstrip button { position: relative; isolation: isolate; }
+.side-links a.active, .side-links button.active { background: transparent; }
+.settings-tabs button[aria-selected="true"] { background: transparent; box-shadow: none; }
+.tabstrip button.active { background: transparent; border-color: transparent; }
+.active-pill { position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; }
+.side-links .active-pill {
+  border-radius: 10px;
+  background: linear-gradient(90deg, color-mix(in srgb, #5b5bf6 15%, transparent), color-mix(in srgb, #22c3ee 7%, transparent));
+  box-shadow: inset 3px 0 0 0 #6d5cf6;
+}
+.side-links a.active::before, .side-links button.active::before { display: none; }
+.settings-tabs .active-pill { border-radius: 9px; background: var(--surface); box-shadow: 0 1px 2px rgba(16, 24, 64, .08), 0 4px 14px rgba(16, 24, 64, .08); }
+.tabstrip .active-pill { border-radius: 99px; background: var(--grad); }
+
+/* ripple on click */
+.ripple {
+  position: absolute; border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 32%, transparent) 0%, transparent 60%);
+  transform: scale(0); animation: ripple .65s cubic-bezier(.2, .8, .2, 1) forwards;
+}
+.btn:not(.secondary):not(.ghost):not(.danger) .ripple { background: radial-gradient(circle, rgba(255, 255, 255, .45) 0%, transparent 60%); }
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+/* bot sections slide in the direction you move */
+.view[data-dir="fwd"] { animation: view-in-right .42s cubic-bezier(.2, .8, .2, 1) both; }
+.view[data-dir="back"] { animation: view-in-left .42s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes view-in-right { from { opacity: 0; transform: translateX(28px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes view-in-left { from { opacity: 0; transform: translateX(-28px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+
+/* tilting cards: motion sets the transform, CSS adds a light that follows the cursor */
+.stat.link:hover, .bot-card:hover { transform: none; }
+.stat.link, .tilt-wrap { transform-style: preserve-3d; will-change: transform; }
+.tilt-wrap { border-radius: var(--radius); }
+.tilt-wrap .bot-card { height: 100%; }
+.stat.link::before, .tilt-wrap .bot-card::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%);
+}
+.stat.link:hover::before, .tilt-wrap:hover .bot-card::before { opacity: 1; }
+.tilt-wrap .bot-card { position: relative; }
+.tilt-wrap:hover .bot-card { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); box-shadow: var(--shadow-lg); }
+
+/* toast */
+.alert.toast { display: flex; align-items: center; gap: 10px; animation: none; }
+.alert.toast::before { content: "\2713"; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 12px; flex: none; }
+
+/* confetti */
+.celebrate { position: absolute; left: 50%; top: 40%; width: 0; height: 0; z-index: 5; pointer-events: none; }
+.celebrate i { position: absolute; width: 8px; height: 12px; border-radius: 2px; }
+
+/* lists: rows lift a little under the cursor */
+.convo-item, .source-item, .qa-item { transition: transform .2s cubic-bezier(.2, .8, .2, 1), border-color .2s, box-shadow .2s, background .2s; }
+.convo-item:hover, .source-item:hover { transform: translateX(3px); }
+tbody tr { transition: background .2s; }
+
+/* inputs: a soft glow while typing */
+input:focus, textarea:focus { transition: border-color .15s, box-shadow .25s; }
+
+/* the welcome card on the bots page floats gently */
+.welcome-art { animation: float 7s ease-in-out infinite; }
+.welcome-art .bubble { animation: pop .45s cubic-bezier(.2, .8, .2, 1) both; }
+.welcome-art .bubble:nth-child(2) { animation-delay: .25s; }
+.welcome-art .bubble:nth-child(3) { animation-delay: .5s; }
+.welcome-art .bubble:nth-child(4) { animation-delay: .75s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .view[data-dir] { animation: none; }
+  .welcome-art, .welcome-art .bubble { animation: none; }
+  .ripple { display: none; }
+}

@@ -3,6 +3,7 @@
 import { FormEvent, Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { api, Conversation, ConversationSummary } from "@/lib/api";
 import Icon from "@/components/Icon";
+import { AnimatedList } from "@/components/AppMotion";
 
 export const CHANNEL_ICON: Record<string, string> = { web: "🌐", whatsapp: "🟢", instagram: "📸", messenger: "💬", telegram: "✈️" };
 const CHANNEL_NAME: Record<string, string> = { web: "website", whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", telegram: "Telegram" };
@@ -193,7 +194,7 @@ export default function ConversationsSection({ botId, onCorrect }: { botId: stri
           {onlyUnanswered ? "No unanswered questions." : "No conversations yet. They appear here as soon as visitors chat with your bot."}
         </p>
       ) : (
-        <div className="convo-list">
+        <AnimatedList className="convo-list">
           {shown.map((c) => (
             <Fragment key={c.id}>
               <button className={`convo-item${c.human ? " is-human" : ""}`} aria-expanded={open === c.id} onClick={() => void toggle(c.id)}>
@@ -275,7 +276,7 @@ export default function ConversationsSection({ botId, onCorrect }: { botId: stri
             </Fragment>
           ))}
           {more && !onlyUnanswered && <button className="btn secondary small" onClick={() => void loadMore()}>Load older</button>}
-        </div>
+        </AnimatedList>
       )}
     </section>
   );

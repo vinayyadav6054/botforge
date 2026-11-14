@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, Lead, LEAD_STATUSES, LeadStatus } from "@/lib/api";
 import Icon from "@/components/Icon";
+import { AnimatedList } from "@/components/AppMotion";
 
 interface Turn {
   role: string;
@@ -116,7 +117,7 @@ export default function LeadsSection({ botId, enabled }: { botId: string; enable
             <thead>
               <tr><th>When</th><th>Name</th><th>Phone</th><th>Course</th><th>Status</th><th aria-label="Actions" /></tr>
             </thead>
-            <tbody>
+            <AnimatedList as="tbody">
               {leads.map((l) => {
                 const turns = parseTranscript(l.transcript);
                 return (
@@ -174,7 +175,7 @@ export default function LeadsSection({ botId, enabled }: { botId: string; enable
                   </Fragment>
                 );
               })}
-            </tbody>
+            </AnimatedList>
           </table>
         </div>
       )}
