@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.Mail;
 using System.Text.Encodings.Web;
 using Microsoft.Extensions.Options;
@@ -17,6 +18,14 @@ public class EmailOptions
     /// <summary>Sender, e.g. "BotForge &lt;hello@yourdomain.com&gt;".</summary>
     public string From { get; set; } = "BotForge <no-reply@botforge.local>";
     public SmtpOptions Smtp { get; set; } = new();
+    public BrevoOptions Brevo { get; set; } = new();
+}
+
+public class BrevoOptions
+{
+    /// <summary>Brevo API key (free plan: 300 emails a day). Sends over HTTPS, for hosts that block SMTP ports (Render free).</summary>
+    public string? ApiKey { get; set; }
+    public string BaseUrl { get; set; } = "https://api.brevo.com";
 }
 
 public class SmtpOptions
@@ -46,6 +55,35 @@ public class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSender
             Timeout = 20_000
         };
         await client.SendMailAsync(mail, ct);
+    }
+}
+
+/// <summary>Sends through Brevo's HTTPS API. The From address must be a sender verified in Brevo.</summary>
+public class BrevoEmailSender(HttpClient http, IOptions<EmailOptions> options) : IEmailSender
+{
+    public async Task SendAsync(EmailMessage message, CancellationToken ct = default)
+    {
+        var o = options.Value;
+        var from = new MailAddress(o.From);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{o.Brevo.BaseUrl.TrimEnd('/')}/v3/smtp/email")
+        {
+            Content = JsonContent.Create(new
+            {
+                sender = new { name = string.IsNullOrWhiteSpace(from.DisplayName) ? "BotForge" : from.DisplayName, email = from.Address },
+                to = new[] { new { email = message.To } },
+                subject = message.Subject,
+                htmlContent = message.Html,
+                textContent = message.Text
+            })
+        };
+        request.Headers.Add("api-key", o.Brevo.ApiKey);
+        request.Headers.Add("Accept", "application/json");
+        using var response = await http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            throw new InvalidOperationException($"Brevo refused the email ({(int)response.StatusCode}): {body[..Math.Min(body.Length, 300)]}");
+        }
     }
 }
 

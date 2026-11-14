@@ -6,7 +6,9 @@ if [ -n "${PUBLIC_URL:-}" ]; then
   export App__DashboardUrl="${PUBLIC_URL%/}" BRANDING_URL="${PUBLIC_URL%/}"
 fi
 
-# Email (any SMTP account: Gmail app password, Brevo, Resend, Zoho). Without it emails only go to the log.
+# Email: BREVO_API_KEY (HTTPS; works on Render free, which blocks SMTP ports) or any SMTP account.
+# Without either, emails only go to the log. EMAIL_FROM must be a sender verified with the provider.
+[ -z "${BREVO_API_KEY:-}" ] || export Email__Brevo__ApiKey="$BREVO_API_KEY"
 if [ -n "${SMTP_HOST:-}" ]; then
   export Email__Smtp__Host="$SMTP_HOST" Email__Smtp__Port="${SMTP_PORT:-587}" \
     Email__Smtp__User="${SMTP_USER:-}" Email__Smtp__Password="${SMTP_PASSWORD:-}"

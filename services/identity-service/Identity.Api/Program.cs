@@ -31,7 +31,9 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<AccountTokens>();
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
-if (!string.IsNullOrWhiteSpace(builder.Configuration["Email:Smtp:Host"]))
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Email:Brevo:ApiKey"]))
+    builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(c => c.Timeout = TimeSpan.FromSeconds(20));
+else if (!string.IsNullOrWhiteSpace(builder.Configuration["Email:Smtp:Host"]))
     builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 else
     builder.Services.AddSingleton<IEmailSender, LogEmailSender>();

@@ -85,7 +85,8 @@ Add these in Render → **Environment**. Each one switches on a feature; everyth
 | Key | What it does |
 |---|---|
 | `ADMIN_API_KEY` | A long random value. Opens **/admin** on your dashboard: every business, its plan and usage, and a button to activate a plan after a UPI/bank payment. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM` | Sends real emails: confirm email, password reset, monthly report. Free options: Brevo (300/day) or a Gmail account with an app password (`smtp.gmail.com`, 587). Without them the emails are only written to the Render log. |
+| `BREVO_API_KEY`, `EMAIL_FROM` | Sends real emails (confirm email, password reset, monthly report) through Brevo's HTTPS API, free for 300 a day. `EMAIL_FROM` like `BotForge <you@gmail.com>`, with that address verified as a sender in Brevo. Render's free plan blocks SMTP ports, so use this there. Without it the emails are only written to the Render log. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Any SMTP account instead of Brevo's API (Gmail app password: `smtp.gmail.com`, 587). Only on hosts that allow SMTP (not Render free). |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Online payments (Razorpay → Account & Settings → API keys). |
 | `RAZORPAY_PLAN_STARTER`, `RAZORPAY_PLAN_BUSINESS`, `RAZORPAY_PLAN_PRO` | The `plan_...` ids. Create three monthly plans in Razorpay → Subscriptions → Plans (₹499, ₹1,499, ₹3,999). |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay → Webhooks → add `https://<render-url>/api/billing/razorpay/webhook` with the events `subscription.activated`, `subscription.charged`, `subscription.halted`, `subscription.cancelled`, `subscription.completed`, and the same secret here. |
