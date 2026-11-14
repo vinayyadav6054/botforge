@@ -87,7 +87,8 @@ app.UseRouting();
 app.UseCors();          // after routing: the CORS policy comes from the matched proxy route
 app.UseRateLimiter();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "gateway" }));
+// HEAD too: uptime monitors (UptimeRobot's default) check with HEAD
+app.MapMethods("/health", ["GET", "HEAD"], () => Results.Ok(new { status = "ok", service = "gateway" }));
 app.MapReverseProxy();
 
 app.Run();

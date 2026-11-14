@@ -88,6 +88,10 @@ public class GatewayTests(GatewayFactory factory) : IClassFixture<GatewayFactory
     public async Task Health_is_ok() =>
         Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/health")).StatusCode);
 
+    [Fact]
+    public async Task Health_answers_head_for_uptime_monitors() =>
+        Assert.Equal(HttpStatusCode.OK, (await _client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/health"))).StatusCode);
+
     [Theory]
     [InlineData("/api/bots", "/bots")]
     [InlineData("/api/bots/123/documents?x=1", "/bots/123/documents")]
