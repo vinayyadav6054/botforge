@@ -6,6 +6,7 @@ Kept identical in the ingestion and chat services (each service is deployed on i
 import logging
 import time
 
+import httpx
 import numpy as np
 
 from . import config
@@ -15,6 +16,11 @@ log = logging.getLogger(__name__)
 BATCH_SIZE = 100                       # texts per API request (Gemini's batch limit)
 RETRY_DELAYS = (2.0, 5.0, 15.0, 30.0)  # free-tier rate limits clear within a minute
 TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+
+
+def is_transient(ex: Exception) -> bool:
+    """Overload, rate limit, a timeout or a dropped connection: worth another try."""
+    return getattr(ex, "code", None) in TRANSIENT_STATUS or isinstance(ex, (httpx.TimeoutException, httpx.NetworkError))
 
 _client = None
 sleep = time.sleep                     # replaced in tests
@@ -44,9 +50,10 @@ def _embed_batch(texts: list[str], task_type: str) -> list[np.ndarray]:
                 raise RuntimeError("Gemini returned embeddings of an unexpected shape")
             return vectors
         except Exception as ex:
-            if getattr(ex, "code", None) not in TRANSIENT_STATUS or attempt == len(RETRY_DELAYS):
+            if not is_transient(ex) or attempt == len(RETRY_DELAYS):
                 raise
-            log.warning("Gemini embeddings returned %s, retrying in %.0fs", ex.code, RETRY_DELAYS[attempt])
+            log.warning("Gemini embeddings failed (%s), retrying in %.0fs",
+                        getattr(ex, "code", None) or type(ex).__name__, RETRY_DELAYS[attempt])
             sleep(RETRY_DELAYS[attempt])
     raise AssertionError("unreachable")
 

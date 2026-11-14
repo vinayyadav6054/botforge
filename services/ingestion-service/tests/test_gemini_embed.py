@@ -51,6 +51,13 @@ def test_rate_limits_are_retried(fake):
     assert [c for c in fake.calls if c[0] == "sleep"] == [("sleep", 2.0), ("sleep", 5.0)]
 
 
+def test_timeouts_and_dropped_connections_are_retried(fake):
+    import httpx
+    fake.errors = [httpx.ReadTimeout("slow"), httpx.ConnectError("reset")]
+    assert len(embedder.embed(["a"])) == 1
+    assert [c for c in fake.calls if c[0] == "sleep"] == [("sleep", 2.0), ("sleep", 5.0)]
+
+
 def test_gives_up_after_the_last_retry(fake):
     fake.errors = [ApiError(429)] * 10
     with pytest.raises(ApiError):
