@@ -11,7 +11,8 @@ export function PageTransition({ id, children }: { id: string; children: ReactNo
   const reduce = useReducedMotion();
   return (
     <motion.div key={id} initial={reduce ? false : { opacity: 0, y: 14, filter: "blur(4px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.45, ease }}>
+      // filter and transform cleared at the end: otherwise fixed overlays inside (toasts, dialogs) are trapped
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)", transitionEnd: { filter: "none", transform: "none" } }} transition={{ duration: 0.45, ease }}>
       {children}
     </motion.div>
   );

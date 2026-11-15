@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ChatDemo from "@/components/landing/ChatDemo";
 import HeroStage from "@/components/landing/HeroStage";
+import IntroVideo from "@/components/landing/IntroVideo";
 import { Faq, FadeIn, ScrollSteps, SpotlightGrid, Stagger } from "@/components/landing/Motion";
 import Footer from "@/components/landing/Footer";
 import NavBar from "@/components/landing/NavBar";
@@ -60,7 +61,7 @@ export default function Landing() {
             </FadeIn>
             <FadeIn delay={0.18} className="lp-cta">
               <Link href="/register" className="btn lg">Start free, no card needed</Link>
-              <a href="#demo" className="btn ghost lg">See it answer</a>
+              <IntroVideo />
             </FadeIn>
             <FadeIn delay={0.24}>
               <ul className="lp-proof">

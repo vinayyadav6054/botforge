@@ -104,6 +104,18 @@ Plans and limits (`services/bot-service/Bots.Api/Billing/Plans.cs`; prices also 
 After the trial or a plan ends, the bots stop answering (visitors are asked to contact the business) and no new bots or
 documents can be added; all data stays available.
 
+## 6b. Sign in with Google, UPI payments, support (optional, all free)
+
+| Where | Variable | What |
+|---|---|---|
+| Render | `GOOGLE_CLIENT_ID` | Google Cloud Console → APIs & Services → Credentials → *Create credentials → OAuth client ID* → Web application. Authorised JavaScript origins: your Vercel address. Copy the client ID. |
+| Vercel | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | the same client ID (shows the "Continue with Google" button) |
+| Vercel | `NEXT_PUBLIC_PAYMENT_UPI`, `NEXT_PUBLIC_PAYMENT_NAME` | your UPI ID and the name on that bank account: plan payments by UPI QR, no gateway, no fees |
+| Render | `SUPPORT_EMAIL` | where "Message us" from the dashboard goes (default: the `EMAIL_FROM` address) |
+| Vercel | `NEXT_PUBLIC_CONTACT_WHATSAPP`, `NEXT_PUBLIC_CONTACT_EMAIL` | shown on the website and help centre |
+
+After a UPI payment: check the reference in your bank app, then open `/admin` → the business → set the plan.
+
 ## 7. Messaging apps (WhatsApp, Instagram, Messenger, Telegram)
 
 Nothing to set on Render: it gives Kahiye its public address (`RENDER_EXTERNAL_URL`), which the apps send messages to.

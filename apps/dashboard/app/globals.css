@@ -1298,3 +1298,9 @@ input:focus, textarea:focus { transition: border-color .15s, box-shadow .25s; }
 .only-phone-flex { display: none; }
 @media (pointer: coarse) { .only-phone-flex { display: flex; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* intro video */
+.play-dot { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--grad); color: #fff; font-size: 10px; padding-left: 2px; }
+.video-box { position: relative; width: min(1100px, 100%); border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 40px 120px rgba(0, 0, 0, .5); }
+.video-box video { display: block; width: 100%; height: auto; }
+.video-box .modal-close { z-index: 2; background: rgba(255, 255, 255, .9); }

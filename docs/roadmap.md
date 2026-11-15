@@ -68,6 +68,14 @@ What Kahiye does today, and what can be added, ordered by how much each item hel
 - **Follow-ups**: automatic WhatsApp or email message to leads that did not convert
 - **Order and booking status** lookups for shops (Shopify, WooCommerce)
 
+## Product polish (done)
+
+- Bright design system, animated 3D website, help centre, real privacy policy and terms, storage notice
+- Four-step onboarding with industry presets, Sign in with Google, password strength and lock-out
+- Security layers (docs/security.md): global and per-route rate limits, headers, upload checks, encrypted lead data
+- Answer, embedding and translation caches with pooled database connections
+- UPI QR payments, in-app support, intro video (scripts/record-intro.mjs), demo kit and go-to-market playbook
+
 ## Phase 5: analytics and growth
 
 - Dashboard charts: conversations, leads, conversion rate, busiest hours, top questions

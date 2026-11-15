@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import QRCode from "qrcode";
 import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, Plan } from "@/lib/api";
 import { site } from "@/lib/site";
 
@@ -35,7 +36,7 @@ Account: ${account}`);
     }
   }
 
-  return (
+  return createPortal(
     <div className="modal-scrim" role="dialog" aria-modal="true" aria-label={`Pay for ${plan.name}`} onClick={onClose}>
       <motion.div className="modal upi" onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 26 }}>
@@ -68,5 +69,5 @@ Account: ${account}`);
         )}
       </motion.div>
     </div>
-  );
+  , document.body);
 }
