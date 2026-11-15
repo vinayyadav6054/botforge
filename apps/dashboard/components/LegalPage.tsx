@@ -1,30 +1,17 @@
-import Link from "next/link";
-import Logo from "@/components/Logo";
+import SitePage from "@/components/SitePage";
 import { site } from "@/lib/site";
 
-export const UPDATED = "13 November 2026";
+export const UPDATED = "15 November 2026";
 
 export function contact() {
-  return site.email ? <a href={`mailto:${site.email}`}>{site.email}</a> : <>the contact details on our website</>;
+  return site.email ? <a href={`mailto:${site.email}`}>{site.email}</a> : <a href="/help#contact">our help centre</a>;
 }
 
+/** Privacy policy and terms: the public page layout with a "last updated" line. */
 export default function LegalPage({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="landing">
-      <header className="lnav">
-        <div className="lwrap lnav-inner">
-          <Logo />
-          <div className="lnav-cta">
-            <Link href="/privacy" className="nav-login">Privacy</Link>
-            <Link href="/terms" className="nav-login">Terms</Link>
-          </div>
-        </div>
-      </header>
-      <main className="legal">
-        <h1>{title}</h1>
-        <p className="muted">Last updated: {UPDATED}</p>
-        {children}
-      </main>
-    </div>
+    <SitePage eyebrow="Legal" title={title} intro={<p>Last updated: {UPDATED}</p>}>
+      <div className="legal-body">{children}</div>
+    </SitePage>
   );
 }

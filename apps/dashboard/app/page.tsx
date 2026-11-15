@@ -2,6 +2,7 @@ import Link from "next/link";
 import ChatDemo from "@/components/landing/ChatDemo";
 import HeroStage from "@/components/landing/HeroStage";
 import { Faq, FadeIn, ScrollSteps, SpotlightGrid, Stagger } from "@/components/landing/Motion";
+import Footer from "@/components/landing/Footer";
 import NavBar from "@/components/landing/NavBar";
 import SmoothScroll from "@/components/landing/SmoothScroll";
 import Logo from "@/components/Logo";
@@ -33,7 +34,6 @@ const FAQ = [
 ];
 
 export default function Landing() {
-  const year = new Date().getFullYear();
   return (
     <div className="lp">
       <SmoothScroll />
@@ -129,6 +129,41 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ---------- the story ---------- */}
+        <section id="story" className="lp-section">
+          <div className="lp-wrap lp-story">
+            <FadeIn className="lp-story-text">
+              <p className="lp-eyebrow">Why Kahiye exists</p>
+              <h2 className="lp-h2">Every missed message is a <span className="lp-grad">missed customer</span>.</h2>
+              <p>
+                At 10:47 PM a parent finds a coaching institute online and asks about the JEE batch fees. The office closed at 7.
+                By morning, they have already joined the institute that answered first.
+              </p>
+              <p>
+                This happens every day to clinics, builders, salons and restaurants across India. Not because owners don&apos;t care,
+                but because <strong>nobody can sit by the phone 24 hours a day</strong>, answering the same twenty questions in
+                three languages.
+              </p>
+              <p>
+                <strong>Kahiye</strong> means <em>“please, tell me”</em>, the way a good receptionist greets you. That is what it does:
+                it listens to every customer, answers from your own information, and hands you the ones who are ready to talk.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <div className="lp-quote">
+                <span className="lp-quote-time">🌙 10:47 PM · website chat</span>
+                <p className="q">“JEE batch ki fees kitni hai? Weekend batch hai kya?”</p>
+                <p className="a">Answered in 3 seconds from the institute&apos;s fee PDF. <b>Lead sent to the owner.</b></p>
+              </div>
+              <div className="lp-quote">
+                <span className="lp-quote-time">☀️ 9:05 AM · next morning</span>
+                <p className="q">The counsellor calls back a parent who is already interested.</p>
+                <p className="a">No missed enquiry. <b>Admission confirmed.</b></p>
+              </div>
+            </FadeIn>
+          </div>
+        </section>
+
         {/* ---------- live demo ---------- */}
         <section id="demo" className="lp-section">
           <div className="lp-wrap">
@@ -159,7 +194,7 @@ export default function Landing() {
         </section>
 
         {/* ---------- trust ---------- */}
-        <section id="trust" className="lp-section">
+        <section id="trust" className="lp-section tinted">
           <div className="lp-wrap">
             <FadeIn className="lp-head center">
               <p className="lp-eyebrow">Trust &amp; security</p>
@@ -174,7 +209,7 @@ export default function Landing() {
                   { i: "📦", t: "Export or delete any time", d: "Download your leads to Excel or delete your whole account in one click." },
                 ].map((x) => (
                   <div key={x.t} className="spot lp-card lp-trust-card">
-                    <span className="lp-trust-icon">{x.i}</span>
+                    <span className="lp-ico">{x.i}</span>
                     <h3>{x.t}</h3>
                     <p>{x.d}</p>
                   </div>
@@ -216,10 +251,16 @@ export default function Landing() {
 
         {/* ---------- FAQ ---------- */}
         <section id="faq" className="lp-section">
-          <div className="lp-wrap lp-narrow">
-            <FadeIn className="lp-head center">
+          <div className="lp-wrap lp-narrow lp-faq-layout">
+            <FadeIn className="lp-head">
               <p className="lp-eyebrow">FAQ</p>
               <h2 className="lp-h2">Questions owners ask us.</h2>
+              <p>Straight answers about setup, languages, data and payments.</p>
+              <div className="lp-help-card">
+                <strong>Still have a question?</strong>
+                <p>We reply within one working day, and we can set up your assistant for you.</p>
+                <Link href="/help" className="btn secondary small">Visit the help centre</Link>
+              </div>
             </FadeIn>
             <FadeIn><Faq items={FAQ} /></FadeIn>
           </div>
@@ -243,22 +284,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="lp-foot">
-        <div className="lp-wrap lp-foot-inner">
-          <div>
-            <Logo />
-            <p>AI assistants for India&apos;s local businesses.</p>
-          </div>
-          <nav aria-label="Footer">
-            <Link href="/demo">Demo</Link>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/login">Log in</Link>
-            <Link href="/register">Sign up</Link>
-          </nav>
-          <span>© {year} {site.name}{site.email && <> · <a href={`mailto:${site.email}`}>{site.email}</a></>}</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

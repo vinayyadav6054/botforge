@@ -64,6 +64,15 @@ export default function HeroStage() {
       }}
       onPointerLeave={() => { mx.set(0); my.set(0); }}>
       <div className="hs-orb o1" /><div className="hs-orb o2" /><div className="hs-orb o3" />
+      {/* a 3D ring of the channels it answers on, slowly orbiting under the product */}
+      <div className="hs-orbit">
+        <div className="hs-orbit-ring">
+          {["💬", "🟢", "📸", "✈️", "📞", "🌐", "📅", "₹"].map((icon, i, all) => {
+            const a = (i / all.length) * Math.PI * 2;
+            return <span key={i} style={{ transform: `translate(${Math.cos(a) * 560}px, ${Math.sin(a) * 240}px) rotateX(-76deg)` }}>{icon}</span>;
+          })}
+        </div>
+      </div>
       <motion.div className="hs-tilt" style={{ rotateX: rx, rotateY: ry, scale }}>
         {/* the owner's dashboard */}
         <div className="hs-window">

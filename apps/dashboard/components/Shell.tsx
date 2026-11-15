@@ -44,10 +44,23 @@ export default function Shell({ children, subnav }: { children: React.ReactNode;
   // close the phone drawer after navigating
   useEffect(() => setDrawer(false), [pathname]);
 
+  // while the session is read: the app frame with placeholders, never a blank white page
   if (!session) {
     return (
-      <div className="auth-wrap">
-        <span className="spinner" aria-label="Loading" />
+      <div className="app" aria-busy="true">
+        <aside className="sidebar" aria-hidden>
+          <div className="sidebar-top"><Logo href="/" /></div>
+          <div className="side-links">{[0, 1].map((i) => <div key={i} className="skel" style={{ height: 36, borderRadius: 10 }} />)}</div>
+        </aside>
+        <div className="workspace">
+          <main className="container">
+            <div className="skeleton-page" aria-label="Loading">
+              <div className="skel" style={{ width: 260, height: 36 }} />
+              <div className="skel-row">{[0, 1, 2, 3].map((i) => <div key={i} className="skel" style={{ height: 96 }} />)}</div>
+              <div className="skel" style={{ height: 280 }} />
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
