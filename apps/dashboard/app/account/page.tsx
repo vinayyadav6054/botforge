@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import Shell, { daysLeft } from "@/components/Shell";
+import SupportForm from "@/components/SupportForm";
+import UpiPay from "@/components/UpiPay";
 import { Account, api, clearSession, getSession, Plan } from "@/lib/api";
 import { site, whatsappLink } from "@/lib/site";
 
@@ -41,6 +43,7 @@ function AccountPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [paying, setPaying] = useState<Plan | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -52,6 +55,10 @@ function AccountPage() {
   async function upgrade(plan: Plan) {
     setError(null);
     if (!account?.onlinePayment.includes(plan.id)) {
+      if (site.upiId) {
+        setPaying(plan);
+        return;
+      }
       if (site.whatsapp) {
         window.open(whatsappLink(`Hi! I'd like the Kahiye ${plan.name} plan (₹${plan.priceInr}/month). My account: ${getSession()?.email ?? ""}`), "_blank", "noopener");
       } else {
@@ -179,9 +186,14 @@ function AccountPage() {
         <p className="small muted" style={{ margin: "14px 0 0" }}>
           {account.onlinePayment.length > 0
             ? "Payments are handled securely by Razorpay (UPI, cards, net banking) and renew monthly. Cancel any time."
-            : "Online payment is coming soon. Pay by UPI or bank transfer and we activate your plan the same day."}
+            : site.upiId
+              ? "Pay by UPI from any app. Plans are monthly with no auto-debit; we switch your plan on as soon as we see the payment."
+              : "Pay by UPI or bank transfer and we activate your plan the same day."}
         </p>
       </section>
+      {paying && <UpiPay plan={paying} account={getSession()?.email ?? ""} onClose={() => setPaying(null)} />}
+
+      <SupportForm />
 
       <section className="card">
         <h2>Your data</h2>
@@ -196,6 +208,7 @@ function AccountPage() {
         <p className="muted small">
           Permanently deletes your business, all bots, documents, leads and conversations, and stops any subscription. This cannot be undone.
         </p>
+        <p className="muted small">Signed up with Google? Set a password first with <a href="/forgot-password">Forgot password</a>, then use it here.</p>
         {!confirmDelete ? (
           <button className="btn danger" onClick={() => setConfirmDelete(true)}>Delete my account…</button>
         ) : (

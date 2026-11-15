@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import CookieNotice from "@/components/CookieNotice";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>{children}<CookieNotice /></body>
     </html>
   );
 }

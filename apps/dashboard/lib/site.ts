@@ -10,6 +10,10 @@ export const site = {
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
   /** Public key (bk_...) of a real bot made from public/samples/sunrise-academy.txt; empty = scripted demo only. */
   demoBotKey: process.env.NEXT_PUBLIC_DEMO_BOT_KEY ?? "",
+  /** Your UPI ID for plan payments, e.g. "yourname@okaxis" (NEXT_PUBLIC_PAYMENT_UPI). Empty hides the UPI QR. */
+  upiId: process.env.NEXT_PUBLIC_PAYMENT_UPI ?? "",
+  /** Name shown in the customer's UPI app (should match the bank account), NEXT_PUBLIC_PAYMENT_NAME. */
+  upiName: process.env.NEXT_PUBLIC_PAYMENT_NAME ?? "Kahiye",
   currency: "₹",
   trialNote: "14-day free trial. No card needed. Pay by UPI or card after that.",
   plans: [

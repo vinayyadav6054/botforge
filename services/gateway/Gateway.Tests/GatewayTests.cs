@@ -100,6 +100,7 @@ public class GatewayTests(GatewayFactory factory) : IClassFixture<GatewayFactory
     [InlineData("/api/chat/bk_abc/conversations/c1/updates", "/chat/bk_abc/conversations/c1/updates")]
     [InlineData("/api/channels/whatsapp/abc", "/channels/whatsapp/abc")]
     [InlineData("/api/account", "/account")]
+    [InlineData("/api/support", "/support")]
     [InlineData("/api/account/export", "/account/export")]
     [InlineData("/api/billing/razorpay/webhook", "/billing/razorpay/webhook")]
     [InlineData("/api/admin/tenants", "/admin/tenants")]

@@ -308,6 +308,8 @@ export const api = {
 
   // account, plan and billing
   me: () => request<Me>("/auth/me"),
+  support: (topic: string, message: string) =>
+    request<{ sent: boolean }>("/support", { method: "POST", body: JSON.stringify({ topic, message }) }),
   account: () => request<Account>("/account"),
   checkout: (plan: string) => request<{ url: string }>("/account/checkout", { method: "POST", body: JSON.stringify({ plan }) }),
   cancelSubscription: () => request<void>("/account/cancel", { method: "POST" }),

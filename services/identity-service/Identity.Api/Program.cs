@@ -311,6 +311,36 @@ app.MapGet("/admin/tenants", async (HttpRequest request, IConfiguration config, 
     return Results.Ok(tenants);
 });
 
+// ---------- support: an owner writes to the Kahiye team from the dashboard ----------
+
+app.MapPost("/support", async (SupportRequest req, ClaimsPrincipal p, AppDbContext db, IEmailSender email,
+    IOptions<EmailOptions> emailOptions, IConfiguration config, TimeProvider clock, ILogger<Program> log) =>
+{
+    var user = await CurrentUserAsync(p, db);
+    if (user is null) return Results.Unauthorized();
+    var topic = (req.Topic ?? "").Trim();
+    var message = (req.Message ?? "").Trim();
+    if (!SupportRules.Topics.Contains(topic)) return Results.BadRequest(new { error = "Choose a topic." });
+    if (message.Length is < 10 or > 3000) return Results.BadRequest(new { error = "Write your message in 10 to 3000 characters." });
+    if (!SupportRules.TryTake(user.Id, clock.GetUtcNow()))
+        return Results.Json(new { error = "You have sent several messages in the last hour. We will reply to those first." }, statusCode: 429);
+
+    var to = config["Support:Email"];
+    if (string.IsNullOrWhiteSpace(to)) to = new System.Net.Mail.MailAddress(emailOptions.Value.From).Address;
+    var text = $"Support request from {user.Tenant.Name}\nTopic: {topic}\nReply to: {user.Email}\nAccount: {user.TenantId}\n\n{message}";
+    var html = $"""<p><b>{System.Net.WebUtility.HtmlEncode(user.Tenant.Name)}</b> ({System.Net.WebUtility.HtmlEncode(user.Email)}) · {System.Net.WebUtility.HtmlEncode(topic)}</p><p style="white-space:pre-wrap">{System.Net.WebUtility.HtmlEncode(message)}</p><p>Reply to: <a href="mailto:{System.Net.WebUtility.HtmlEncode(user.Email)}">{System.Net.WebUtility.HtmlEncode(user.Email)}</a></p>""";
+    try
+    {
+        await email.SendAsync(new EmailMessage(to, $"[Support] {topic} · {user.Tenant.Name}", text, html));
+        return Results.Ok(new { sent = true });
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "Support message not sent: {Reason}", ex.Message);
+        return Results.Json(new { error = "Your message could not be sent. Please email us instead." }, statusCode: 502);
+    }
+}).RequireAuthorization();
+
 // ---------- internal: lead alerts (called by the bot service, which does not know the owner's email) ----------
 
 app.MapPost("/internal/tenants/{tenantId:guid}/lead-alert", async (Guid tenantId, LeadAlertRequest req, HttpRequest request,

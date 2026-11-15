@@ -38,3 +38,6 @@ BRANDING_URL = os.getenv("BRANDING_URL", "").strip()
 # messaging apps (overridable for tests)
 TELEGRAM_API = os.getenv("TELEGRAM_API", "https://api.telegram.org").rstrip("/")
 GRAPH_API = os.getenv("GRAPH_API", "https://graph.facebook.com/v21.0").rstrip("/")
+
+# reused database connections for the search (per process)
+DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "6"))

@@ -7,10 +7,12 @@ import re
 from google.genai import types
 
 from . import config
+from .cache import TTLCache
 
 log = logging.getLogger("chat")
 
 TRANSLATE_TIMEOUT = 5.0  # seconds
+_translations = TTLCache(maxsize=4000, ttl=24 * 3600)   # the same Hinglish question is translated once
 
 LANGUAGES = {
     "en": "English", "hi": "Hindi", "mr": "Marathi", "ta": "Tamil", "te": "Telugu", "bn": "Bengali",
@@ -46,6 +48,10 @@ async def to_english(text: str) -> str | None:
     """English version of a question for searching; None when it is English already or translation fails."""
     if not needs_translation(text):
         return None
+    key = " ".join(text.lower().split())
+    cached = _translations.get(key)
+    if cached is not None:
+        return cached or None
     try:
         # only a search helper: when Gemini is slow, answer with the original text instead of making the visitor wait
         res = await asyncio.wait_for(_client().aio.models.generate_content(
@@ -56,8 +62,9 @@ async def to_english(text: str) -> str | None:
                                    "letters. Output only the translation, nothing else.",
                 temperature=0, max_output_tokens=200),
         ), timeout=TRANSLATE_TIMEOUT)
-        out = (res.text or "").strip()
-        return out[:1000] or None
+        out = (res.text or "").strip()[:1000]
+        _translations.set(key, out)
+        return out or None
     except Exception:
         log.warning("Query translation failed; searching with the original text")
         return None

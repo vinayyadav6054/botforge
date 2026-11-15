@@ -89,6 +89,7 @@ def world(monkeypatch):
         return state.get("human", False)
 
     monkeypatch.setattr(main, "human_is_replying", human_is_replying)
+    main._answers.clear()   # answers cached by earlier tests must not leak in
     monkeypatch.setattr(main, "transcribe", transcribe)
     monkeypatch.setattr(main, "give_back", nothing)
     monkeypatch.setattr(main, "get_model", lambda: None)

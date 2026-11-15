@@ -14,6 +14,9 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from . import config
+import hashlib
+
+from .cache import TTLCache
 from .bots_client import consume_answer, conversation_updates, create_lead, record_turn, refund_answer, resolve_bot
 from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, to_english, transcribe
 from .llm import clean_actions, stream_answer
@@ -120,6 +123,39 @@ async def find_chunks(bot: dict, question: str, history: list[tuple[str, str]]):
     if english:
         query = f"{query}\n{english}"
     return await asyncio.to_thread(retrieve, uuid.UUID(bot["tenantId"]), uuid.UUID(bot["botId"]), query, config.TOP_K)
+
+
+# answers to a first question, keyed by everything that shapes them (the bot, the normalised question, the exact
+# knowledge that matched, style, buttons and model). New or changed knowledge matches different chunks, so a stale
+# answer is never reused; entries also expire. Follow-ups (with history) are always generated fresh.
+_answers = TTLCache(maxsize=2000, ttl=6 * 3600)
+_PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def answer_key(bot: dict, question: str, chunks, history) -> str | None:
+    if history:
+        return None
+    normalised = " ".join(_PUNCT.sub(" ", question.lower()).split())
+    payload = json.dumps([bot.get("botId"), normalised, [c[0] for c in chunks], bot.get("style"), bot.get("actions"),
+                          config.GEMINI_MODEL], sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+async def answer_stream(bot: dict, question: str, chunks, history):
+    """The AI answer, from the cache when this exact question already matched this exact knowledge."""
+    key = answer_key(bot, question, chunks, history)
+    cached = _answers.get(key) if key else None
+    if cached:
+        for i in range(0, len(cached), 48):   # still streamed, so the widget behaves the same
+            yield cached[i:i + 48]
+        return
+    parts = []
+    async for token in stream_answer(bot["name"], question, chunks, history, style=bot.get("style"), actions=bot.get("actions")):
+        parts.append(token)
+        yield token
+    text = "".join(parts)
+    if key and text.strip() and not says_no_information(text):
+        _answers.set(key, text)
 
 
 def sse(event: str, data: dict) -> str:
@@ -303,8 +339,7 @@ async def chat(public_key: str, body: ChatRequest):
             return
         answer = []
         try:
-            async for token in stream_answer(bot["name"], question, chunks, history, style=bot.get("style"),
-                                            actions=bot.get("actions")):
+            async for token in answer_stream(bot, question, chunks, history):
                 answer.append(token)
                 yield sse("token", {"text": token})
         except Exception as ex:

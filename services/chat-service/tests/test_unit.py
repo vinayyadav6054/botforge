@@ -82,6 +82,7 @@ def fakes(monkeypatch):
         return state.get("human", False)
 
     monkeypatch.setattr(main, "human_is_replying", human_is_replying)
+    main._answers.clear()   # answers cached by earlier tests must not leak in
     monkeypatch.setattr(main, "get_model", lambda: None)  # skip loading the embedding model
     return state
 
@@ -597,7 +598,7 @@ def test_no_sources_when_disabled_or_unanswered(client, fakes):
     assert "sources" not in [e for e, _ in chat(client)]
     fakes["bot"] = {**BOT, "showSources": True}
     fakes["tokens"] = ["I don't have that information."]
-    assert "sources" not in [e for e, _ in chat(client)]
+    assert "sources" not in [e for e, _ in chat(client, message="Do you sell gift cards?")]
 
 
 def test_playground_answers_are_not_stored_but_counted(client, fakes):
@@ -711,3 +712,40 @@ def test_huge_recordings_are_rejected(client, monkeypatch):
 def test_inactive_bots_do_not_transcribe(client, fakes):
     fakes["bot"] = {**BOT, "active": False}
     assert client.post(f"/chat/{KEY}/transcribe", content=b"abc", headers={"Content-Type": "audio/ogg"}).status_code == 403
+
+
+# ---------- caching ----------
+
+def test_the_same_first_question_on_the_same_knowledge_is_answered_from_the_cache(client, fakes):
+    first = "".join(d["text"] for e, d in chat(client) if e == "token")
+    second = "".join(d["text"] for e, d in chat(client, message="open on sunday") if e == "token")   # same words, other case/punctuation
+    assert first == second == "Closed on Sundays."
+    assert len(fakes["llm_calls"]) == 1          # Gemini was called once
+    assert fakes["consumed"] == 2               # both answers still count, and both are stored
+    assert len(fakes["turns"]) == 2
+
+
+def test_cache_is_skipped_for_follow_ups_and_changed_knowledge(client, fakes):
+    chat(client)
+    chat(client, history=[{"role": "user", "text": "hi"}, {"role": "assistant", "text": "hello"}])
+    fakes["chunks"] = [("We are now open on Sundays from 10.", 0.9)]
+    chat(client)
+    assert len(fakes["llm_calls"]) == 3
+
+
+def test_answers_saying_it_does_not_know_are_not_cached(client, fakes):
+    fakes["tokens"] = ["I don't have that information."]
+    chat(client)
+    fakes["tokens"] = ["Closed on Sundays."]
+    assert "Closed" in "".join(d["text"] for e, d in chat(client) if e == "token")
+    assert len(fakes["llm_calls"]) == 2
+
+
+def test_translation_and_embedding_caches():
+    from app import cache
+    c = cache.TTLCache(maxsize=2, ttl=60)
+    c.set("a", 1); c.set("b", 2); c.get("a"); c.set("c", 3)   # "b" is the least recently used
+    assert (c.get("a"), c.get("b"), c.get("c")) == (1, None, 3)
+    expiring = cache.TTLCache(maxsize=5, ttl=-1)
+    expiring.set("x", 1)
+    assert expiring.get("x") is None

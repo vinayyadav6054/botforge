@@ -34,3 +34,6 @@ export Services__BotsUrl=http://127.0.0.1:5215
 
 # "Continue with Google": the OAuth client id from Google Cloud (free). The dashboard needs the same value as NEXT_PUBLIC_GOOGLE_CLIENT_ID.
 [ -z "${GOOGLE_CLIENT_ID:-}" ] || export Google__ClientId="$GOOGLE_CLIENT_ID"
+
+# Where support messages from the dashboard go (default: the EMAIL_FROM address)
+[ -z "${SUPPORT_EMAIL:-}" ] || export Support__Email="$SUPPORT_EMAIL"

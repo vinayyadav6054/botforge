@@ -1,0 +1,25 @@
+SmileCare Dental Clinic - Information for patients
+(Fictional business used for the Kahiye demo.)
+
+ABOUT
+SmileCare Dental Clinic is a family dental clinic in Andheri West, Mumbai, run by Dr. Neha Kulkarni (BDS, MDS Orthodontics) and Dr. Arjun Shah (BDS).
+We have 3 treatment chairs, digital X-ray and a separate kids' corner. Fully sterilised instruments for every patient.
+Phone / WhatsApp: +91 22 0000 0000 (demo number). Address: Shop 4, Sea Breeze Building, Lokhandwala, Andheri West.
+
+TIMINGS
+Monday to Saturday: 10 AM to 1:30 PM and 5 PM to 9 PM. Sunday: 10 AM to 2 PM (appointments only).
+Emergency (severe pain, broken tooth, swelling): call or WhatsApp us; we try to see you the same day.
+
+TREATMENTS AND PRICES
+Consultation: Rs 500 (free if you do a treatment the same day).
+Teeth cleaning and polishing: Rs 800 to Rs 1,200.
+Tooth-coloured filling: Rs 1,200 to Rs 2,000 per tooth.
+Root canal treatment (RCT): Rs 4,500 to Rs 7,000, plus a cap from Rs 3,500.
+Tooth removal: Rs 800; wisdom tooth removal: Rs 3,000 to Rs 6,000.
+Braces: metal Rs 35,000, ceramic Rs 50,000; clear aligners from Rs 90,000. EMI available on braces and aligners.
+Teeth whitening: Rs 6,000 per session.
+Kids' dentistry: first check-up for children under 12 is free.
+
+APPOINTMENTS
+Book by WhatsApp or the "Book a visit" button. Please arrive 10 minutes early for your first visit and bring old X-rays if you have them.
+We accept cash, UPI and all cards. We provide bills for insurance reimbursement; we are not cashless with insurers yet.

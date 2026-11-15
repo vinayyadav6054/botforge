@@ -104,8 +104,9 @@ export default function Onboarding() {
         const url = /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`;
         await api.addSource(botId, { kind: "website", url, syncIntervalDays: 7 });
       } else if (kind === "sample") {
-        const text = await (await fetch("/samples/sunrise-academy.txt")).text();
-        await api.uploadDocument(botId, new File([text], "sample-coaching-institute.txt", { type: "text/plain" }));
+        const sample = (INDUSTRIES.find((i) => i.id === industry) ?? INDUSTRIES[0]).sample;
+        const text = await (await fetch(`/samples/${sample}`)).text();
+        await api.uploadDocument(botId, new File([text], `sample-${sample}`, { type: "text/plain" }));
       } else {
         return;
       }
@@ -231,7 +232,7 @@ export default function Onboarding() {
                   </div>
                 </div>
                 <button type="button" className="ob-option" disabled={busy} onClick={() => void addKnowledge("sample")}>
-                  <span aria-hidden>🧪</span><strong>Try with a sample</strong><small>A coaching institute&apos;s fees and timings, to see how it works</small>
+                  <span aria-hidden>🧪</span><strong>Try with a sample</strong><small>A sample business like yours (fees, timings, services), to see how it works</small>
                 </button>
               </div>
               {busy && <p className="au-sub"><span className="spinner" /> Uploading…</p>}

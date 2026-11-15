@@ -4,10 +4,25 @@ from typing import NamedTuple
 
 import psycopg
 from pgvector.psycopg import register_vector
+from psycopg_pool import ConnectionPool
 
 from . import config, gemini_embed
+from .cache import TTLCache
 
 _model = None
+_pool: ConnectionPool | None = None
+# the same question (or follow-up text) is embedded once; vectors are small
+_embeddings = TTLCache(maxsize=4000, ttl=24 * 3600)
+
+
+def pool() -> ConnectionPool:
+    """Reused database connections: no new TLS handshake per question (that alone cost 100-300 ms with Neon).
+    Each connection is checked before use, so ones the server closed while idle are replaced."""
+    global _pool
+    if _pool is None:
+        _pool = ConnectionPool(config.DATABASE_URL, min_size=0, max_size=config.DB_POOL_SIZE, max_idle=240,
+                               configure=register_vector, check=ConnectionPool.check_connection, open=True)
+    return _pool
 
 
 def get_model():
@@ -22,9 +37,16 @@ def get_model():
 
 
 def embed_query(text: str):
+    key = (config.EMBEDDING_PROVIDER, text)
+    cached = _embeddings.get(key)
+    if cached is not None:
+        return cached
     if config.EMBEDDING_PROVIDER == "gemini":
-        return gemini_embed.embed([text], "RETRIEVAL_QUERY")[0]
-    return list(get_model().embed([text]))[0]
+        vector = gemini_embed.embed([text], "RETRIEVAL_QUERY")[0]
+    else:
+        vector = list(get_model().embed([text]))[0]
+    _embeddings.set(key, vector)
+    return vector
 
 
 def embed_documents(texts: list[str]):
@@ -65,8 +87,7 @@ def retrieve(tenant_id: uuid.UUID, bot_id: uuid.UUID, question: str, top_k: int)
     vector = embed_query(question)
     params = {"v": vector, "t": tenant_id, "b": bot_id, "q": keyword_query(question), "n": CANDIDATES,
               "k": RRF_K, "bonus": QA_BONUS, "top": top_k}
-    with psycopg.connect(config.DATABASE_URL) as conn:
-        register_vector(conn)
+    with pool().connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """WITH v AS (
