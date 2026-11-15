@@ -26,6 +26,7 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
 
     public FakeEmailSender Emails { get; } = new();
     public FakeBotsClient Bots { get; } = new();
+    public FakeGoogle Google { get; } = new();
 
     private readonly string _connectionString;
 
@@ -51,6 +52,8 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
             s.AddSingleton<IEmailSender>(Emails);
             s.RemoveAll<IBotsClient>();
             s.AddSingleton<IBotsClient>(Bots);
+            s.RemoveAll<Identity.Api.Auth.IGoogleTokenValidator>();
+            s.AddSingleton<Identity.Api.Auth.IGoogleTokenValidator>(Google);
         });
     }
 }
@@ -123,4 +126,18 @@ public static class TestDatabase
 public class IdentityApiCollection : ICollectionFixture<IdentityApiFactory>
 {
     public const string Name = "identity-api";
+}
+
+/// <summary>Accepts "good:{email}:{verified}:{name}" tokens instead of real Google ones.</summary>
+public class FakeGoogle : Identity.Api.Auth.IGoogleTokenValidator
+{
+    public bool Enabled { get; set; } = true;
+
+    public Task<Identity.Api.Auth.GoogleIdentity?> ValidateAsync(string credential, CancellationToken ct)
+    {
+        var p = credential.Split(':');
+        return Task.FromResult(p.Length == 4 && p[0] == "good"
+            ? new Identity.Api.Auth.GoogleIdentity("sub-" + p[1], p[1], p[2] == "true", p[3].Length == 0 ? null : p[3])
+            : null);
+    }
 }

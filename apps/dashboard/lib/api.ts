@@ -234,6 +234,13 @@ async function authenticate(path: string, body: object): Promise<Session> {
 
 export const api = {
   login: (email: string, password: string) => authenticate("/auth/login", { email, password }),
+  /** "Continue with Google": isNew is true when this created the account (then onboarding continues). */
+  google: async (credential: string, tenantName?: string) => {
+    const r = await request<AuthResponse & { isNew: boolean }>("/auth/google",
+      { method: "POST", body: JSON.stringify({ credential, tenantName }) }, false);
+    saveSession({ token: r.token, email: r.email, tenantSlug: r.tenantSlug, role: r.role });
+    return r.isNew;
+  },
   register: (tenantName: string, email: string, password: string) =>
     authenticate("/auth/register-tenant", { tenantName, email, password }),
 

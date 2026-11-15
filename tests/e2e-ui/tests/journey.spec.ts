@@ -22,6 +22,8 @@ async function register(page: Page, owner: ReturnType<typeof newOwner>) {
   await page.getByLabel("Email").fill(owner.email);
   await page.getByLabel("Password").fill(owner.password);
   await page.getByRole("button", { name: "Create account" }).click();
+  // onboarding continues with the business step; these journeys create their bot themselves
+  await page.getByRole("link", { name: "Skip setup for now" }).click();
   await expect(page).toHaveURL(/\/bots$/);
 }
 
@@ -247,4 +249,35 @@ test("the owner takes over a live chat and the visitor sees the reply on the cus
     await visitor.close();
     await ownerPage.close();
   }
+});
+
+test("new owners are guided from sign-up to a working assistant", async ({ page }) => {
+  const owner = newOwner();
+  await page.goto("/register");
+  await page.getByLabel("Business name").fill(owner.business);
+  await page.getByLabel("Email").fill(owner.email);
+  await page.getByLabel("Password").fill("short");
+  await expect(page.getByText("At least 8 characters")).toBeVisible();
+  await page.getByLabel("Password").fill(owner.password);
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  // step 2: business type, language
+  await expect(page.getByRole("heading", { name: "Tell us about your business" })).toBeVisible();
+  await page.getByText("Clinic / hospital").click();
+  await page.getByLabel("Which language should it reply in?").selectOption("hi");
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  // step 3: teach it with the sample, step 4: ready
+  await expect(page.getByRole("heading", { name: "Teach your assistant" })).toBeVisible();
+  await page.getByRole("button", { name: /Try with a sample/ }).click();
+  await expect(page.getByRole("heading", { name: "Your assistant is ready!" })).toBeVisible({ timeout: 90_000 });
+  await page.getByRole("link", { name: "Test my assistant" }).click();
+  await expect(page).toHaveURL(/\/bots\/[0-9a-f-]{36}#answers$/);
+  await expect(page.getByRole("heading", { name: owner.business })).toBeVisible();
+
+  // the clinic preset is applied: suggested questions and Hindi replies, lead capture on
+  await page.getByRole("navigation", { name: "Bot sections" }).getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByPlaceholder("e.g. What are the fees?")).toHaveValue("What are your timings?");
+  await page.getByRole("tab", { name: /How it answers/ }).click();
+  await expect(page.getByLabel("Reply language")).toHaveValue("hi");
 });

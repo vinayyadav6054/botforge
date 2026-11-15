@@ -1,7 +1,7 @@
-import AuthForm from "@/components/AuthForm";
+import LoginForm from "@/components/auth/LoginForm";
 
 export const metadata = { title: "Log in · Kahiye" };
 
 export default function LoginPage() {
-  return <AuthForm mode="login" />;
+  return <LoginForm />;
 }

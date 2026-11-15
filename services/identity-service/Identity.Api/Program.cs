@@ -26,6 +26,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
      .UseSnakeCaseNamingConvention());
 
 builder.Services.AddSingleton<TokenService>();
+builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<AccountTokens>();
@@ -118,6 +119,45 @@ app.MapPost("/auth/login", async (
     if (result == PasswordVerificationResult.Failed) return Results.Unauthorized();
 
     return Results.Ok(new AuthResponse(tokens.Create(user), user.TenantId, user.Tenant.Slug, user.Email, user.Role));
+});
+
+// "Continue with Google": logs in an existing account, or creates a new business account (email already verified by Google)
+app.MapPost("/auth/google", async (GoogleSignInRequest req, IGoogleTokenValidator google, AppDbContext db,
+    IPasswordHasher<User> hasher, TokenService tokens, TimeProvider clock, CancellationToken ct) =>
+{
+    if (!google.Enabled) return Results.NotFound(new { error = "Google sign-in is not switched on." });
+    var who = await google.ValidateAsync(req.Credential ?? "", ct);
+    if (who is null) return Results.Unauthorized();
+    if (!who.EmailVerified || !TenantRules.IsValidEmail(who.Email))
+        return Results.BadRequest(new { error = "This Google account has no verified email address." });
+
+    var user = await db.Users.Include(u => u.Tenant).FirstOrDefaultAsync(u => u.Email == who.Email, ct);
+    var isNew = user is null;
+    if (user is null)
+    {
+        var name = (req.TenantName ?? "").Trim();
+        if (name.Length == 0) name = string.IsNullOrWhiteSpace(who.Name) ? who.Email.Split('@')[0] : $"{who.Name!.Trim()}'s business";
+        if (name.Length > 200) name = name[..200];
+        var tenant = new Tenant { Name = name, Slug = await MakeUniqueSlugAsync(db, name) };
+        user = new User { Tenant = tenant, Email = who.Email, Role = "Owner", EmailVerifiedAt = clock.GetUtcNow().UtcDateTime };
+        user.PasswordHash = hasher.HashPassword(user, GoogleTokenValidator.UnusablePassword());
+        db.Users.Add(user);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Results.Conflict(new { error = "Please try again." });   // the same account was created a moment ago
+        }
+    }
+    else if (user.EmailVerifiedAt is null)
+    {
+        user.EmailVerifiedAt = clock.GetUtcNow().UtcDateTime;   // Google has verified this address
+        await db.SaveChangesAsync(ct);
+    }
+    var auth = new AuthResponse(tokens.Create(user), user.TenantId, user.Tenant.Slug, user.Email, user.Role);
+    return Results.Ok(new { auth.Token, auth.TenantId, auth.TenantSlug, auth.Email, auth.Role, isNew });
 });
 
 app.MapGet("/auth/me", async (ClaimsPrincipal p, AppDbContext db) =>

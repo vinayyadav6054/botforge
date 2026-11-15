@@ -1,7 +1,12 @@
-import AuthForm from "@/components/AuthForm";
+import { Suspense } from "react";
+import Onboarding from "@/components/auth/Onboarding";
 
-export const metadata = { title: "Sign up · Kahiye" };
+export const metadata = { title: "Create your account · Kahiye" };
 
 export default function RegisterPage() {
-  return <AuthForm mode="register" />;
+  return (
+    <Suspense>
+      <Onboarding />
+    </Suspense>
+  );
 }
