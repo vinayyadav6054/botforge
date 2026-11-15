@@ -19,6 +19,9 @@ public class User
     public string Role { get; set; } = "Owner";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? EmailVerifiedAt { get; set; }
+    /// <summary>Wrong passwords in a row; at LoginRules.MaxFailures the account is locked for a while.</summary>
+    public int FailedLogins { get; set; }
+    public DateTime? LockedUntil { get; set; }
 }
 
 /// <summary>One-time link token (email verification, password reset). Only its SHA-256 hash is stored.</summary>

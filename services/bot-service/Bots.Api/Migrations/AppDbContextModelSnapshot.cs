@@ -562,14 +562,14 @@ namespace Bots.Api.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
                         .HasColumnName("email");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
                         .HasColumnName("name");
 
                     b.Property<string>("PageUrl")
@@ -579,9 +579,14 @@ namespace Bots.Api.Migrations
 
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
                         .HasColumnName("phone");
+
+                    b.Property<string>("PhoneHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("phone_hash");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -601,8 +606,8 @@ namespace Bots.Api.Migrations
                     b.HasKey("Id")
                         .HasName("pk_leads");
 
-                    b.HasIndex("BotId", "Phone", "CreatedAt")
-                        .HasDatabaseName("ix_leads_bot_id_phone_created_at");
+                    b.HasIndex("BotId", "PhoneHash", "CreatedAt")
+                        .HasDatabaseName("ix_leads_bot_id_phone_hash_created_at");
 
                     b.HasIndex("TenantId", "BotId", "CreatedAt")
                         .HasDatabaseName("ix_leads_tenant_id_bot_id_created_at");

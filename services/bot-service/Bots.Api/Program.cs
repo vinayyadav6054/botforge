@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKey) || jwtKey.Length < 32)
     throw new InvalidOperationException("Jwt:Key must be set (same as identity service) and 32+ characters.");
+Pii.Configure(jwtKey);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantContext, TenantContext>();
@@ -39,6 +40,7 @@ builder.Services.AddHostedService<ConversationCleanup>();
 builder.Services.AddSingleton<SecretBox>();
 builder.Services.AddHttpClient<ChannelPlatforms>(c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<ChatRelay>(c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddHostedService<LeadEncryptionBackfill>();
 builder.Services.AddSingleton<LeadAlertQueue>();
 builder.Services.AddHostedService<LeadAlertService>();
 builder.Services.AddScoped<LeadAlertSender>();
@@ -196,6 +198,14 @@ bots.MapPost("/{botId:guid}/documents", async (
     var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
     if (!DocumentRules.AllowedExtensions.Contains(ext))
         return Results.BadRequest(new { error = "Allowed types: .pdf, .txt, .md, .docx, .xlsx, .csv" });
+    // the content must match the name: a renamed program or archive is refused before it is stored
+    await using (var head = file.OpenReadStream())
+    {
+        var buffer = new byte[4096];
+        var read = await head.ReadAtLeastAsync(buffer, buffer.Length, throwOnEndOfStream: false);
+        if (!DocumentRules.ContentMatches(ext, buffer.AsSpan(0, read)))
+            return Results.BadRequest(new { error = $"This file does not look like a real {ext} file. Please export it again and upload." });
+    }
 
     var doc = new BotDocument
     {
@@ -515,8 +525,9 @@ app.MapPost("/internal/bots/{publicKey}/leads", async (
 
     // the same person submitting twice (double click, page reload) must not create two leads
     var since = DateTime.UtcNow - LeadRules.DuplicateWindow;
+    lead.PhoneHash = Pii.Lookup(lead.Phone);
     var existing = await db.Leads.IgnoreQueryFilters()
-        .FirstOrDefaultAsync(l => l.BotId == bot.Id && l.Phone == lead.Phone && l.CreatedAt >= since);
+        .FirstOrDefaultAsync(l => l.BotId == bot.Id && l.PhoneHash == lead.PhoneHash && l.CreatedAt >= since);
     if (existing is not null) return Results.Ok(new { id = existing.Id, duplicate = true });
 
     lead.TenantId = bot.TenantId;

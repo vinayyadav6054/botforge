@@ -4,6 +4,17 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// connection hardening: no server banner, bounded body and header sizes, slow clients cut off
+builder.WebHost.ConfigureKestrel(k =>
+{
+    k.AddServerHeader = false;
+    k.Limits.MaxRequestBodySize = builder.Configuration.GetValue<long>("Gateway:MaxBodyBytes", 12 * 1024 * 1024);   // 10 MB uploads + form overhead
+    k.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(15);
+    k.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(75);
+    k.Limits.MaxRequestHeadersTotalSize = 32 * 1024;
+    k.Limits.MaxConcurrentConnections = builder.Configuration.GetValue<long?>("Gateway:MaxConnections") ?? 2000;
+});
+
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
@@ -24,9 +35,24 @@ var authPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:AuthPerMi
 var chatPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:ChatPerMinute", 30);
 // the open widget checks for replies from a person every few seconds; that must not use up the chat limit
 var pollPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:PollPerMinute", 60);
+// every visitor (IP) also has an overall budget across all routes, so no single client can flood the services
+var globalPerMinute = builder.Configuration.GetValue("Gateway:RateLimits:GlobalPerMinute", 600);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx => RateLimitPartition.GetTokenBucketLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = Math.Max(20, globalPerMinute / 4),            // short bursts are fine (a dashboard page makes several calls)
+            TokensPerPeriod = Math.Max(1, globalPerMinute / 60), ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    o.OnRejected = (ctx, _) =>
+    {
+        ctx.HttpContext.Response.Headers.RetryAfter = "60";
+        return ValueTask.CompletedTask;
+    };
     o.AddPolicy("auth", ctx => PerClientIp(ctx, authPerMinute));
     o.AddPolicy("chat", ctx => PerClientIp(ctx, chatPerMinute));
     o.AddPolicy("poll", ctx => PerClientIp(ctx, pollPerMinute));
@@ -49,6 +75,23 @@ if (trustProxy)
 var app = builder.Build();
 
 if (trustProxy) app.UseForwardedHeaders();
+
+// security headers on every response
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.OnStarting(() =>
+    {
+        var h = ctx.Response.Headers;
+        h["X-Content-Type-Options"] = "nosniff";
+        h["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        h["X-Frame-Options"] = "DENY";
+        h["Permissions-Policy"] = "camera=(), geolocation=(), payment=()";
+        if (ctx.Request.IsHttps) h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        h.Remove("X-Powered-By");
+        return Task.CompletedTask;
+    });
+    await next();
+});
 
 // defense in depth: service-to-service endpoints must never be reachable from outside,
 // even if someone later adds a broad route by mistake

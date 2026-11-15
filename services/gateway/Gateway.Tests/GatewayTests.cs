@@ -65,6 +65,7 @@ public class GatewayFactory : WebApplicationFactory<Program>
         builder.UseSetting("Gateway:WidgetPath", WidgetDir);
         builder.UseSetting("Gateway:RateLimits:AuthPerMinute", "3");
         builder.UseSetting("Gateway:RateLimits:ChatPerMinute", "1000");
+        builder.UseSetting("Gateway:RateLimits:GlobalPerMinute", "100000");
         builder.UseSetting("Gateway:DashboardOrigins:0", "http://localhost:3000");
     }
 
@@ -283,6 +284,38 @@ public class SingleHostGatewayTests(SingleHostGatewayFactory factory) : IClassFi
             base.ConfigureWebHost(builder);
             builder.UseSetting("Gateway:RateLimits:ChatPerMinute", "2");
             builder.UseSetting("Gateway:RateLimits:PollPerMinute", "100");
+        }
+    }
+
+    [Fact]
+    public async Task Responses_carry_security_headers_and_no_server_banner()
+    {
+        var res = await _client.GetAsync("/health");
+        Assert.Equal("nosniff", res.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("DENY", res.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal("strict-origin-when-cross-origin", res.Headers.GetValues("Referrer-Policy").Single());
+        Assert.False(res.Headers.Contains("Server"));
+    }
+
+    [Fact]
+    public async Task One_visitor_cannot_flood_all_routes()
+    {
+        await using var limited = new LimitedGlobalFactory();
+        var client = limited.CreateClient();
+        var codes = new List<HttpStatusCode>();
+        for (var i = 0; i < 40; i++) codes.Add((await client.GetAsync("/api/bots")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, codes[0]);
+        Assert.Contains(HttpStatusCode.TooManyRequests, codes);
+        var blocked = await client.GetAsync("/api/bots");
+        Assert.Equal("60", blocked.Headers.GetValues("Retry-After").Single());
+    }
+
+    private sealed class LimitedGlobalFactory : GatewayFactory
+    {
+        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.UseSetting("Gateway:RateLimits:GlobalPerMinute", "60");   // a burst of 20, then 1 per second
         }
     }
 }

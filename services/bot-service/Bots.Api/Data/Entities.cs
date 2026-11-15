@@ -112,6 +112,8 @@ public class Lead
     public Guid BotId { get; set; }
     public string Name { get; set; } = default!;
     public string Phone { get; set; } = default!;      // normalised: digits with optional leading +
+    /// <summary>Keyed hash of the normalised phone (Pii.Lookup): finds repeat submissions without storing the number in clear.</summary>
+    public string? PhoneHash { get; set; }
     public string? Email { get; set; }
     public string? Course { get; set; }
     public string? PageUrl { get; set; }

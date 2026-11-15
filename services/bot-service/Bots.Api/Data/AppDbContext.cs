@@ -76,16 +76,19 @@ public class AppDbContext : DbContext
         b.Entity<Lead>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            e.Property(x => x.Phone).HasMaxLength(20).IsRequired();
-            e.Property(x => x.Email).HasMaxLength(200);
+            // visitors' personal data is encrypted in the database (see Pii); sizes allow for the ciphertext
+            var pii = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<string, string>(v => Pii.Protect(v), v => Pii.Unprotect(v));
+            e.Property(x => x.Name).HasMaxLength(600).IsRequired().HasConversion(pii);
+            e.Property(x => x.Phone).HasMaxLength(120).IsRequired().HasConversion(pii);
+            e.Property(x => x.Email).HasMaxLength(400).HasConversion(pii);
+            e.Property(x => x.PhoneHash).HasMaxLength(64);
             e.Property(x => x.Course).HasMaxLength(150);
             e.Property(x => x.PageUrl).HasMaxLength(500);
-            e.Property(x => x.Transcript).IsRequired();
+            e.Property(x => x.Transcript).IsRequired().HasConversion(pii);
             e.Property(x => x.Status).HasMaxLength(20).IsRequired();
             e.Property(x => x.Channel).HasMaxLength(20).IsRequired().HasDefaultValue("web");
             e.HasIndex(x => new { x.TenantId, x.BotId, x.CreatedAt });
-            e.HasIndex(x => new { x.BotId, x.Phone, x.CreatedAt });   // duplicate check
+            e.HasIndex(x => new { x.BotId, x.PhoneHash, x.CreatedAt });   // duplicate check
             e.HasOne<Bot>().WithMany().HasForeignKey(x => x.BotId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

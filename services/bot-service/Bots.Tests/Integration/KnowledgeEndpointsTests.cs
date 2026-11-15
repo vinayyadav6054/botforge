@@ -247,10 +247,25 @@ public class KnowledgeEndpointsTests(BotsApiFactory factory)
     public async Task Spreadsheets_can_be_uploaded()
     {
         var (owner, bot) = await NewBot();
-        foreach (var name in new[] { "prices.xlsx", "menu.csv" })
+        var zip = new byte[] { 0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00 };   // an .xlsx is a ZIP file
+        foreach (var (name, bytes) in new[] { ("prices.xlsx", zip), ("menu.csv", "a,b\n1,2"u8.ToArray()) })
         {
-            using var form = new MultipartFormDataContent { { new ByteArrayContent("a,b\n1,2"u8.ToArray()), "file", name } };
+            using var form = new MultipartFormDataContent { { new ByteArrayContent(bytes), "file", name } };
             Assert.Equal(HttpStatusCode.Accepted, (await owner.PostAsync($"/bots/{bot.Id}/documents", form)).StatusCode);
         }
+    }
+
+    [Theory]
+    [InlineData("fees.pdf", "not really a pdf")]
+    [InlineData("menu.xlsx", "a,b\n1,2")]
+    [InlineData("notes.txt", "MZ\u0090 program")]
+    [InlineData("notes.md", "binary\u0000data")]
+    public async Task Files_whose_content_does_not_match_their_name_are_refused(string name, string content)
+    {
+        var (owner, bot) = await NewBot();
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(System.Text.Encoding.Latin1.GetBytes(content)), "file", name } };
+        var res = await owner.PostAsync($"/bots/{bot.Id}/documents", form);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Contains("does not look like a real", await res.Content.ReadAsStringAsync());
     }
 }

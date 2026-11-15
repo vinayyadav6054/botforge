@@ -109,15 +109,46 @@ app.MapPost("/auth/register-tenant", async (
 
 app.MapPost("/auth/login", async (
     LoginRequest req, AppDbContext db,
-    IPasswordHasher<User> hasher, TokenService tokens) =>
+    IPasswordHasher<User> hasher, TokenService tokens, TimeProvider clock) =>
 {
     var email = (req.Email ?? "").Trim().ToLowerInvariant();
+    var password = req.Password ?? "";
+    if (password.Length > 128) return Results.Unauthorized();
     var user = await db.Users.Include(u => u.Tenant).FirstOrDefaultAsync(u => u.Email == email);
-    if (user is null) return Results.Unauthorized();
+    if (user is null)
+    {
+        // same work as a real check, so the response time does not reveal which emails have an account
+        hasher.VerifyHashedPassword(LoginRules.Dummy, LoginRules.DummyHash(hasher), password);
+        return Results.Unauthorized();
+    }
 
-    var result = hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password ?? "");
-    if (result == PasswordVerificationResult.Failed) return Results.Unauthorized();
+    var now = clock.GetUtcNow().UtcDateTime;
+    if (user.LockedUntil is { } until && until > now)
+    {
+        var minutes = Math.Max(1, (int)Math.Ceiling((until - now).TotalMinutes));
+        return Results.Json(new { error = $"Too many wrong passwords. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}, or reset your password." },
+            statusCode: StatusCodes.Status429TooManyRequests);
+    }
 
+    var result = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+    if (result == PasswordVerificationResult.Failed)
+    {
+        user.FailedLogins += 1;
+        if (user.FailedLogins >= LoginRules.MaxFailures)
+        {
+            user.LockedUntil = now + LoginRules.LockFor;
+            user.FailedLogins = 0;
+        }
+        await db.SaveChangesAsync();
+        return Results.Unauthorized();
+    }
+
+    if (user.FailedLogins != 0 || user.LockedUntil is not null)
+    {
+        user.FailedLogins = 0;
+        user.LockedUntil = null;
+        await db.SaveChangesAsync();
+    }
     return Results.Ok(new AuthResponse(tokens.Create(user), user.TenantId, user.Tenant.Slug, user.Email, user.Role));
 });
 
@@ -220,6 +251,8 @@ app.MapPost("/auth/reset-password", async (ResetPasswordRequest req, AppDbContex
     if (user is null) return Results.BadRequest(new { error = "This link is invalid or has expired. Ask for a new one." });
 
     user.PasswordHash = hasher.HashPassword(user, password);
+    user.FailedLogins = 0;      // a new password ends any lock-out
+    user.LockedUntil = null;
     user.EmailVerifiedAt ??= links.Now;   // they just proved they can read this inbox
     await db.SaveChangesAsync();
     return Results.Ok(new AuthResponse(tokens.Create(user), user.TenantId, user.Tenant.Slug, user.Email, user.Role));

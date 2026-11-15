@@ -75,6 +75,24 @@ public static class DocumentRules
     public const long MaxFileBytes = 10 * 1024 * 1024;
     public const int MaxFileNameLength = 300;
 
+    /// <summary>Checks the first bytes: PDF starts with %PDF, Word/Excel are ZIP files (PK), text must be text.</summary>
+    public static bool ContentMatches(string ext, ReadOnlySpan<byte> head)
+    {
+        if (head.Length == 0) return false;
+        switch (ext.ToLowerInvariant())
+        {
+            case ".pdf":
+                return head.IndexOf("%PDF-"u8) is >= 0 and < 1024;          // some exporters put a few bytes first
+            case ".docx" or ".xlsx":
+                return head.Length >= 4 && head[0] == 0x50 && head[1] == 0x4B && head[2] == 0x03 && head[3] == 0x04;
+            default:                                                       // .txt .md .csv
+                if (head.Length >= 2 && ((head[0] == 0xFF && head[1] == 0xFE) || (head[0] == 0xFE && head[1] == 0xFF))) return true;   // UTF-16 text
+                if (head.IndexOf((byte)0) >= 0) return false;              // binary data
+                if (head.Length >= 2 && head[0] == 0x4D && head[1] == 0x5A) return false;   // "MZ": a Windows program
+                return true;
+        }
+    }
+
     public static readonly IReadOnlySet<string> AllowedExtensions =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pdf", ".txt", ".md", ".docx", ".xlsx", ".csv" };
 
