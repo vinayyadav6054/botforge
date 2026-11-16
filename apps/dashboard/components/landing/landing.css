@@ -322,3 +322,26 @@
   background: linear-gradient(135deg, #eef0ff, #ecfeff); border: 1px solid #dfe3fb; }
 .help-contact h2 { margin-top: 0 !important; }
 .help-contact-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+
+/* ---------- navbar that becomes a floating pill on scroll ---------- */
+.lp-nav { transition: padding .4s cubic-bezier(.2, .8, .2, 1); }
+.lp-nav .lp-nav-inner {
+  transition: max-width .5s cubic-bezier(.2, .8, .2, 1), height .4s, padding .4s, border-radius .5s, background .35s, box-shadow .35s, border-color .35s;
+  border: 1px solid transparent; border-radius: 0;
+}
+.lp-nav.solid { background: transparent; border-bottom-color: transparent; box-shadow: none; backdrop-filter: none; padding-top: 12px; }
+.lp-nav.solid .lp-nav-inner {
+  max-width: 1040px; height: 58px; padding: 0 10px 0 22px; border-radius: 999px;
+  background: rgba(255, 255, 255, .82); backdrop-filter: blur(16px) saturate(1.6); -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border-color: var(--lp-line); box-shadow: 0 14px 40px rgba(16, 24, 64, .12);
+}
+.lp-nav.solid .lp-progress { opacity: 0; }
+.lp-menu { inset: 82px 12px auto 12px; }
+@media (max-width: 760px) {
+  .lp-nav.solid { padding: 8px 10px 0; }
+  .lp-nav.solid .lp-nav-inner { height: 54px; padding: 0 8px 0 16px; }
+}
+
+/* ---------- pill buttons on the website ---------- */
+.lp .btn, .lp a.btn { border-radius: 999px; }
+.lp .btn.lg { padding: 14px 26px; }

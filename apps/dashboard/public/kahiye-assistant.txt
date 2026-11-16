@@ -1,0 +1,50 @@
+Kahiye - everything a business owner asks before signing up
+
+WHAT KAHIYE IS
+Kahiye is an AI assistant (an "AI receptionist") for small and medium businesses in India. It answers customers' questions instantly, 24 hours a day, from the business's own information: brochure, fee list, price list, menu, FAQ or website. It works on the business's website and on WhatsApp, Instagram, Messenger and Telegram.
+When a customer is interested, Kahiye asks for their name and phone number and sends this "lead" to the owner immediately by email, with the whole chat.
+The word Kahiye (कहिये) means "please, tell me", the way a good receptionist greets you.
+
+WHO IT IS FOR
+Coaching institutes and schools, dental and medical clinics, real-estate builders and agents, restaurants and cafes, salons, spas and gyms, travel agents, shops and online stores, and any business that answers the same questions every day.
+
+HOW IT WORKS (ABOUT 10 MINUTES)
+1. Create a free account (with email or Continue with Google).
+2. Choose your type of business and the reply language.
+3. Upload your brochure, fee list or FAQ (PDF, Word, Excel, CSV or text, up to 10 MB each), or give your website address and Kahiye reads it.
+4. Test it: ask it questions the way your customers would. If an answer is wrong, correct it in one click.
+5. Put it on your website by pasting one line of code (works on WordPress, Wix, Shopify, Webflow or any website), or share your assistant's demo link on Instagram, Google Business profile and WhatsApp status. No website is needed.
+
+LANGUAGES
+Customers can type or speak in English, Hindi, Hinglish, Marathi, Tamil, Telugu and many other languages. The assistant replies in the customer's language, even if your documents are in English. The chat window's buttons are available in English, Hindi, Marathi, Tamil and Telugu.
+
+DOES IT MAKE THINGS UP?
+No. It answers only from the information you give it. If something is not in your documents, it says so politely and offers a call-back, so you still get the lead. You can see every conversation and correct any answer.
+
+FEATURES
+- Answers from your documents and website, with the source shown.
+- Lead capture: name, phone, and optionally email and interest. Instant email alert to you with one-tap Call and WhatsApp buttons.
+- Leads can also go to Google Sheets, Zapier, Make or your CRM through a webhook.
+- Booking button (Calendly, Google booking page or any form) and payment buttons (payment link or UPI) inside the chat.
+- Live takeover: see chats as they happen, take over any chat and reply yourself. The bot stays quiet until you hand it back.
+- WhatsApp, Instagram, Messenger and Telegram, including voice notes.
+- Voice: customers can speak their question in the website chat and hear the answer.
+- Opening hours message, your colour, logo and welcome message.
+- Export leads to Excel; download or delete all your data any time.
+
+PRICING (PER MONTH, IN RUPEES)
+Every account starts with a 14-day free trial with all features. No card is needed.
+Starter: Rs 499 per month. 1 assistant, 500 answers a month, 10 documents, website chat in Hindi and Hinglish, lead alerts by email and Google Sheets, booking and UPI buttons, live takeover.
+Business: Rs 1,499 per month (most popular). 3 assistants, 3,000 answers a month, 50 documents, WhatsApp, Instagram, Messenger and Telegram, and no "Powered by Kahiye" badge.
+Pro: Rs 3,999 per month. 10 assistants, 15,000 answers a month, 200 documents, everything in Business, priority support and done-for-you setup.
+Payment is monthly by UPI (GPay, PhonePe, Paytm, BHIM or any bank app). There is no contract and no auto-debit; you can stop any time. If a plan ends, the assistant pauses and your data stays until you delete it.
+WhatsApp itself may charge the business for some conversations; that fee goes to Meta, not to Kahiye.
+
+SETUP HELP
+We can set up your assistant for you, free, during your trial: send us your brochure and we do the rest.
+
+DATA AND SECURITY
+Each business has its own private workspace. Customers' names, phone numbers, emails and lead chats are encrypted in the database. All connections use HTTPS. Repeated wrong passwords lock an account for 15 minutes. You can export or delete your data any time. Kahiye shows no ads and does not sell data. Details are in the privacy policy on the website.
+
+CONTACT
+To talk to a person, use the "Contact us" part of the help centre on the website, or the "Message us" form inside your account. We reply within one working day.

@@ -4,6 +4,7 @@ import HeroStage from "@/components/landing/HeroStage";
 import IntroVideo from "@/components/landing/IntroVideo";
 import { Faq, FadeIn, ScrollSteps, SpotlightGrid, Stagger } from "@/components/landing/Motion";
 import Footer from "@/components/landing/Footer";
+import SiteAssistant from "@/components/landing/SiteAssistant";
 import NavBar from "@/components/landing/NavBar";
 import SmoothScroll from "@/components/landing/SmoothScroll";
 import Logo from "@/components/Logo";
@@ -37,6 +38,7 @@ const FAQ = [
 export default function Landing() {
   return (
     <div className="lp">
+      <SiteAssistant />
       <SmoothScroll />
       <NavBar />
 

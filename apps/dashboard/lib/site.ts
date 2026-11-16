@@ -14,6 +14,8 @@ export const site = {
   upiId: process.env.NEXT_PUBLIC_PAYMENT_UPI ?? "",
   /** Name shown in the customer's UPI app (should match the bank account), NEXT_PUBLIC_PAYMENT_NAME. */
   upiName: process.env.NEXT_PUBLIC_PAYMENT_NAME ?? "Kahiye",
+  /** Public key (bk_...) of Kahiye's own assistant, made from /kahiye-assistant.txt: chats with visitors on the website. */
+  siteBotKey: process.env.NEXT_PUBLIC_SITE_BOT_KEY ?? "",
   currency: "₹",
   trialNote: "14-day free trial. No card needed. Pay by UPI or card after that.",
   plans: [

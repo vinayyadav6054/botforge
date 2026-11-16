@@ -1,4 +1,5 @@
 import Footer from "@/components/landing/Footer";
+import SiteAssistant from "@/components/landing/SiteAssistant";
 import NavBar from "@/components/landing/NavBar";
 import "@/components/landing/landing.css";
 
@@ -8,6 +9,7 @@ export default function SitePage({ eyebrow, title, intro, children, wide = false
 }) {
   return (
     <div className="lp">
+      <SiteAssistant />
       <NavBar home={false} />
       <main className="sp">
         <header className="sp-head">
