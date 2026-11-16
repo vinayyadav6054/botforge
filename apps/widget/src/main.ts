@@ -42,7 +42,7 @@ export function readOptions(script: HTMLScriptElement | null): Options | null {
   // default API: same origin as the script, under /api (the gateway serves both)
   const origin = script?.src ? new URL(script.src, location.href).origin : location.origin;
   const color = script?.dataset.color;
-  const accent = color && /^#[0-9a-f]{3,8}$/i.test(color) ? color : "#4f46e5";
+  const accent = color && /^#[0-9a-f]{3,8}$/i.test(color) ? color : "#0f766e";
   const g = script?.dataset.greeting?.trim();
   const greeting = g === "off" ? null : (g || DEFAULT_GREETING).slice(0, 160);
   return { botKey, apiBase: script?.dataset.api || `${origin}/api`, accent, greeting };

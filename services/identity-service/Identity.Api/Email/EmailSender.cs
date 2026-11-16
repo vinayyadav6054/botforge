@@ -105,7 +105,7 @@ public static class EmailTemplates
     private static string Layout(string title, string bodyHtml) => $"""
         <!doctype html><html><body style="margin:0;background:#f6f7fb;font-family:Segoe UI,Arial,sans-serif;color:#0b1020">
         <div style="max-width:520px;margin:0 auto;padding:28px 18px">
-          <div style="font-weight:800;font-size:19px;margin-bottom:18px;letter-spacing:-.02em">Kah<span style="color:#5b5bf6">iye</span></div>
+          <div style="font-weight:800;font-size:19px;margin-bottom:18px;letter-spacing:-.02em">Kah<span style="color:#0d9488">iye</span></div>
           <div style="background:#ffffff;border:1px solid #e3e6f0;border-radius:14px;padding:26px">
             <h1 style="font-size:20px;margin:0 0 14px">{E(title)}</h1>
             {bodyHtml}
@@ -115,7 +115,7 @@ public static class EmailTemplates
         """;
 
     private static string Button(string url, string label) =>
-        $"""<p style="margin:22px 0"><a href="{E(url)}" style="background:#5b5bf6;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">{E(label)}</a></p>""";
+        $"""<p style="margin:22px 0"><a href="{E(url)}" style="background:#0d9488;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">{E(label)}</a></p>""";
 
     public static EmailMessage Verify(string to, string url) => new(to, "Confirm your email for Kahiye",
         $"Welcome to Kahiye!\n\nConfirm your email address by opening this link (valid for 24 hours):\n{url}\n\nIf you did not sign up, ignore this email.",
@@ -164,15 +164,15 @@ public static class EmailTemplates
             <div style="margin-top:18px;border-top:1px solid #e3e6f0;padding-top:14px">
               <div style="color:#5b6478;font-size:13px;margin-bottom:8px">The chat</div>
               {string.Join("", turns.Select(t => t.Role == "user"
-                  ? $"""<p style="margin:6px 0 6px 40px;background:#ecebff;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""
+                  ? $"""<p style="margin:6px 0 6px 40px;background:#d5f5f0;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""
                   : $"""<p style="margin:6px 40px 6px 0;background:#eef0f7;border-radius:12px;padding:8px 12px;font-size:14px">{E(t.Text)}</p>"""))}
             </div>
             """;
         var actions = $"""
             <p style="margin:20px 0 6px">
-              <a href="tel:{tel}" style="background:#5b5bf6;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">Call {E(l.Name)}</a>
+              <a href="tel:{tel}" style="background:#0d9488;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">Call {E(l.Name)}</a>
               <a href="https://wa.me/{whatsapp}" style="background:#1e7a3c;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:10px;display:inline-block;margin:0 6px 8px 0">WhatsApp</a>
-              <a href="{E(leadsUrl)}" style="color:#5b5bf6;font-weight:700;padding:11px 4px;display:inline-block">All leads →</a>
+              <a href="{E(leadsUrl)}" style="color:#0d9488;font-weight:700;padding:11px 4px;display:inline-block">All leads →</a>
             </p>
             """;
         return new EmailMessage(to, $"New lead: {l.Name} · {l.Phone} ({l.BotName})", text,

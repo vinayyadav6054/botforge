@@ -17,10 +17,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const CARD = (title, sub, extra = "") => `<!doctype html><html><head>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@500&display=swap" rel="stylesheet">
 <style>body{margin:0;height:100vh;display:grid;place-items:center;font-family:Inter,sans-serif;color:#0b1020;
-background:radial-gradient(600px 400px at 20% 10%,#c7d2fe,transparent 70%),radial-gradient(600px 400px at 90% 90%,#a5f3fc,transparent 70%),#f7f7ff}
+background:radial-gradient(600px 400px at 20% 10%,#99f6e4,transparent 70%),radial-gradient(600px 400px at 90% 90%,#fde68a,transparent 70%),#f6fbfa}
 .c{text-align:center;animation:in .8s cubic-bezier(.2,.8,.2,1) both}h1{font:800 72px "Plus Jakarta Sans";letter-spacing:-.04em;margin:0}
-h1 span{background:linear-gradient(90deg,#4f46e5,#7c3aed,#0891b2);-webkit-background-clip:text;color:transparent}
-p{font-size:26px;color:#5b6478;margin:14px 0 0}.x{margin-top:28px;font-size:20px;font-weight:600;color:#4f46e5}
+h1 span{background:linear-gradient(90deg,#0f766e,#0d9488,#d97706);-webkit-background-clip:text;color:transparent}
+p{font-size:26px;color:#5b6478;margin:14px 0 0}.x{margin-top:28px;font-size:20px;font-weight:600;color:#0f766e}
 @keyframes in{from{opacity:0;transform:translateY(20px)}to{opacity:1}}</style></head>
 <body><div class="c"><h1>${title}</h1><p>${sub}</p>${extra ? `<div class="x">${extra}</div>` : ""}</div></body></html>`;
 

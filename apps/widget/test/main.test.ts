@@ -36,7 +36,7 @@ describe("readOptions", () => {
     s.dataset.botKey = "bk_1";
     s.dataset.color = "red;}body{display:none";
     expect(readOptions(s)).toEqual({
-      botKey: "bk_1", apiBase: "https://gw.example.com/api", accent: "#4f46e5",
+      botKey: "bk_1", apiBase: "https://gw.example.com/api", accent: "#0f766e",
       greeting: "👋 Hi! Have a question? Ask me here, I reply instantly.",
     });
     s.dataset.color = "#ff0000";
@@ -340,7 +340,7 @@ describe("redesign", () => {
     expect(initials("  SP   Classes for JEE ")).toBe("SC");
     expect(initials("🍰 !!")).toBe("");
     expect(hex6("#abc")).toBe("#aabbcc");
-    expect(hex6("#4f46e5cc")).toBe("#4f46e5");
+    expect(hex6("#0f766ecc")).toBe("#0f766e");
   });
 
   it("reads a custom greeting, or turns it off", () => {
@@ -444,7 +444,7 @@ describe("plans and conversation history", () => {
 
   it("shows the badge unless the plan removes it, and only links to http(s)", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(infoWith({ branding: { show: true, url: "javascript:alert(1)" } })));
-    const w = mount({ botKey: "bk_badge1", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
+    const w = mount({ botKey: "bk_badge1", apiBase: "http://gw/api", accent: "#0f766e", greeting: null });
     w.open();
     const root = document.querySelectorAll("[data-kahiye]")[document.querySelectorAll("[data-kahiye]").length - 1].shadowRoot!;
     await vi.waitFor(() => expect(root.querySelector<HTMLElement>(".footer")!.hidden).toBe(false));
@@ -454,7 +454,7 @@ describe("plans and conversation history", () => {
 
   it("hides the badge on plans without it", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(infoWith({ branding: { show: false } })));
-    const w = mount({ botKey: "bk_badge2", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
+    const w = mount({ botKey: "bk_badge2", apiBase: "http://gw/api", accent: "#0f766e", greeting: null });
     w.open();
     const root = document.querySelectorAll("[data-kahiye]")[document.querySelectorAll("[data-kahiye]").length - 1].shadowRoot!;
     await vi.waitFor(() => expect(root.querySelector(".title")!.textContent).toBe("Bot"));

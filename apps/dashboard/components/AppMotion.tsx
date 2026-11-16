@@ -104,7 +104,7 @@ export function Celebrate({ show }: { show: boolean }) {
           {pieces.map((i) => {
             const angle = (i / pieces.length) * Math.PI * 2;
             return (
-              <motion.i key={i} style={{ background: ["#5b5bf6", "#8b5cf6", "#22c3ee", "#12a150", "#f5b84a"][i % 5] }}
+              <motion.i key={i} style={{ background: ["#0d9488", "#14b8a6", "#f59e0b", "#12a150", "#f5b84a"][i % 5] }}
                 initial={{ x: 0, y: 0, scale: 0.4, opacity: 1, rotate: 0 }}
                 animate={{ x: Math.cos(angle) * (70 + (i % 3) * 30), y: Math.sin(angle) * (70 + (i % 3) * 30) + 30, scale: 1, opacity: 0, rotate: 240 }}
                 transition={{ duration: 1.1, ease: "easeOut" }} />

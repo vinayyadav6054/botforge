@@ -70,7 +70,7 @@ export default function TryPage() {
   }
   if (!info) return <div className="auth-wrap"><span className="spinner" aria-label="Loading" /></div>;
 
-  const color = info.appearance?.color || "#4f46e5"; // the widget's own default, so page and chat match
+  const color = info.appearance?.color || "#0f766e"; // the widget's own default, so page and chat match
   const questions = (info.suggestedQuestions?.length ? info.suggestedQuestions : FALLBACK_QUESTIONS).slice(0, 4);
   const cta = site.whatsapp
     ? whatsappLink(`Hi! I tried the AI assistant demo for ${info.name}. I'd like to put it on our website.`)

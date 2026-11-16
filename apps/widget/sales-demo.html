@@ -22,7 +22,7 @@
   <style>
     :root {
       --bg: #f7f8fb; --card: #ffffff; --text: #151823; --muted: #5d6374; --border: #e3e6ee;
-      --accent: #4f46e5; --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+      --accent: #0f766e; --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
     }
     @media (prefers-color-scheme: dark) {
       :root { --bg: #0f1117; --card: #171a23; --text: #eceef4; --muted: #9ba1b3; --border: #272b38; }
@@ -109,7 +109,7 @@
     var gateway = (p.get("gw") || (isLocal ? "http://localhost:5000" : DEFAULT_GATEWAY)).replace(/\/+$/, "");
     var questions = (p.get("q") || "").split("|").map(function (s) { return s.trim().slice(0, 120); }).filter(Boolean);
     if (!questions.length) questions = DEFAULT_QUESTIONS;
-    var accent = /^#[0-9a-f]{3,8}$/i.test(color) ? color : "#4f46e5";
+    var accent = /^#[0-9a-f]{3,8}$/i.test(color) ? color : "#0f766e";
 
     function warn(msg) { var w = document.getElementById("warn"); w.textContent = msg; w.style.display = "block"; }
 

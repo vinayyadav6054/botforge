@@ -1,4 +1,4 @@
-/** "#abc" / "#4f46e5" / "#4f46e5cc" -> "#rrggbb" so a 2-digit alpha can be appended safely. */
+/** "#abc" / "#0f766e" / "#0f766ecc" -> "#rrggbb" so a 2-digit alpha can be appended safely. */
 export function hex6(color: string): string {
   let h = color.replace("#", "");
   if (h.length === 3 || h.length === 4) h = h.slice(0, 3).split("").map((c) => c + c).join("");

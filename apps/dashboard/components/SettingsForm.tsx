@@ -11,7 +11,7 @@ const QUESTION_EXAMPLES = [
   "e.g. Is there a scholarship test?",
   "e.g. Do you offer a free demo class?",
 ];
-const COLORS = ["#4f46e5", "#c8461f", "#1d4ed8", "#0f766e", "#15803d", "#be185d", "#1f2937"];
+const COLORS = ["#0f766e", "#d97706", "#1d4ed8", "#c8461f", "#15803d", "#be185d", "#1f2937"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const LANGUAGES: [string, string][] = [["en", "English"], ["hi", "Hindi"], ["mr", "Marathi"], ["ta", "Tamil"], ["te", "Telugu"],
   ["bn", "Bengali"], ["gu", "Gujarati"], ["kn", "Kannada"], ["ml", "Malayalam"], ["pa", "Punjabi"], ["ur", "Urdu"]];
@@ -120,7 +120,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
     }
   }
 
-  const color = s.widgetColor ?? "#4f46e5";
+  const color = s.widgetColor ?? "#0f766e";
 
   return (
     <form className="card" onSubmit={save} aria-label="Bot settings" id="settings">

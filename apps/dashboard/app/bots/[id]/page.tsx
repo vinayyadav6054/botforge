@@ -69,7 +69,7 @@ function Ring({ done, total }: { done: number; total: number }) {
       <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden>
         <defs>
           <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#5b5bf6" /><stop offset=".6" stopColor="#8b5cf6" /><stop offset="1" stopColor="#22c3ee" />
+            <stop offset="0" stopColor="#0d9488" /><stop offset=".6" stopColor="#14b8a6" /><stop offset="1" stopColor="#f59e0b" />
           </linearGradient>
         </defs>
         <circle cx="32" cy="32" r={r} className="ring-bg" />

@@ -34,7 +34,7 @@ describe("owner settings in the widget", () => {
   it("applies colour, side and logo before the chat is opened", async () => {
     const logo = "data:image/png;base64,iVBORw0KGgo=";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(info({ appearance: { color: "#0f766e", position: "left", avatar: logo } })));
-    mount({ botKey: "bk_look", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
+    mount({ botKey: "bk_look", apiBase: "http://gw/api", accent: "#0f766e", greeting: null });
     await settle();
     const root = lastRoot();
     expect(root.querySelector(".launcher")!.classList.contains("left")).toBe(true);
@@ -44,7 +44,7 @@ describe("owner settings in the widget", () => {
 
   it("ignores unsafe logo and colour values", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(info({ appearance: { color: "red}body{", avatar: "javascript:alert(1)" } })));
-    mount({ botKey: "bk_unsafe", apiBase: "http://gw/api", accent: "#4f46e5", greeting: null });
+    mount({ botKey: "bk_unsafe", apiBase: "http://gw/api", accent: "#0f766e", greeting: null });
     await settle();
     const root = lastRoot();
     expect(root.querySelector(".avatar img")).toBeNull();
