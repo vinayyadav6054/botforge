@@ -93,8 +93,13 @@ await caption(page, "Customers ask anything, in Hindi, Hinglish or English");
 const widget = page.locator("[data-kahiye]");
 await widget.getByRole("button", { name: "Close chat" }).waitFor({ timeout: 15000 }).catch(() => {});
 await wait(1200);
+// wait for the whole answer (it is saved for the owner only once it has finished streaming):
+// the widget's send button is disabled while an answer streams
 await page.getByRole("button", { name: "Aapki fees kitni hai?" }).click();
-await wait(9000);
+const send = widget.locator("button.send");
+await send.and(page.locator(":disabled")).waitFor({ timeout: 5000 }).catch(() => {});
+await send.and(page.locator(":enabled")).waitFor({ timeout: 60000 });
+await wait(3500);
 await caption(page, "Interested? They leave their number for a call back");
 await widget.getByRole("button", { name: "Request a call back" }).click();
 await widget.getByPlaceholder("e.g. Asha Patil").pressSequentially("Rohan Mehta", { delay: 40 });
@@ -109,8 +114,16 @@ await caption(page, "Every lead lands in your dashboard and your email, instantl
 await wait(4500);
 
 // 6. step in personally
-await page.getByRole("navigation", { name: "Bot sections" }).getByRole("button", { name: "Conversations" }).click();
-await page.locator(".convo-item").first().click();
+// conversations are saved in the background: reload until the chat shows up
+for (let i = 0; i < 8 && !(await page.locator(".convo-item").count()); i++) {
+  if (i) await page.reload();
+  await page.getByRole("navigation", { name: "Bot sections" }).getByRole("button", { name: "Conversations" }).click();
+  await page.locator(".convo-item").first().waitFor({ timeout: 5000 }).catch(() => {});
+}
+await page.locator(".convo-item").first().click().catch(async (e) => {
+  await page.screenshot({ path: join(OUT, "_rec-failed.png") });
+  throw e;
+});
 await caption(page, "Take over any chat and reply yourself");
 await page.getByRole("button", { name: "Take over" }).click();
 await page.getByLabel("Your reply").pressSequentially("Hi Rohan, this is Priya from Sunrise. Calling you in 5 minutes!", { delay: 22 });

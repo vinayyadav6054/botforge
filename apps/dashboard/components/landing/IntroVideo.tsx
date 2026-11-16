@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-/** "Watch the intro" button and a player for the 80-second product video (recorded from the real product). */
+/** "Watch the intro" button and a player for the 90-second product video (recorded from the real product). */
 export default function IntroVideo() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -19,7 +19,7 @@ export default function IntroVideo() {
   return (
     <>
       <button className="btn ghost lg" onClick={() => setOpen(true)}>
-        <span className="play-dot" aria-hidden>▶</span> Watch 80-sec intro
+        <span className="play-dot" aria-hidden>▶</span> Watch 90-sec intro
       </button>
       {/* rendered on <body>: inside the animated hero, a fixed overlay would be trapped by the blur transition */}
       {mounted && createPortal(<AnimatePresence>

@@ -15,7 +15,7 @@ testimonial reusable.
 | Asset | Where | Use it to |
 |---|---|---|
 | Website | your Vercel address | look trustworthy; pricing, security, help |
-| 80-second intro video | `/media/kahiye-intro.mp4` (also on the home page) | send on WhatsApp before or after a demo |
+| 90-second intro video | `/media/kahiye-intro.mp4` (also on the home page) | send on WhatsApp before or after a demo |
 | Demo link per business | bot → Install → Demo link | let an owner chat with *their own* assistant |
 | Sample knowledge | `/samples/*.txt` (coaching, dental, real estate, restaurant) | build a demo in 15 minutes when you have little information |
 | Live demo on the home page | `/#demo` | show the idea in 30 seconds |
