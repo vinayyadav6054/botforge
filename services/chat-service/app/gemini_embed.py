@@ -4,7 +4,10 @@ Uses almost no memory compared with the local model, so the services fit on smal
 Kept identical in the ingestion and chat services (each service is deployed on its own).
 """
 import logging
+import os
+import threading
 import time
+from collections import deque
 
 import httpx
 import numpy as np
@@ -13,8 +16,11 @@ from . import config
 
 log = logging.getLogger(__name__)
 
-BATCH_SIZE = 100                       # texts per API request (Gemini's batch limit)
-RETRY_DELAYS = (2.0, 5.0, 15.0, 30.0)  # free-tier rate limits clear within a minute
+# The free tier counts every text as one request: 100 per minute for the whole API key, shared by
+# the ingestion and chat services. Big websites are paced to stay under it instead of failing.
+TEXTS_PER_MINUTE = max(1, int(os.getenv("GEMINI_EMBED_TEXTS_PER_MINUTE", "80")))
+BATCH_SIZE = min(50, TEXTS_PER_MINUTE)       # texts per API request (Gemini allows up to 100)
+RETRY_DELAYS = (2.0, 5.0, 15.0, 30.0, 60.0, 60.0)  # a per-minute limit clears within a minute
 TRANSIENT_STATUS = {429, 500, 502, 503, 504}
 
 
@@ -24,6 +30,25 @@ def is_transient(ex: Exception) -> bool:
 
 _client = None
 sleep = time.sleep                     # replaced in tests
+clock = time.monotonic                 # replaced in tests
+_sent: deque = deque()                 # (time, number of texts) sent in the last minute
+_lock = threading.Lock()
+
+
+def _wait_for_quota(n: int) -> None:
+    """Blocks until sending n more texts keeps this process under TEXTS_PER_MINUTE."""
+    with _lock:
+        while True:
+            now = clock()
+            while _sent and now - _sent[0][0] >= 60:
+                _sent.popleft()
+            used = sum(c for _, c in _sent)
+            if not _sent or used + n <= TEXTS_PER_MINUTE:
+                _sent.append((now, n))
+                return
+            wait = 60 - (now - _sent[0][0]) + 0.5
+            log.info("Pacing Gemini embeddings: waiting %.0fs for the per-minute quota", wait)
+            sleep(wait)
 
 
 def _get_client():
@@ -39,6 +64,7 @@ def _embed_batch(texts: list[str], task_type: str) -> list[np.ndarray]:
     from google.genai import types
 
     for attempt in range(len(RETRY_DELAYS) + 1):
+        _wait_for_quota(len(texts))
         try:
             result = _get_client().models.embed_content(
                 model=config.GEMINI_EMBEDDING_MODEL,

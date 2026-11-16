@@ -29,20 +29,43 @@ class FakeModels:
 @pytest.fixture
 def fake(monkeypatch):
     models = FakeModels()
+    now = [1000.0]
+
+    def fake_sleep(seconds):
+        models.calls.append(("sleep", seconds))
+        now[0] += seconds
+
     monkeypatch.setattr(gemini_embed, "_client", SimpleNamespace(models=models))
-    monkeypatch.setattr(gemini_embed, "sleep", lambda s: models.calls.append(("sleep", s)))
+    monkeypatch.setattr(gemini_embed, "sleep", fake_sleep)
+    monkeypatch.setattr(gemini_embed, "clock", lambda: now[0])
+    monkeypatch.setattr(gemini_embed, "_sent", __import__("collections").deque())
     monkeypatch.setattr(config, "EMBEDDING_PROVIDER", "gemini")
     return models
 
 
 def test_documents_are_embedded_in_batches_with_the_configured_size(fake):
-    texts = [f"chunk {i}" for i in range(250)]
+    texts = [f"chunk {i}" for i in range(120)]
     vectors = embedder.embed(texts)
-    assert len(vectors) == 250 and all(v.shape == (config.EMBEDDING_DIM,) and v.dtype == np.float32 for v in vectors)
-    assert [len(c[1]) for c in fake.calls] == [100, 100, 50]
-    assert {c[2] for c in fake.calls} == {"RETRIEVAL_DOCUMENT"}
-    assert {c[3] for c in fake.calls} == {config.EMBEDDING_DIM}
-    assert [c[1][0] for c in fake.calls] == ["chunk 0", "chunk 100", "chunk 200"]   # order kept
+    calls = [c for c in fake.calls if c[0] != "sleep"]
+    assert len(vectors) == 120 and all(v.shape == (config.EMBEDDING_DIM,) and v.dtype == np.float32 for v in vectors)
+    assert [len(c[1]) for c in calls] == [50, 50, 20]
+    assert {c[2] for c in calls} == {"RETRIEVAL_DOCUMENT"}
+    assert {c[3] for c in calls} == {config.EMBEDDING_DIM}
+    assert [c[1][0] for c in calls] == ["chunk 0", "chunk 50", "chunk 100"]   # order kept
+
+
+def test_big_websites_are_paced_under_the_free_per_minute_quota(fake):
+    embedder.embed([f"chunk {i}" for i in range(250)])
+    # 80 texts a minute: 50 now, the next 50 must wait for the first minute to pass
+    sent, t = [], 1000.0
+    for c in fake.calls:
+        if c[0] == "sleep":
+            t += c[1]
+        else:
+            sent.append((t, len(c[1])))
+    for start, _ in sent:
+        assert sum(n for when, n in sent if start <= when < start + 60) <= gemini_embed.TEXTS_PER_MINUTE
+    assert sum(n for _, n in sent) == 250
 
 
 def test_rate_limits_are_retried(fake):
