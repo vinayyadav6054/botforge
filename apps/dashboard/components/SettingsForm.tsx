@@ -90,6 +90,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         topicsToAvoid: s.topicsToAvoid,
         customInstructions: s.customInstructions,
         showSources: s.showSources,
+        noAnswerMessage: s.noAnswerMessage,
         widgetColor: s.widgetColor ?? "",
         widgetPosition: s.widgetPosition,
         avatarDataUrl: s.avatarDataUrl ?? "",
@@ -239,6 +240,15 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
         <textarea id="customInstructions" maxLength={1000} value={s.customInstructions} onChange={(e) => set("customInstructions", e.target.value)}
           placeholder="e.g. Always invite people to the free demo class on Sunday. Call fees “course fees”. Answer in Hindi if the visitor writes in Hindi." />
         <p className="small muted" style={{ margin: "4px 0 0" }}>The bot still only answers from your documents; these shape how it answers.</p>
+      </div>
+      <div className="field">
+        <label htmlFor="noAnswerMessage">When it doesn&apos;t know the answer <span className="muted small">(optional, {s.noAnswerMessage.length}/300)</span></label>
+        <textarea id="noAnswerMessage" maxLength={300} rows={2} value={s.noAnswerMessage} onChange={(e) => set("noAnswerMessage", e.target.value)}
+          placeholder="e.g. Is sawaal ke liye humein 98200 12345 par call kijiye, ya apna number chhodiye, hum aapko call karenge." />
+        <p className="small muted" style={{ margin: "4px 0 0" }}>
+          Leave empty for the built-in reply: in the visitor&apos;s language (English, Hinglish or Hindi), and on your website it also
+          opens the call-back form when call-backs are on. The question appears under “Unanswered” so you can add the answer.
+        </p>
       </div>
       <div className="form-grid" style={{ marginTop: 6 }}>
         <div className="field">

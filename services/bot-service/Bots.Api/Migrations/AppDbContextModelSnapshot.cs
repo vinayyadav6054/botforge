@@ -208,6 +208,14 @@ namespace Bots.Api.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("NoAnswerMessage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasDefaultValue("")
+                        .HasColumnName("no_answer_message");
+
                     b.Property<string>("OfflineMessage")
                         .IsRequired()
                         .HasMaxLength(300)

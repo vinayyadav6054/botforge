@@ -18,7 +18,7 @@ import hashlib
 
 from .cache import TTLCache
 from .bots_client import consume_answer, conversation_updates, create_lead, record_turn, refund_answer, resolve_bot
-from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, to_english, transcribe
+from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, no_answer_text, to_english, transcribe
 from .llm import clean_actions, stream_answer
 from .retrieval import citations, get_model, retrieve
 
@@ -28,7 +28,6 @@ log = logging.getLogger("chat")
 PUBLIC_KEY = re.compile(r"^bk_[0-9a-f]{32}$")
 CONVERSATION_ID = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 
-NO_INFORMATION = "I don't have any information to answer that yet."
 # the system prompt tells the model to say this when the documents do not cover the question
 _NO_INFO = re.compile(
     r"(don['’]t|do not|doesn['’]t|does not) (have|contain|include|mention)\b[^.!?]{0,40}\b(information|details)"
@@ -327,9 +326,13 @@ async def chat(public_key: str, body: ChatRequest):
 
     async def events():
         yield sse("meta", {"botName": bot["name"], "sources": len(chunks), "conversationId": conversation_id})
+        lead_on = bool((bot.get("leadCapture") or {}).get("enabled"))
         if not chunks:
-            yield sse("token", {"text": NO_INFORMATION})
-            await record(NO_INFORMATION, answered=False)
+            text = no_answer_text(bot, question, "callback" if lead_on else "contact")
+            yield sse("token", {"text": text})
+            await record(text, answered=False)
+            if lead_on:
+                yield sse("offer_lead", {})   # the widget opens the call-back form
             yield sse("done", {})
             return
         blocked = await allowed()
@@ -354,6 +357,8 @@ async def chat(public_key: str, body: ChatRequest):
         text = "".join(answer)
         answered = not says_no_information(text)
         await record(text, answered=answered)
+        if not answered and lead_on:
+            yield sse("offer_lead", {})
         # where the answer came from: shown under it when the owner enables it (playground always gets them)
         if answered and (bot.get("showSources") or body.playground):
             sources = citations(chunks)

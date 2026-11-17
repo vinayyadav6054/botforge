@@ -86,6 +86,30 @@ public class KnowledgeEndpointsTests(BotsApiFactory factory)
         Assert.Equal("professional", cleared.Tone);
     }
 
+    [Fact]
+    public async Task Reply_for_unknown_questions_is_saved_cleared_and_reaches_the_chat_service()
+    {
+        var (owner, bot) = await NewBot();
+        Assert.Equal("", bot.NoAnswerMessage);   // built-in reply by default
+
+        var saved = (await (await owner.PutAsJsonAsync($"/bots/{bot.Id}",
+            new { name = bot.Name, noAnswerMessage = "  Call us on 98200 12345.  " })).Content.ReadFromJsonAsync<BotDto>())!;
+        Assert.Equal("Call us on 98200 12345.", saved.NoAnswerMessage);
+        var style = (await Lookup(bot.PublicKey)).GetProperty("style");
+        Assert.Equal("Call us on 98200 12345.", style.GetProperty("noAnswerMessage").GetString());
+
+        // leaving it out keeps it; "" goes back to the built-in reply
+        var kept = (await (await owner.PutAsJsonAsync($"/bots/{bot.Id}", new { name = bot.Name, tone = "casual" }))
+            .Content.ReadFromJsonAsync<BotDto>())!;
+        Assert.Equal("Call us on 98200 12345.", kept.NoAnswerMessage);
+        var cleared = (await (await owner.PutAsJsonAsync($"/bots/{bot.Id}", new { name = bot.Name, noAnswerMessage = "" }))
+            .Content.ReadFromJsonAsync<BotDto>())!;
+        Assert.Equal("", cleared.NoAnswerMessage);
+
+        var tooLong = await owner.PutAsJsonAsync($"/bots/{bot.Id}", new { name = bot.Name, noAnswerMessage = new string('x', 301) });
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+    }
+
     [Theory]
     [InlineData("tone", "rude")]
     [InlineData("answerLength", "endless")]

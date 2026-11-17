@@ -52,6 +52,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.HoursDays).IsRequired();
             e.Property(x => x.TimeZone).HasMaxLength(60).IsRequired();
             e.Property(x => x.OfflineMessage).HasMaxLength(300).IsRequired();
+            e.Property(x => x.NoAnswerMessage).HasMaxLength(300).IsRequired().HasDefaultValue("");
             e.Property(x => x.ReplyLanguage).HasMaxLength(10).IsRequired().HasDefaultValue("auto");
             e.HasQueryFilter(x => x.TenantId == CurrentTenantId);
         });

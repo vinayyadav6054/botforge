@@ -294,6 +294,36 @@ describe("lead capture", () => {
     expect(root.querySelector("form.lead")).not.toBeNull();
   });
 
+  it("opens the form when the assistant could not answer, even with afterMessages 0", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(info({ enabled: true, prompt: "Want a call back?", afterMessages: 0 }))
+      .mockResolvedValueOnce(sse('event: token\ndata: {"text":"Iski jaankari abhi mere paas nahi hai."}\n\n',
+        "event: offer_lead\ndata: {}\n\n", "event: done\ndata: {}\n\n"));
+    vi.stubGlobal("fetch", fetchMock);
+    const widget = mount({ botKey: "bk_unknown", apiBase: "http://gw/api", accent: "#000" });
+    widget.open();
+    await settle();
+    widget.ask("hostel ki fees?");
+    await settle();
+    const root = document.querySelector("[data-kahiye]")!.shadowRoot!;
+    expect([...root.querySelectorAll(".msg.bot")].pop()!.textContent).toBe("Iski jaankari abhi mere paas nahi hai.");
+    expect(root.querySelector("form.lead")).not.toBeNull();
+  });
+
+  it("does not push the form again after the visitor said 'No thanks'", async () => {
+    sessionStorage.setItem("kahiye:bk_nothanks:lead", "dismissed");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(info({ enabled: true, prompt: "Call?", afterMessages: 1 }))
+      .mockResolvedValueOnce(sse('event: token\ndata: {"text":"I don\'t have that information yet."}\n\n',
+        "event: offer_lead\ndata: {}\n\n", "event: done\ndata: {}\n\n")));
+    const widget = mount({ botKey: "bk_nothanks", apiBase: "http://gw/api", accent: "#000" });
+    widget.open();
+    await settle();
+    widget.ask("hostel?");
+    await settle();
+    expect(document.querySelector("[data-kahiye]")!.shadowRoot!.querySelector("form.lead")).toBeNull();
+  });
+
   it("afterMessages 0 never pops up on its own", async () => {
     const root = await chatOnce(vi.fn(), 0);
     expect(root.querySelector("form.lead")).toBeNull();

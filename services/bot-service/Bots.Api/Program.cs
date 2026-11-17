@@ -395,7 +395,7 @@ app.MapGet("/internal/bots/{publicKey}", async (string publicKey, HttpRequest re
             },
             suggestedQuestions = b.SuggestedQuestions,
             style = new { tone = b.Tone, answerLength = b.AnswerLength, topicsToAvoid = b.TopicsToAvoid, customInstructions = b.CustomInstructions,
-                          replyLanguage = b.ReplyLanguage },
+                          replyLanguage = b.ReplyLanguage, noAnswerMessage = b.NoAnswerMessage },
             b.VoiceEnabled,
             b.ShowSources,
             b.BookingUrl, b.BookingLabel, b.PaymentUrl, b.UpiId, b.PaymentLabel,

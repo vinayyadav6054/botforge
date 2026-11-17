@@ -452,6 +452,7 @@ export function mount(opts: Options): Widget {
     answer.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
     let received = "";
     let handedOver = false;
+    let offerLead = false;
     if (!agentSince) {
       // replies from a person can only come after the first message
       agentSince = new Date().toISOString();
@@ -461,6 +462,9 @@ export function mount(opts: Options): Widget {
     await api.send(text, history.slice(-MAX_HISTORY), {
       onHandover: () => {
         handedOver = true;
+      },
+      onOfferLead: () => {
+        offerLead = true;
       },
       onToken: (t) => {
         received += t;
@@ -492,7 +496,9 @@ export function mount(opts: Options): Widget {
         history = [...history, ...turns].slice(-MAX_HISTORY);
         saveHistory(historyKey, history);
         answered += 1;
-        maybeOfferLead();
+        // it could not answer: the call-back form, unless the visitor already sent or closed it
+        if (offerLead && !leadState) showLeadForm();
+        else maybeOfferLead();
       },
     }, { conversationId: conversationId(conversationKey), pageUrl: location.origin + location.pathname });
 

@@ -32,6 +32,8 @@ public class Bot
     public string CustomInstructions { get; set; } = "";
     /// <summary>Show "Source: Fees.pdf, page 2" under answers.</summary>
     public bool ShowSources { get; set; } = true;
+    /// <summary>Reply when the knowledge does not cover a question; "" = the built-in one in the visitor's language.</summary>
+    public string NoAnswerMessage { get; set; } = "";
 
     // widget look; WidgetColor null = the snippet's data-color or the default
     public string? WidgetColor { get; set; }

@@ -23,6 +23,8 @@ public class UpdateBotRequest
     public string? TopicsToAvoid { get; set; }
     public string? CustomInstructions { get; set; }
     public bool? ShowSources { get; set; }
+    /// <summary>"" = the built-in reply.</summary>
+    public string? NoAnswerMessage { get; set; }
 
     /// <summary>"" clears it.</summary>
     public string? WidgetColor { get; set; }
@@ -55,7 +57,7 @@ public class UpdateBotRequest
 public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicKey, DateTime CreatedAt,
     bool LeadCaptureEnabled, string LeadPrompt, int LeadAfterMessages, List<string> SuggestedQuestions,
     bool LeadAskEmail, bool LeadAskCourse, string LeadCourseLabel, string LeadTiming,
-    string Tone, string AnswerLength, string TopicsToAvoid, string CustomInstructions, bool ShowSources,
+    string Tone, string AnswerLength, string TopicsToAvoid, string CustomInstructions, bool ShowSources, string NoAnswerMessage,
     string? WidgetColor, string WidgetPosition, string? AvatarDataUrl,
     bool HoursEnabled, string HoursStart, string HoursEnd, List<int> HoursDays, string TimeZone, string OfflineMessage,
     string ReplyLanguage, bool VoiceEnabled,
@@ -65,7 +67,7 @@ public record BotDto(Guid Id, string Name, string WelcomeMessage, string PublicK
     public static BotDto From(Bot b) => new(b.Id, b.Name, b.WelcomeMessage, b.PublicKey, b.CreatedAt,
         b.LeadCaptureEnabled, b.LeadPrompt, b.LeadAfterMessages, b.SuggestedQuestions,
         b.LeadAskEmail, b.LeadAskCourse, b.LeadCourseLabel, b.LeadTiming,
-        b.Tone, b.AnswerLength, b.TopicsToAvoid, b.CustomInstructions, b.ShowSources,
+        b.Tone, b.AnswerLength, b.TopicsToAvoid, b.CustomInstructions, b.ShowSources, b.NoAnswerMessage,
         b.WidgetColor, b.WidgetPosition, b.AvatarDataUrl,
         b.HoursEnabled, b.HoursStart, b.HoursEnd, b.HoursDays, b.TimeZone, b.OfflineMessage, b.ReplyLanguage, b.VoiceEnabled,
         b.AlertEmailEnabled, b.AlertEmail, b.WebhookUrl, b.WebhookSecret,
@@ -110,6 +112,7 @@ public static partial class BotSettingsRules
         if (r.HoursDays is { } days && (days.Count > 7 || days.Any(d => d is < 1 or > 7))) return "Days must be numbers 1 (Monday) to 7 (Sunday).";
         if (r.TimeZone is { } zone && (zone.Length > 60 || !Zone().IsMatch(zone))) return "Time zone must look like Asia/Kolkata.";
         if (r.OfflineMessage?.Trim().Length > 300) return "The closed message must be at most 300 characters.";
+        if (r.NoAnswerMessage?.Trim().Length > 300) return "The reply for unknown questions must be at most 300 characters.";
         if (r.ReplyLanguage is { } lang && !Languages.Contains(lang)) return "Unknown reply language.";
         if (!string.IsNullOrWhiteSpace(r.AlertEmail) && (r.AlertEmail.Trim().Length > 200 || !Email().IsMatch(r.AlertEmail.Trim())))
             return "The alert email address does not look right.";
@@ -133,6 +136,7 @@ public static partial class BotSettingsRules
         if (r.TopicsToAvoid is { } avoid) bot.TopicsToAvoid = avoid.Trim();
         if (r.CustomInstructions is { } custom) bot.CustomInstructions = custom.Trim();
         if (r.ShowSources is { } sources) bot.ShowSources = sources;
+        if (r.NoAnswerMessage is { } noAnswer) bot.NoAnswerMessage = noAnswer.Trim();
         if (r.WidgetColor is { } color) bot.WidgetColor = color.Length == 0 ? null : color.ToLowerInvariant();
         if (r.WidgetPosition is { } pos) bot.WidgetPosition = pos;
         if (r.AvatarDataUrl is { } avatar) bot.AvatarDataUrl = avatar.Length == 0 ? null : avatar;

@@ -5,6 +5,8 @@ import json
 import uuid
 
 import pytest
+
+from app.language import NO_ANSWER
 from fastapi.testclient import TestClient
 
 from app import bots_client, channels, main
@@ -217,7 +219,8 @@ def test_no_knowledge_limit_and_inactive_plans(client, world):
         return world["sent"][-1][2]
 
     world["chunks"] = []
-    assert send("Hostel?", 1) == main.NO_INFORMATION and world["turns"][-1]["answered"] is False
+    assert send("Hostel?", 1) == NO_ANSWER["en"]["noted"] and world["turns"][-1]["answered"] is False
+    assert send("hostel ki fees kitni hai?", 4) == NO_ANSWER["hinglish"]["noted"]
     world["chunks"] = [Retrieved("x", 1.0)]
     world["quota"] = main.LIMIT_REACHED
     assert send("Fees?", 2) == main.LIMIT_REACHED

@@ -4,6 +4,8 @@ import uuid
 
 import httpx
 import pytest
+
+from app.language import NO_ANSWER
 from fastapi.testclient import TestClient
 
 from app import config, llm, main
@@ -273,9 +275,58 @@ def test_streams_meta_tokens_and_done(client, fakes):
 def test_no_knowledge_answers_without_calling_the_llm(client, fakes):
     fakes["chunks"] = []
     events = parse_sse(client.post(f"/chat/{KEY}", json={"message": "hi"}).text)
-    assert [e for e, _ in events] == ["meta", "token", "done"]
-    assert "don't have any information" in events[1][1]["text"]
+    assert [e for e, _ in events] == ["meta", "token", "done"]          # no call-back form: lead capture is off
+    assert events[1][1]["text"] == NO_ANSWER["en"]["contact"]
     assert fakes["llm_calls"] == []
+
+
+LEAD_ON = {"enabled": True, "prompt": "Call back?", "afterMessages": 2}
+
+
+@pytest.mark.parametrize("question, language", [
+    ("What is the hostel fee?", "en"),
+    ("hostel ki fees kitni hai?", "hinglish"),
+    ("हॉस्टल की फीस कितनी है?", "hi"),
+])
+def test_unknown_question_offers_a_call_back_in_the_visitors_language(client, fakes, question, language):
+    fakes["chunks"] = []
+    fakes["bot"] = {**BOT, "leadCapture": LEAD_ON}
+    events = parse_sse(client.post(f"/chat/{KEY}", json={"message": question}).text)
+    assert [e for e, _ in events] == ["meta", "token", "offer_lead", "done"]
+    assert events[1][1]["text"] == NO_ANSWER[language]["callback"]
+
+
+def test_a_fixed_reply_language_wins_over_the_visitors(client, fakes):
+    fakes["chunks"] = []
+    fakes["bot"] = {**BOT, "style": {"replyLanguage": "hi"}}
+    events = parse_sse(client.post(f"/chat/{KEY}", json={"message": "Hostel fee?"}).text)
+    assert events[1][1]["text"] == NO_ANSWER["hi"]["contact"]
+
+
+def test_the_owners_own_reply_is_used_as_written(client, fakes):
+    fakes["chunks"] = []
+    fakes["bot"] = {**BOT, "leadCapture": LEAD_ON,
+                    "style": {"noAnswerMessage": "  Please call 98200 12345\n for this.  "}}
+    events = parse_sse(client.post(f"/chat/{KEY}", json={"message": "hostel kitna hai?"}).text)
+    assert events[1][1]["text"] == "Please call 98200 12345 for this."
+    assert "offer_lead" in [e for e, _ in events]
+
+
+def test_ai_saying_it_does_not_know_also_offers_a_call_back(client, fakes):
+    fakes["bot"] = {**BOT, "leadCapture": LEAD_ON}
+    fakes["tokens"] = ["I don't have that information. ", "Please contact us."]
+    events = [e for e, _ in parse_sse(client.post(f"/chat/{KEY}", json={"message": "Hostel?"}).text)]
+    assert "offer_lead" in events and events[-1] == "done"
+    fakes["tokens"] = ["Closed on Sundays."]
+    events = [e for e, _ in parse_sse(client.post(f"/chat/{KEY}", json={"message": "Sunday?"}).text)]
+    assert "offer_lead" not in events
+
+
+def test_the_owners_reply_guides_the_ai_too():
+    from app.llm import build_system
+    system = build_system("Bakery", {"noAnswerMessage": "Call us on\n98200 12345"})
+    assert "reply with this message from the business" in system and "Call us on 98200 12345" in system
+    assert "message from the business" not in build_system("Bakery", {})
 
 
 def test_history_is_passed_to_llm_and_used_for_retrieval(client, fakes):

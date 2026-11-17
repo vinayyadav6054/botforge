@@ -87,6 +87,8 @@ export interface StreamHandlers {
   onSources?: (items: SourceRef[]) => void;
   /** a person from the business is handling this chat: no bot answer comes */
   onHandover?: () => void;
+  /** the assistant could not answer: offer the call-back form */
+  onOfferLead?: () => void;
 }
 
 /** A person's replies since the last check, and whether they are still handling the chat. */
@@ -206,6 +208,8 @@ export class ChatApi {
             finished = true;
           } else if (evt.event === "handover") {
             handlers.onHandover?.();
+          } else if (evt.event === "offer_lead") {
+            handlers.onOfferLead?.();
           } else if (evt.event === "sources" && Array.isArray(data.items)) {
             handlers.onSources?.(data.items as SourceRef[]);
           } else if (evt.event === "done") {

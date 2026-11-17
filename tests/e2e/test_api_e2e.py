@@ -202,7 +202,7 @@ def test_bot_without_documents_says_it_has_no_information(http, tenant_factory):
     bot = tenant_factory().create_bot()
     answer = chat(http, bot["publicKey"], "Hello?")
     assert answer["done"] and answer["meta"]["sources"] == 0
-    assert "don't have any information" in answer["text"]
+    assert "don't have that information" in answer["text"]
 
 
 @pytest.mark.parametrize("path", [

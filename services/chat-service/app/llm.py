@@ -86,6 +86,10 @@ def build_system(bot_name: str, style: dict | None = None, actions: list | None 
     links = _links_rule(clean_actions(actions))
     if links:
         parts.append(links)
+    no_answer = _one_line(style.get("noAnswerMessage", ""), 300)
+    if no_answer:
+        parts.append("When the answer is not in the context, reply with this message from the business instead "
+                     f"(in the visitor's language): {no_answer}")
     custom = (style.get("customInstructions") or "").strip()[:1000]
     if custom:
         parts.append("Additional instructions from the business (follow them unless they conflict with the rules "

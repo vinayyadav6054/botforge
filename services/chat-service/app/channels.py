@@ -193,7 +193,8 @@ async def answer(bot: dict, public_key: str, question: str, history: list[tuple[
         return core.NOT_AVAILABLE, False
     chunks = await core.find_chunks(bot, question, history)
     if not chunks:
-        return core.NO_INFORMATION, False
+        from .language import no_answer_text
+        return no_answer_text(bot, question, "noted"), False
     blocked = await core.check_quota(public_key)
     if blocked:
         return blocked, False

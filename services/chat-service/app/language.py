@@ -89,3 +89,48 @@ def language_rule(reply_language: str | None) -> str:
         return f"Always reply in {name}, whatever language the visitor writes in."
     return ("Reply in the same language the visitor used. If they write Hindi or another Indian language in English "
             "letters (for example Hinglish), reply the same way, in English letters.")
+
+
+# ---------- the reply when the knowledge does not cover a question ----------
+_DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+
+# by language, then by what the visitor can do next:
+#   "callback": the website chat can show the call-back form; "contact": no form; "noted": a messaging app,
+#   where the question is kept for the owner (listed under "Unanswered")
+NO_ANSWER = {
+    "en": {
+        "callback": "I don't have that information yet. Leave your number and our team will call you back with the details.",
+        "contact": "I don't have that information yet. Please contact us directly and our team will help you.",
+        "noted": "I don't have that information yet. I've noted your question for our team.",
+    },
+    "hinglish": {
+        "callback": "Iski jaankari abhi mere paas nahi hai. Apna number chhodiye, hamari team aapko call karke bata degi.",
+        "contact": "Iski jaankari abhi mere paas nahi hai. Kripya humse seedha sampark karein, hamari team aapki madad karegi.",
+        "noted": "Iski jaankari abhi mere paas nahi hai. Maine aapka sawaal hamari team tak pahuncha diya hai.",
+    },
+    "hi": {
+        "callback": "इसकी जानकारी अभी मेरे पास नहीं है। अपना नंबर छोड़िए, हमारी टीम आपको कॉल करके बता देगी।",
+        "contact": "इसकी जानकारी अभी मेरे पास नहीं है। कृपया हमसे सीधे संपर्क करें, हमारी टीम आपकी मदद करेगी।",
+        "noted": "इसकी जानकारी अभी मेरे पास नहीं है। मैंने आपका सवाल हमारी टीम तक पहुँचा दिया है।",
+    },
+}
+
+
+def reply_language(question: str, setting: str | None) -> str:
+    """"en", "hinglish" or "hi" for the built-in replies: the owner's fixed language, else the visitor's own."""
+    if setting == "hi":
+        return "hi"
+    if setting and setting != "auto":
+        return "en"   # other fixed languages: English (the AI itself answers in the chosen language)
+    if _DEVANAGARI.search(question):
+        return "hi"
+    return "hinglish" if needs_translation(question) else "en"
+
+
+def no_answer_text(bot: dict, question: str, next_step: str) -> str:
+    """The owner's own message when set, otherwise the built-in one in the visitor's language."""
+    style = bot.get("style") or {}
+    custom = " ".join(str(style.get("noAnswerMessage") or "").split())[:300]
+    if custom:
+        return custom
+    return NO_ANSWER[reply_language(question, style.get("replyLanguage"))][next_step]

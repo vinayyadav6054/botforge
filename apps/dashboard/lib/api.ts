@@ -37,6 +37,7 @@ export interface Bot {
   topicsToAvoid: string;
   customInstructions: string;
   showSources: boolean;
+  noAnswerMessage: string;
   widgetColor: string | null;
   widgetPosition: "right" | "left";
   avatarDataUrl: string | null;
