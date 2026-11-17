@@ -181,7 +181,7 @@ def with_sources(text: str, sources: list[dict]) -> str:
     if not sources:
         return text
     names = " · ".join(f"{s['name']} ({s['location']})" if s.get("location") else s["name"] for s in sources)
-    return f"{text}\n\n📄 Source: {names}"
+    return f"{text}\n\nSource: {names}"
 
 
 async def answer(bot: dict, public_key: str, question: str, history: list[tuple[str, str]]) -> tuple[str, bool]:

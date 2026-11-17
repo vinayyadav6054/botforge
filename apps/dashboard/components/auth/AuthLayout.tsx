@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
+import Icon from "@/components/Icon";
 import Logo from "@/components/Logo";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
@@ -39,7 +40,7 @@ export default function AuthLayout({ children, aside = "default" }: { children: 
               <li>Hindi, Hinglish and English, on your website and WhatsApp</li>
               <li>Every interested customer's number, sent to you instantly</li>
             </ul>
-            <p className="au-trust">🔒 Private workspace · Export or delete your data any time · No card needed</p>
+            <p className="au-trust"><Icon name="lock" size={14} /> Private workspace · Export or delete your data any time · No card needed</p>
           </div>
         </aside>
       )}

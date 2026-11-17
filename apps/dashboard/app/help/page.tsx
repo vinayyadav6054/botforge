@@ -1,12 +1,13 @@
 import Link from "next/link";
+import Icon, { type IconName } from "@/components/Icon";
 import SitePage from "@/components/SitePage";
 import { site, whatsappLink } from "@/lib/site";
 
 export const metadata = { title: `Help centre · ${site.name}`, description: "Simple step-by-step guides for setting up and using your Kahiye assistant." };
 
-const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
+const TOPICS: { id: string; icon: IconName; title: string; steps: string[] }[] = [
   {
-    id: "start", icon: "🚀", title: "Create your assistant (5 minutes)",
+    id: "start", icon: "flag", title: "Create your assistant (5 minutes)",
     steps: [
       "Click “Start free” and create your account. No card is needed.",
       "Click “New bot” and type your business name, for example “Sunrise Academy”.",
@@ -16,7 +17,7 @@ const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
     ],
   },
   {
-    id: "website", icon: "🌐", title: "Put the chat on your website",
+    id: "website", icon: "globe", title: "Put the chat on your website",
     steps: [
       "Open your assistant and click “Install”. Click “Copy snippet”.",
       "WordPress: install any “Header and Footer Scripts” plugin and paste the line in the footer box.",
@@ -26,7 +27,7 @@ const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
     ],
   },
   {
-    id: "leads", icon: "📞", title: "Get customers' numbers (leads)",
+    id: "leads", icon: "phone", title: "Get customers' numbers (leads)",
     steps: [
       "Open Settings → “Leads & alerts” and switch on “Ask visitors for their name and phone number”.",
       "Every enquiry appears under “Leads”, with the whole chat, and is emailed to you at once.",
@@ -35,7 +36,7 @@ const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
     ],
   },
   {
-    id: "whatsapp", icon: "🟢", title: "Answer on WhatsApp, Instagram and Telegram",
+    id: "whatsapp", icon: "message", title: "Answer on WhatsApp, Instagram and Telegram",
     steps: [
       "Open your assistant → “Messaging apps”. Telegram takes 2 minutes: create a bot with @BotFather and paste its token.",
       "WhatsApp and Instagram need a free Meta business app. The screen shows each step; we can also do it for you.",
@@ -43,7 +44,7 @@ const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
     ],
   },
   {
-    id: "takeover", icon: "🙋", title: "Reply to a customer yourself",
+    id: "takeover", icon: "user", title: "Reply to a customer yourself",
     steps: [
       "Open “Conversations”. A green dot means the customer is chatting right now.",
       "Open the chat and click “Take over”. The bot stops answering in that chat.",
@@ -52,7 +53,7 @@ const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
     ],
   },
   {
-    id: "billing", icon: "₹", title: "Plans and payment",
+    id: "billing", icon: "rupee", title: "Plans and payment",
     steps: [
       "Every new account gets 14 days free with all features.",
       "To continue, open “Plan & account”, choose a plan and pay by UPI (GPay, PhonePe, Paytm). Your plan starts within a few hours of payment.",
@@ -60,7 +61,7 @@ const TOPICS: { id: string; icon: string; title: string; steps: string[] }[] = [
     ],
   },
   {
-    id: "data", icon: "🔒", title: "Your data and your customers' data",
+    id: "data", icon: "lock", title: "Your data and your customers' data",
     steps: [
       "Only you can see your documents, chats and leads.",
       "Download everything any time: “Plan & account” → “Download my data”. Leads also export to Excel.",
@@ -77,7 +78,7 @@ export default function HelpPage() {
       <nav className="help-grid" aria-label="Topics">
         {TOPICS.map((t) => (
           <a key={t.id} href={`#${t.id}`} className="lp-card help-topic">
-            <span className="lp-ico">{t.icon}</span>
+            <span className="lp-ico"><Icon name={t.icon} size={22} /></span>
             <h3>{t.title}</h3>
           </a>
         ))}
@@ -86,7 +87,7 @@ export default function HelpPage() {
       <div className="help-guides">
         {TOPICS.map((t) => (
           <section key={t.id} id={t.id} className="help-guide">
-            <h2><span aria-hidden>{t.icon}</span> {t.title}</h2>
+            <h2><span className="help-ico"><Icon name={t.icon} size={20} /></span> {t.title}</h2>
             <ol>{t.steps.map((s) => <li key={s}>{s}</li>)}</ol>
           </section>
         ))}

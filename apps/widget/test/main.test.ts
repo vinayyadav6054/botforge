@@ -37,7 +37,7 @@ describe("readOptions", () => {
     s.dataset.color = "red;}body{display:none";
     expect(readOptions(s)).toEqual({
       botKey: "bk_1", apiBase: "https://gw.example.com/api", accent: "#0f766e",
-      greeting: "👋 Hi! Have a question? Ask me here, I reply instantly.",
+      greeting: "Hi! Have a question? Ask me here, I reply instantly.",
     });
     s.dataset.color = "#ff0000";
     s.dataset.api = "https://other/api";

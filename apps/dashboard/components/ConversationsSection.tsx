@@ -2,10 +2,10 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { api, Conversation, ConversationSummary } from "@/lib/api";
-import Icon from "@/components/Icon";
+import Icon, { type IconName } from "@/components/Icon";
 import { AnimatedList } from "@/components/AppMotion";
 
-export const CHANNEL_ICON: Record<string, string> = { web: "🌐", whatsapp: "🟢", instagram: "📸", messenger: "💬", telegram: "✈️" };
+export const CHANNEL_ICON: Record<string, IconName> = { web: "globe", whatsapp: "message", instagram: "camera", messenger: "chat", telegram: "send" };
 const CHANNEL_NAME: Record<string, string> = { web: "website", whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", telegram: "Telegram" };
 const LIVE_MINUTES = 5;
 
@@ -199,7 +199,7 @@ export default function ConversationsSection({ botId, onCorrect }: { botId: stri
             <Fragment key={c.id}>
               <button className={`convo-item${c.human ? " is-human" : ""}`} aria-expanded={open === c.id} onClick={() => void toggle(c.id)}>
                 <span className="q">
-                  <span aria-label={c.channel} title={c.channel}>{CHANNEL_ICON[c.channel] ?? "🌐"}</span>{" "}
+                  <span className="convo-channel" aria-label={c.channel} title={c.channel}><Icon name={CHANNEL_ICON[c.channel] ?? "globe"} size={14} /></span>{" "}
                   {isLive(c) && <span className="live-dot" title="Active in the last few minutes" aria-label="live" />}{" "}
                   {c.contactName && <strong>{c.contactName}: </strong>}{c.firstQuestion ?? "(no question)"}
                 </span>

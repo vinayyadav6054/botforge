@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { gatewayOrigin } from "@/lib/api";
+import Icon from "@/components/Icon";
 import ChatDemo from "./ChatDemo";
 
 /**
@@ -36,7 +37,7 @@ export default function DemoWidget({ botKey, color }: { botKey: string; color: s
         </div>
       )}
       <button className="fake-launcher" onClick={() => setOpen((o) => !o)} aria-label={open ? "Close chat" : "Open chat"}>
-        {open ? "×" : "💬"}
+        {open ? "×" : <Icon name="chat" size={26} />}
       </button>
     </div>
   );

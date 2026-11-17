@@ -166,7 +166,6 @@ textarea:focus-visible { outline: none; }
   display: flex; flex-direction: column; gap: 9px; animation: fade .25s ease-out;
 }
 .lead-intro { margin: 0 0 2px; font-size: 15px; font-weight: 650; line-height: 1.4; }
-.lead-intro::before { content: "📞 "; }
 .lead-field { display: flex; flex-direction: column; gap: 4px; color: #5d6374; font-size: 11.5px; font-weight: 600; }
 .lead-field input {
   font-size: 14px; font-weight: 400; padding: 10px 12px; border-radius: 10px; color: #1f2328;
@@ -221,7 +220,6 @@ textarea:focus-visible { outline: none; }
 .avatar img, .mini img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .mini.logo { background: #fff; box-shadow: 0 0 0 1px rgba(17,24,39,.08); overflow: hidden; }
 .hours { padding: 8px 14px; font-size: 12.5px; line-height: 1.4; background: #fff8e6; color: #7a5300; border-bottom: 1px solid #f1e3bd; }
-.hours::before { content: "🕘 "; }
 .hours[hidden] { display: none; }
 .sources { margin: -6px 0 0 34px; font-size: 11.5px; color: #7a8190; animation: fade .2s ease-out; }
 .sources a { color: inherit; text-decoration: underline; }

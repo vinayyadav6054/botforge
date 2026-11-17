@@ -159,7 +159,7 @@ def test_telegram_requests_need_the_secret_token(client, world):
     assert client.post(f"/channels/telegram/{ch['id']}", json=update).status_code == 401
     assert client.post(f"/channels/telegram/{ch['id']}", json=update,
                        headers={"X-Telegram-Bot-Api-Secret-Token": "tg-secret"}).status_code == 200
-    assert world["sent"] == [("telegram", "42", "The fee is ₹68,000.\n\n📄 Source: Fees.pdf (page 2)")]
+    assert world["sent"] == [("telegram", "42", "The fee is ₹68,000.\n\nSource: Fees.pdf (page 2)")]
 
 
 # ---------- answering ----------

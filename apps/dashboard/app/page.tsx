@@ -7,6 +7,7 @@ import Footer from "@/components/landing/Footer";
 import SiteAssistant from "@/components/landing/SiteAssistant";
 import NavBar from "@/components/landing/NavBar";
 import SmoothScroll from "@/components/landing/SmoothScroll";
+import Icon from "@/components/Icon";
 import Logo from "@/components/Logo";
 import { site, whatsappLink } from "@/lib/site";
 import "@/components/landing/landing.css";
@@ -97,7 +98,7 @@ export default function Landing() {
                     <h3>Answers only from your documents</h3>
                     <p>No made-up prices or promises. Every answer comes from your files, with the source shown.</p>
                     <div className="lp-viz-doc">
-                      <span className="doc">📄 Fee_Structure_2026.pdf</span><span className="arrow">→</span>
+                      <span className="doc"><Icon name="file" size={15} /> Fee_Structure_2026.pdf</span><span className="arrow">→</span>
                       <span className="ans">“₹68,000 per year, in 3 instalments.” <small>Source: page 2</small></span>
                     </div>
                   </div>,
@@ -124,7 +125,7 @@ export default function Landing() {
                   <div key="f" className="spot lp-card wide">
                     <h3>Book visits and collect fees in the chat</h3>
                     <p>“Book a free demo” and “Pay by UPI” buttons, right where the customer decides. Leads also flow to Google Sheets or your CRM.</p>
-                    <div className="lp-viz-btns"><span>📅 Book a free demo class</span><span>₹ Pay by UPI</span><span>📊 Google Sheets</span></div>
+                    <div className="lp-viz-btns"><span><Icon name="calendar" size={14} /> Book a free demo class</span><span><Icon name="rupee" size={14} /> Pay by UPI</span><span><Icon name="sheet" size={14} /> Google Sheets</span></div>
                   </div>,
                 ]}
               </Stagger>
@@ -154,12 +155,12 @@ export default function Landing() {
             </FadeIn>
             <FadeIn delay={0.1}>
               <div className="lp-quote">
-                <span className="lp-quote-time">🌙 10:47 PM · website chat</span>
+                <span className="lp-quote-time"><Icon name="moon" size={14} /> 10:47 PM · website chat</span>
                 <p className="q">“JEE batch ki fees kitni hai? Weekend batch hai kya?”</p>
                 <p className="a">Answered in 3 seconds from the institute&apos;s fee PDF. <b>Lead sent to the owner.</b></p>
               </div>
               <div className="lp-quote">
-                <span className="lp-quote-time">☀️ 9:05 AM · next morning</span>
+                <span className="lp-quote-time"><Icon name="sun" size={14} /> 9:05 AM · next morning</span>
                 <p className="q">The counsellor calls back a parent who is already interested.</p>
                 <p className="a">No missed enquiry. <b>Admission confirmed.</b></p>
               </div>
@@ -206,13 +207,13 @@ export default function Landing() {
             <SpotlightGrid>
               <Stagger className="lp-trust">
                 {[
-                  { i: "🛡️", t: "Private workspace", d: "Each business's documents, chats and leads are kept separate from everyone else's." },
-                  { i: "🔐", t: "Encrypted keys", d: "WhatsApp and Telegram keys are stored encrypted, and every connection uses HTTPS." },
-                  { i: "🎯", t: "No made-up answers", d: "The assistant only uses what you upload, and says so when it doesn't know." },
-                  { i: "📦", t: "Export or delete any time", d: "Download your leads to Excel or delete your whole account in one click." },
+                  { i: "shield" as const, t: "Private workspace", d: "Each business's documents, chats and leads are kept separate from everyone else's." },
+                  { i: "lock" as const, t: "Encrypted keys", d: "WhatsApp and Telegram keys are stored encrypted, and every connection uses HTTPS." },
+                  { i: "badge" as const, t: "No made-up answers", d: "The assistant only uses what you upload, and says so when it doesn't know." },
+                  { i: "download" as const, t: "Export or delete any time", d: "Download your leads to Excel or delete your whole account in one click." },
                 ].map((x) => (
                   <div key={x.t} className="spot lp-card lp-trust-card">
-                    <span className="lp-ico">{x.i}</span>
+                    <span className="lp-ico"><Icon name={x.i} size={22} /></span>
                     <h3>{x.t}</h3>
                     <p>{x.d}</p>
                   </div>

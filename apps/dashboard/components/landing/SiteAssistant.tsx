@@ -14,7 +14,7 @@ export default function SiteAssistant() {
     const s = document.createElement("script");
     s.src = `${gatewayOrigin()}/widget.js`;
     s.dataset.botKey = site.siteBotKey;
-    s.dataset.greeting = "👋 Questions about Kahiye? Ask me, I'm Kahiye's own assistant.";
+    s.dataset.greeting = "Questions about Kahiye? Ask me, I'm Kahiye's own assistant.";
     s.async = true;
     document.body.appendChild(s);
     return () => {

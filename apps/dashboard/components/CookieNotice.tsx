@@ -35,7 +35,6 @@ export default function CookieNotice() {
       {show && !APP_PATHS.some((p) => pathname.startsWith(p)) && (
         <motion.div className="cookie" role="region" aria-label="Storage notice"
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} transition={{ delay: 0.8, duration: 0.4 }}>
-          <span aria-hidden>🍪</span>
           <p>
             No ads, no tracking. We only store what the app needs to work, like keeping you logged in.{" "}
             <Link href="/privacy#cookies">Details</Link>

@@ -24,7 +24,7 @@ const MAX_RECORDING_MS = 30_000;
 const PHONE_ICON = svg(17, 2,
   '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>');
 const MAX_HISTORY = 10;
-const DEFAULT_GREETING = "👋 Hi! Have a question? Ask me here, I reply instantly.";
+const DEFAULT_GREETING = "Hi! Have a question? Ask me here, I reply instantly.";
 const GREETING_DELAY_MS = 4000;
 
 /** "Kalrashukla Classes" -> "KC", "bakery" -> "B"; empty when the name has no letters or digits. */
@@ -200,7 +200,7 @@ export function mount(opts: Options): Widget {
   function showBranding(branding: BotInfo["branding"]) {
     if (branding?.show === false) return;
     const url = typeof branding?.url === "string" && /^https?:\/\//i.test(branding.url) ? branding.url : "";
-    const label = "⚡ Powered by Kahiye";
+    const label = "Powered by Kahiye";
     footer.textContent = "";
     if (url) {
       const a = document.createElement("a");

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import DemoWidget from "@/components/landing/DemoWidget";
+import Icon from "@/components/Icon";
 import { site } from "@/lib/site";
 
 export const metadata = {
@@ -29,7 +30,7 @@ export default function DemoSite() {
 
       <header className="ds-nav">
         <div className="ds-wrap ds-nav-inner">
-          <div className="ds-logo"><span>☀</span> Sunrise Academy</div>
+          <div className="ds-logo"><span><Icon name="sun" size={22} /></span> Sunrise Academy</div>
           <nav className="ds-links" aria-label="Demo site">
             <span>Courses</span><span>Results</span><span>Admissions</span><span>Contact</span>
           </nav>
@@ -68,7 +69,7 @@ export default function DemoSite() {
       </section>
 
       <section className="ds-wrap ds-section ds-hint">
-        <h2>Try asking the assistant 👉</h2>
+        <h2>Try asking the assistant →</h2>
         <ul>
           <li>“What is the fee for the JEE batch?”</li>
           <li>“When does the next batch start?”</li>

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import Icon, { type IconName } from "@/components/Icon";
 
 type Line = { who: "visitor" | "bot"; text: string };
 const SCRIPTS: { business: string; initial: string; lines: Line[]; lead: string }[] = [
@@ -11,7 +12,7 @@ const SCRIPTS: { business: string; initial: string; lines: Line[]; lead: string 
       { who: "visitor", text: "JEE batch ki fees kitni hai?" },
       { who: "bot", text: "JEE Main + Advanced: ₹68,000 per year, payable in 3 instalments. Free demo class every Sunday at 11 AM." },
       { who: "visitor", text: "Can someone call me?" },
-      { who: "bot", text: "Of course! I've shared your number with our counsellor. 👍" },
+      { who: "bot", text: "Of course! I've shared your number with our counsellor." },
     ],
   },
   {
@@ -20,7 +21,7 @@ const SCRIPTS: { business: string; initial: string; lines: Line[]; lead: string 
       { who: "visitor", text: "Are you open on Sunday?" },
       { who: "bot", text: "Yes, Sunday 10 AM to 2 PM. Cleaning starts at ₹800. Shall I book a slot?" },
       { who: "visitor", text: "Yes, tomorrow morning" },
-      { who: "bot", text: "Done! Tap “Book a visit” to pick your time. 🦷" },
+      { who: "bot", text: "Done! Tap “Book a visit” to pick your time." },
     ],
   },
 ];
@@ -67,9 +68,9 @@ export default function HeroStage() {
       {/* a 3D ring of the channels it answers on, slowly orbiting under the product */}
       <div className="hs-orbit">
         <div className="hs-orbit-ring">
-          {["💬", "🟢", "📸", "✈️", "📞", "🌐", "📅", "₹"].map((icon, i, all) => {
+          {(["chat", "message", "camera", "send", "phone", "globe", "calendar", "rupee"] as IconName[]).map((icon, i, all) => {
             const a = (i / all.length) * Math.PI * 2;
-            return <span key={i} style={{ transform: `translate(${Math.cos(a) * 560}px, ${Math.sin(a) * 240}px) rotateX(-76deg)` }}>{icon}</span>;
+            return <span key={i} style={{ transform: `translate(${Math.cos(a) * 560}px, ${Math.sin(a) * 240}px) rotateX(-76deg)` }}><Icon name={icon} size={22} /></span>;
           })}
         </div>
       </div>
@@ -82,7 +83,7 @@ export default function HeroStage() {
               <b className="on" /><b /><b /><b /><b />
             </div>
             <div className="hs-main">
-              <div className="hs-title">Good evening 👋 <small>sample data</small></div>
+              <div className="hs-title">Good evening <small>sample data</small></div>
               <div className="hs-stats">
                 <div><small>Questions answered</small><strong>248</strong><em>+18%</em></div>
                 <div><small>New leads</small><strong>{lead ? 13 : 12}</strong><em>this week</em></div>
@@ -123,13 +124,13 @@ export default function HeroStage() {
           {lead && (
             <motion.div className="hs-toast" key={`lead-${script}`} initial={{ opacity: 0, y: 20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}>
-              <span className="hs-bell">🔔</span>
+              <span className="hs-bell"><Icon name="bell" size={20} /></span>
               <div><small>New lead · emailed to you</small><strong>{s.lead}</strong></div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="hs-chip wa"><span>🟢</span> Also answers on WhatsApp</div>
+        <div className="hs-chip wa"><span className="hs-live" /> Also answers on WhatsApp</div>
         <div className="hs-chip lang"><span>अ</span> Hindi · Hinglish · English</div>
       </motion.div>
     </div>

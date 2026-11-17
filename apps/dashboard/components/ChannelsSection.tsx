@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, Channel, ChannelKind } from "@/lib/api";
-import Icon from "@/components/Icon";
+import Icon, { type IconName } from "@/components/Icon";
 
 interface Field {
   name: string;
@@ -11,9 +11,9 @@ interface Field {
   secret?: boolean;
 }
 
-const APPS: { kind: ChannelKind; label: string; icon: string; steps: string[]; fields: Field[] }[] = [
+const APPS: { kind: ChannelKind; label: string; icon: IconName; steps: string[]; fields: Field[] }[] = [
   {
-    kind: "whatsapp", label: "WhatsApp", icon: "🟢",
+    kind: "whatsapp", label: "WhatsApp", icon: "message",
     steps: [
       "Go to developers.facebook.com → My Apps → Create app → type Business, and add the WhatsApp product.",
       "In WhatsApp → API Setup, add your business phone number (it must not be used in the normal WhatsApp app). Copy its Phone number ID.",
@@ -28,7 +28,7 @@ const APPS: { kind: ChannelKind; label: string; icon: string; steps: string[]; f
     ],
   },
   {
-    kind: "instagram", label: "Instagram", icon: "📸",
+    kind: "instagram", label: "Instagram", icon: "camera",
     steps: [
       "Your Instagram account must be a Professional account linked to a Facebook Page (Meta Business Suite → Settings → Instagram).",
       "In your Meta app add the Messenger product, then Instagram settings; generate a Page access token for the linked Page.",
@@ -41,7 +41,7 @@ const APPS: { kind: ChannelKind; label: string; icon: string; steps: string[]; f
     ],
   },
   {
-    kind: "messenger", label: "Messenger", icon: "💬",
+    kind: "messenger", label: "Messenger", icon: "chat",
     steps: [
       "In your Meta app add the Messenger product and generate a Page access token for your Facebook Page.",
       "Copy the App secret from App settings → Basic.",
@@ -53,7 +53,7 @@ const APPS: { kind: ChannelKind; label: string; icon: string; steps: string[]; f
     ],
   },
   {
-    kind: "telegram", label: "Telegram", icon: "✈️",
+    kind: "telegram", label: "Telegram", icon: "send",
     steps: [
       "Open Telegram, search for @BotFather and send /newbot. Choose a name and a username ending in “bot”.",
       "BotFather replies with a token like 123456789:AA… — paste it here. That's all: Kahiye connects the rest.",
@@ -138,7 +138,7 @@ export default function ChannelsSection({ botId }: { botId: string }) {
         return (
           <div key={c.id} className={`channel-row${justAdded === c.id ? " fresh" : ""}`}>
             <div className="channel-top">
-              <span className="channel-icon" aria-hidden>{meta.icon}</span>
+              <span className="channel-icon" aria-hidden><Icon name={meta.icon} size={20} /></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <strong>{meta.label}</strong> <span className="muted">· {c.displayName}</span>
                 <div className="small muted">
@@ -163,13 +163,13 @@ export default function ChannelsSection({ botId }: { botId: string }) {
         <div className="row" style={{ marginTop: 12 }}>
           {APPS.map((a) => (
             <button key={a.kind} className="btn secondary small" onClick={() => { setKind(a.kind); setError(null); }}>
-              <span aria-hidden>{a.icon}</span> Connect {a.label}
+              <Icon name={a.icon} size={15} /> Connect {a.label}
             </button>
           ))}
         </div>
       ) : (
         <form className="qa-form" onSubmit={connect} aria-label={`Connect ${app!.label}`} style={{ marginTop: 12 }}>
-          <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>{app!.icon} Connect {app!.label}</h3>
+          <h3 style={{ margin: "0 0 8px", fontSize: 16, display: "flex", alignItems: "center", gap: 8 }}><Icon name={app!.icon} /> Connect {app!.label}</h3>
           <ol className="setup-steps small">{app!.steps.map((s) => <li key={s}>{s}</li>)}</ol>
           {app!.fields.map((f) => (
             <div key={f.name} className="field">

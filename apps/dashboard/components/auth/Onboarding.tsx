@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Celebrate } from "@/components/AppMotion";
 import AuthLayout from "@/components/auth/AuthLayout";
+import Icon from "@/components/Icon";
 import GoogleButton, { googleEnabled } from "@/components/auth/GoogleButton";
 import PasswordInput, { passwordStrength } from "@/components/auth/PasswordInput";
 import { api, ApiError, getSession } from "@/lib/api";
@@ -196,7 +197,7 @@ export default function Onboarding() {
                 {INDUSTRIES.map((i) => (
                   <label key={i.id} className={industry === i.id ? "on" : ""}>
                     <input type="radio" name="industry" value={i.id} checked={industry === i.id} onChange={() => setIndustry(i.id)} />
-                    <span aria-hidden>{i.icon}</span>{i.label}
+                    <span aria-hidden><Icon name={i.icon} size={19} /></span>{i.label}
                   </label>
                 ))}
               </fieldset>
@@ -221,18 +222,18 @@ export default function Onboarding() {
               <p className="au-sub">It answers only from what you give it. Pick one way; you can add more later.</p>
               <div className="ob-options">
                 <button type="button" className="ob-option" disabled={busy} onClick={() => file.current?.click()}>
-                  <span aria-hidden>📄</span><strong>Upload a file</strong><small>Brochure, fee list, menu or FAQ (PDF, Word, Excel)</small>
+                  <span aria-hidden><Icon name="upload" size={20} /></span><strong>Upload a file</strong><small>Brochure, fee list, menu or FAQ (PDF, Word, Excel)</small>
                 </button>
                 <input ref={file} type="file" hidden multiple accept={ALLOWED.join(",")} aria-label="Upload documents" onChange={(e) => void addKnowledge("file", e.target.files)} />
                 <div className="ob-option as-form">
-                  <span aria-hidden>🌐</span><strong>Read my website</strong>
+                  <span aria-hidden><Icon name="globe" size={20} /></span><strong>Read my website</strong>
                   <div className="ob-inline">
                     <input type="text" inputMode="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="www.yourbusiness.com" aria-label="Website address" />
                     <button type="button" className="btn small" disabled={busy || !website.trim()} onClick={() => void addKnowledge("website")}>Read</button>
                   </div>
                 </div>
                 <button type="button" className="ob-option" disabled={busy} onClick={() => void addKnowledge("sample")}>
-                  <span aria-hidden>🧪</span><strong>Try with a sample</strong><small>A sample business like yours (fees, timings, services), to see how it works</small>
+                  <span aria-hidden><Icon name="flask" size={20} /></span><strong>Try with a sample</strong><small>A sample business like yours (fees, timings, services), to see how it works</small>
                 </button>
               </div>
               {busy && <p className="au-sub"><span className="spinner" /> Uploading…</p>}
@@ -243,7 +244,7 @@ export default function Onboarding() {
           {step === "done" && (
             <div className="ob-done" style={{ position: "relative" }}>
               <Celebrate show={knowledge === "ready"} />
-              <div className="ob-done-icon" aria-hidden>{knowledge === "ready" ? "🎉" : "📖"}</div>
+              <div className="ob-done-icon" aria-hidden><Icon name={knowledge === "ready" ? "badge" : "book"} size={34} /></div>
               <h1>{knowledge === "ready" ? "Your assistant is ready!" : "Your assistant is reading…"}</h1>
               <p className="au-sub">
                 {knowledge === "ready"

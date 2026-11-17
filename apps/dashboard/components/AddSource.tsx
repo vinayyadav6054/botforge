@@ -2,22 +2,23 @@
 
 import { FormEvent, useState } from "react";
 import { api, SourceKind } from "@/lib/api";
+import Icon, { type IconName } from "@/components/Icon";
 
-const KINDS: { id: SourceKind; label: string; icon: string; placeholder: string; help: string }[] = [
+const KINDS: { id: SourceKind; label: string; icon: IconName; placeholder: string; help: string }[] = [
   {
-    id: "website", label: "Website", icon: "🌐", placeholder: "https://www.yourbusiness.com",
+    id: "website", label: "Website", icon: "globe", placeholder: "https://www.yourbusiness.com",
     help: "We read your website's pages (up to your plan's page limit), following links on the same site.",
   },
   {
-    id: "google", label: "Google Docs / Sheets", icon: "📗", placeholder: "https://docs.google.com/document/d/…",
+    id: "google", label: "Google Docs / Sheets", icon: "sheet", placeholder: "https://docs.google.com/document/d/…",
     help: "Docs, Sheets, Slides or a Drive file (PDF, Word, Excel). In Google, set Share → General access → \"Anyone with the link\".",
   },
   {
-    id: "notion", label: "Notion", icon: "📓", placeholder: "https://www.notion.so/Your-page-…",
+    id: "notion", label: "Notion", icon: "book", placeholder: "https://www.notion.so/Your-page-…",
     help: "Create an integration at notion.so/my-integrations, copy its secret, then open your page → ••• → Connections → add the integration.",
   },
   {
-    id: "youtube", label: "YouTube", icon: "▶️", placeholder: "https://www.youtube.com/watch?v=…",
+    id: "youtube", label: "YouTube", icon: "play", placeholder: "https://www.youtube.com/watch?v=…",
     help: "We read the video's captions (automatic captions work too). Answers link to the right moment in the video.",
   },
 ];
@@ -62,7 +63,7 @@ export default function AddSource({ botId, onAdded }: { botId: string; onAdded: 
         {KINDS.map((k) => (
           <button key={k.id} type="button" role="tab" aria-selected={kind === k.id}
             className={`source-tab${kind === k.id ? " active" : ""}`} onClick={() => { setKind(k.id); setError(null); }}>
-            <span aria-hidden>{k.icon}</span> {k.label}
+            <Icon name={k.icon} size={15} /> {k.label}
           </button>
         ))}
       </div>

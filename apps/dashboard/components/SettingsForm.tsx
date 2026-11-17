@@ -201,7 +201,7 @@ export default function SettingsForm({ bot, onSaved }: { bot: Bot; onSaved: (b: 
             <strong>{s.name}</strong>
           </div>
           <div className="lkp-body"><span className="lkp-msg">{s.welcomeMessage || "Hi! How can I help you today?"}</span></div>
-          <span className="lkp-launcher" style={{ background: color, [s.widgetPosition === "left" ? "left" : "right"]: 10 }}>💬</span>
+          <span className="lkp-launcher" style={{ background: color, [s.widgetPosition === "left" ? "left" : "right"]: 10 }}><Icon name="chat" size={20} /></span>
         </div>
       </div>
 
