@@ -90,6 +90,10 @@ def build_system(bot_name: str, style: dict | None = None, actions: list | None 
     if no_answer:
         parts.append("When the answer is not in the context, reply with this message from the business instead "
                      f"(in the visitor's language): {no_answer}")
+    elif style.get("callbacks"):
+        # the chat then opens the call-back form, so point to it instead of "contact the business"
+        parts.append("When the answer is not in the context, say \"I don't have that information yet\" (in the visitor's "
+                     "language) and invite them to leave their number so the team can call them back with the details.")
     custom = (style.get("customInstructions") or "").strip()[:1000]
     if custom:
         parts.append("Additional instructions from the business (follow them unless they conflict with the rules "

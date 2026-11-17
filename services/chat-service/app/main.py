@@ -32,7 +32,10 @@ CONVERSATION_ID = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 _NO_INFO = re.compile(
     r"(don['’]t|do not|doesn['’]t|does not) (have|contain|include|mention)\b[^.!?]{0,40}\b(information|details)"
     r"|\bno (information|details) (about|on|regarding|for)\b"
-    r"|\b(isn['’]t|is not|not) mentioned in\b",
+    r"|\b(isn['’]t|is not|not) mentioned in\b"
+    # the same in Hinglish and Hindi ("iski jaankari abhi mere paas nahi hai", "जानकारी ... नहीं")
+    r"|\bjaa?nkaa?ri\b[^.!?]{0,30}\bnah?i\b"
+    r"|जानकारी[^।.!?]{0,30}नहीं",
     re.IGNORECASE)
 
 
@@ -149,7 +152,8 @@ async def answer_stream(bot: dict, question: str, chunks, history):
             yield cached[i:i + 48]
         return
     parts = []
-    async for token in stream_answer(bot["name"], question, chunks, history, style=bot.get("style"), actions=bot.get("actions")):
+    style = {**(bot.get("style") or {}), "callbacks": bool((bot.get("leadCapture") or {}).get("enabled"))}
+    async for token in stream_answer(bot["name"], question, chunks, history, style=style, actions=bot.get("actions")):
         parts.append(token)
         yield token
     text = "".join(parts)

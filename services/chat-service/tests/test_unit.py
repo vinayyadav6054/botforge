@@ -660,7 +660,7 @@ def test_playground_answers_are_not_stored_but_counted(client, fakes):
 def test_owner_style_reaches_the_model(client, fakes):
     fakes["bot"] = {**BOT, "style": {"tone": "professional"}}
     chat(client)
-    assert fakes["style"] == {"tone": "professional"}
+    assert fakes["style"] == {"tone": "professional", "callbacks": False}
 
 
 def test_system_prompt_applies_style_but_keeps_rules_first():
@@ -820,3 +820,25 @@ def test_a_fixed_reply_language_gets_no_per_question_note():
     from app.llm import build_contents
     prompt = build_contents("Aapki fees kitni hai?", [("Fees.", 0.9)], style={"replyLanguage": "en"})[-1].parts[0].text
     assert "Reply in" not in prompt
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("I don't have that information yet. Leave your number and we'll call you back.", True),
+    ("Iski jaankari abhi mere paas nahi hai. Apna number chhodiye.", True),
+    ("Fees ki jankari mere paas nahi hai.", True),
+    ("इसकी जानकारी अभी मेरे पास नहीं है।", True),
+    ("Hamare centres Thane aur Kalyan mein hain. Puri jaankari ke liye call karein.", False),
+    ("The fee is Rs 68,000 per year.", False),
+])
+def test_not_knowing_is_recognised_in_hinglish_and_hindi_too(text, expected):
+    from app.main import says_no_information
+    assert says_no_information(text) is expected
+
+
+def test_with_call_backs_on_the_ai_offers_one_instead_of_contact_us():
+    from app.llm import build_system
+    assert "leave their number" in build_system("Bakery", {"callbacks": True})
+    assert "leave their number" not in build_system("Bakery", {"callbacks": False})
+    # the owner's own message wins
+    own = build_system("Bakery", {"callbacks": True, "noAnswerMessage": "Call 98200 12345."})
+    assert "Call 98200 12345." in own and "leave their number" not in own
