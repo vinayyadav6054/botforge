@@ -800,3 +800,23 @@ def test_translation_and_embedding_caches():
     expiring = cache.TTLCache(maxsize=5, ttl=-1)
     expiring.set("x", 1)
     assert expiring.get("x") is None
+
+
+@pytest.mark.parametrize("question, expected", [
+    ("Aapki fees kitni hai?", "Reply in Hinglish"),
+    ("आपकी फीस कितनी है?", "Reply in Hindi"),
+    ("What are the fees?", None),
+])
+def test_the_visitors_language_is_named_next_to_the_question(question, expected):
+    from app.llm import build_contents
+    prompt = build_contents(question, [("Fees are Rs 50,000.", 0.9)])[-1].parts[0].text
+    if expected:
+        assert prompt.rstrip().endswith(")") and expected in prompt
+    else:
+        assert "Reply in" not in prompt
+
+
+def test_a_fixed_reply_language_gets_no_per_question_note():
+    from app.llm import build_contents
+    prompt = build_contents("Aapki fees kitni hai?", [("Fees.", 0.9)], style={"replyLanguage": "en"})[-1].parts[0].text
+    assert "Reply in" not in prompt

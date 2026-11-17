@@ -110,20 +110,38 @@ def _context_entry(i: int, chunk) -> str:
     return f"[{i}] {text}"
 
 
-def build_prompt(question: str, chunks) -> str:
+LANGUAGE_HINTS = {
+    "hinglish": "Reply in Hinglish (Hindi written in English letters), the way the visitor wrote.",
+    "hi": "Reply in Hindi (Devanagari script), the way the visitor wrote.",
+}
+
+
+def language_hint(question: str, style: dict | None) -> str | None:
+    """Next to the question itself: a general "reply in the visitor's language" rule alone is often ignored
+    for Hinglish. Only when the owner left the reply language on auto."""
+    from .language import reply_language
+    setting = (style or {}).get("replyLanguage")
+    if setting and setting != "auto":
+        return None
+    return LANGUAGE_HINTS.get(reply_language(question, None))
+
+
+def build_prompt(question: str, chunks, hint: str | None = None) -> str:
     """chunks: (text, score) tuples or retrieval.Retrieved rows."""
     context = "\n\n".join(_context_entry(i, c) for i, c in enumerate(chunks, 1))
-    return f"CONTEXT:\n{context}\n\nVISITOR QUESTION:\n{question}"
+    prompt = f"CONTEXT:\n{context}\n\nVISITOR QUESTION:\n{question}"
+    return f"{prompt}\n\n({hint})" if hint else prompt
 
 
 def build_contents(question: str, chunks: list[tuple[str, float]],
-                   history: list[tuple[str, str]] | None = None) -> list[types.Content]:
+                   history: list[tuple[str, str]] | None = None, style: dict | None = None) -> list[types.Content]:
     """Earlier turns as plain chat turns, then the latest question together with the retrieved context."""
     contents = [
         types.Content(role="model" if role in ("assistant", "agent") else "user", parts=[types.Part(text=text)])
         for role, text in (history or [])
     ]
-    contents.append(types.Content(role="user", parts=[types.Part(text=build_prompt(question, chunks))]))
+    prompt = build_prompt(question, chunks, language_hint(question, style))
+    contents.append(types.Content(role="user", parts=[types.Part(text=prompt)]))
     return contents
 
 
@@ -138,7 +156,7 @@ def is_transient(ex: Exception) -> bool:
 async def _open_stream(model, bot_name, question, chunks, history, style=None, actions=None):
     return await _client.aio.models.generate_content_stream(
         model=model,
-        contents=build_contents(question, chunks, history),
+        contents=build_contents(question, chunks, history, style),
         config=types.GenerateContentConfig(
             system_instruction=build_system(bot_name, style, actions),
             temperature=0.2,
