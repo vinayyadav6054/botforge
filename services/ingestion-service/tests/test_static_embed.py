@@ -104,6 +104,9 @@ def test_chunks_stored_by_another_model_are_reembedded_from_their_text(db_conn, 
     monkeypatch.setattr(config, "EMBEDDING_ID", "model2vec:test")
     assert db.reembed_stale(db_conn, embedder.embed, batch=1) == 2
     assert db.reembed_stale(db_conn, embedder.embed) == 0          # nothing left: start-up stays quick
+    # no transaction left open while the worker waits for messages
+    import psycopg
+    assert db_conn.info.transaction_status == psycopg.pq.TransactionStatus.IDLE
 
     with db_conn.cursor() as cur:
         cur.execute("SELECT content, embedding, embedding_model FROM knowledge.chunks WHERE document_id = %s "

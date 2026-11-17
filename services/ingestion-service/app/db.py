@@ -100,6 +100,9 @@ def reembed_stale(conn, embed_fn, batch: int = 200, log=None) -> int:
                         (config.EMBEDDING_ID, batch))
             rows = cur.fetchall()
         if not rows:
+            # end the read transaction: one left open is closed by the database after a while
+            # (Neon: idle-in-transaction timeout) and the next document would fail
+            conn.commit()
             return total
         vectors = embed_fn([content for _, content in rows])
         with conn.cursor() as cur:
