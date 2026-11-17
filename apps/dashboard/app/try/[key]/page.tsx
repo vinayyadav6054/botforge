@@ -98,7 +98,6 @@ export default function TryPage() {
           {questions.map((q) => (
             <button key={q} className="try-chip" disabled={!ready} onClick={() => window.Kahiye?.ask(q)}>{q}</button>
           ))}
-          <button className="try-chip ghost" disabled={!ready} onClick={() => window.Kahiye?.ask("Aapki fees kitni hai?")}>Aapki fees kitni hai?</button>
         </div>
         <p className="muted small">Or tap the chat bubble in the corner and type your own question.</p>
 
