@@ -28,11 +28,15 @@ STORAGE_ROOT = Path(_required("STORAGE_ROOT")).resolve()
 # "local": fastembed model on this machine (~300 MB RAM); "gemini": Gemini embedding API (tiny RAM, needs a key).
 # Pick one per database - vectors from different providers cannot be compared.
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local").strip().lower()
-if EMBEDDING_PROVIDER not in ("local", "gemini"):
-    raise RuntimeError("EMBEDDING_PROVIDER must be 'local' or 'gemini'")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+if EMBEDDING_PROVIDER not in ("local", "gemini", "model2vec"):
+    raise RuntimeError("EMBEDDING_PROVIDER must be 'local', 'gemini' or 'model2vec'")
+# model2vec: small static model (~60 MB RAM, numpy only, no API limits) - the free-host default
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL") or (
+    "minishlab/potion-base-8M" if EMBEDDING_PROVIDER == "model2vec" else "BAAI/bge-small-en-v1.5")
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "384"))
 GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+# which model made a stored vector; stored chunks made by another model are re-embedded at start-up
+EMBEDDING_ID = f"gemini:{GEMINI_EMBEDDING_MODEL}" if EMBEDDING_PROVIDER == "gemini" else f"{EMBEDDING_PROVIDER}:{EMBEDDING_MODEL}"
 GEMINI_API_KEY = _required("GEMINI_API_KEY") if EMBEDDING_PROVIDER == "gemini" else os.getenv("GEMINI_API_KEY", "")
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))

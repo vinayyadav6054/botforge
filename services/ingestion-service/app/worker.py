@@ -147,11 +147,16 @@ def main() -> None:
     conn = db.connect()
     db.ensure_schema(conn)
 
-    if config.EMBEDDING_PROVIDER == "local":
-        log.info("Loading embedding model (the first run downloads it, ~100 MB)...")
-    else:
+    if config.EMBEDDING_PROVIDER == "gemini":
         log.info("Using Gemini embeddings (%s)", config.GEMINI_EMBEDDING_MODEL)
+    else:
+        log.info("Loading embedding model %s...", config.EMBEDDING_MODEL)
     get_model()
+    # after a model change, stored chunks are re-embedded from their text (not with Gemini: it has a daily limit)
+    if config.EMBEDDING_PROVIDER != "gemini":
+        n = db.reembed_stale(conn, embed, log=log)
+        if n:
+            log.info("Re-embedding finished: %d chunk(s) now use %s", n, config.EMBEDDING_ID)
 
     handler = Handler(conn, publish_fn=None)
     try:

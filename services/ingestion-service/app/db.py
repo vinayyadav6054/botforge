@@ -39,6 +39,8 @@ def ensure_schema(conn: psycopg.Connection) -> None:
         cur.execute("""ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS tsv tsvector
                        GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED""")
         cur.execute("CREATE INDEX IF NOT EXISTS ix_chunks_tsv ON knowledge.chunks USING gin (tsv)")
+        # which model made each vector (null: stored before this was tracked)
+        cur.execute("ALTER TABLE knowledge.chunks ADD COLUMN IF NOT EXISTS embedding_model text")
     conn.commit()
 
 
@@ -47,7 +49,7 @@ def replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors,
     """chunks: plain strings or Chunk objects (with location/url)."""
     rows = [
         (tenant_id, bot_id, document_id, i, getattr(c, "content", c), vector, source_name,
-         getattr(c, "location", None), getattr(c, "url", None), kind)
+         getattr(c, "location", None), getattr(c, "url", None), kind, config.EMBEDDING_ID)
         for i, (c, vector) in enumerate(zip(chunks, vectors))
     ]
     with conn.cursor() as cur:
@@ -57,8 +59,9 @@ def replace_chunks(conn, tenant_id, bot_id, document_id, chunks, vectors,
         )
         cur.executemany(
             """INSERT INTO knowledge.chunks
-               (tenant_id, bot_id, document_id, chunk_index, content, embedding, source_name, location, source_url, kind)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+               (tenant_id, bot_id, document_id, chunk_index, content, embedding, source_name, location, source_url, kind,
+                embedding_model)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             rows,
         )
     conn.commit()
@@ -84,3 +87,25 @@ def delete_bot_chunks(conn, tenant_id, bot_id) -> int:
         count = cur.rowcount
     conn.commit()
     return count
+
+
+def reembed_stale(conn, embed_fn, batch: int = 200, log=None) -> int:
+    """Chunks stored by another embedding model cannot be searched with this one: re-embeds them from
+    their stored text (no re-reading of files or websites). Runs at start-up; quick for a local model."""
+    total = 0
+    while True:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT id, content FROM knowledge.chunks
+                           WHERE embedding_model IS DISTINCT FROM %s ORDER BY id LIMIT %s""",
+                        (config.EMBEDDING_ID, batch))
+            rows = cur.fetchall()
+        if not rows:
+            return total
+        vectors = embed_fn([content for _, content in rows])
+        with conn.cursor() as cur:
+            cur.executemany("UPDATE knowledge.chunks SET embedding = %s, embedding_model = %s WHERE id = %s",
+                            [(v, config.EMBEDDING_ID, i) for (i, _), v in zip(rows, vectors)])
+        conn.commit()
+        total += len(rows)
+        if log:
+            log.info("Re-embedded %d stored chunk(s) with %s", total, config.EMBEDDING_ID)

@@ -14,10 +14,12 @@ customer site ──<script src=".../widget.js">──────>   gateway �
 | Backend (gateway, identity, bots, chat, ingestion) | Render | Free web service: 512 MB RAM, sleeps after 15 min idle |
 | Database | Neon | Free: 0.5 GB |
 | Message queue | CloudAMQP | Little Lemur |
-| AI answers + embeddings | Google Gemini | Free API key |
+| AI answers | Google Gemini | Free API key |
 
-The backend uses **Gemini embeddings** (`EMBEDDING_PROVIDER=gemini`, set in `deploy/render/Dockerfile`) instead of
-the local model, which would not fit in 512 MB. Tested locally at 512 MB / 0.1 CPU: about 350 MB peak.
+Embeddings (the search index of each business's knowledge) come from a **small model inside the container**
+(`EMBEDDING_PROVIDER=model2vec`, `minishlab/potion-base-8M`, set in `deploy/render/Dockerfile`): about 60 MB per
+service, numpy only, no API key and **no daily limit**. Gemini's free embeddings allow only 1,000 texts a day, which
+one or two websites use up; the bigger local model (bge-small, ~330 MB) does not fit in 512 MB.
 
 ## 1. Neon (database)
 
@@ -142,6 +144,7 @@ Push to `main`: Vercel and Render both redeploy automatically.
   the free 750 instance hours per month cover one service running all the time.
 - **Uploaded files are temporary** on Render (no free disk): answers keep working because the processed
   knowledge is in Neon, but **Retry** on an old document fails (upload it again).
-- **Gemini free quota** is shared by answers and embeddings; very large documents may take a while.
-- Don't switch `EMBEDDING_PROVIDER` on a database that already has documents: vectors from different models
-  can't be compared. Re-upload the documents after a switch.
+- **Gemini free quota** is used for answers only; embeddings run inside the container.
+- After a change of `EMBEDDING_PROVIDER` or `EMBEDDING_MODEL`, the ingestion service re-embeds the stored
+  knowledge from its text at start-up (logged as "Re-embedded ..."), except with Gemini (daily limit):
+  vectors from different models can't be compared.

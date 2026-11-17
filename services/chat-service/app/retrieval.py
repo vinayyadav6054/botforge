@@ -6,7 +6,7 @@ import psycopg
 from pgvector.psycopg import register_vector
 from psycopg_pool import ConnectionPool
 
-from . import config, gemini_embed
+from . import config, gemini_embed, static_embed
 from .cache import TTLCache
 
 _model = None
@@ -26,10 +26,12 @@ def pool() -> ConnectionPool:
 
 
 def get_model():
-    """Loads the local model once (EMBEDDING_PROVIDER=local); nothing to load for Gemini."""
+    """Loads the local model once (EMBEDDING_PROVIDER=local or model2vec); nothing to load for Gemini."""
     global _model
     if config.EMBEDDING_PROVIDER == "gemini":
         return None
+    if config.EMBEDDING_PROVIDER == "model2vec":
+        return static_embed.get_model()
     if _model is None:
         from fastembed import TextEmbedding   # imported lazily: not installed on Gemini-only hosts
         _model = TextEmbedding(model_name=config.EMBEDDING_MODEL)
@@ -37,12 +39,14 @@ def get_model():
 
 
 def embed_query(text: str):
-    key = (config.EMBEDDING_PROVIDER, text)
+    key = (config.EMBEDDING_ID, text)
     cached = _embeddings.get(key)
     if cached is not None:
         return cached
     if config.EMBEDDING_PROVIDER == "gemini":
         vector = gemini_embed.embed([text], "RETRIEVAL_QUERY")[0]
+    elif config.EMBEDDING_PROVIDER == "model2vec":
+        vector = static_embed.embed([text])[0]
     else:
         vector = list(get_model().embed([text]))[0]
     _embeddings.set(key, vector)
@@ -53,6 +57,8 @@ def embed_documents(texts: list[str]):
     """Same as the ingestion service stores them (used by tests and tools)."""
     if config.EMBEDDING_PROVIDER == "gemini":
         return gemini_embed.embed(texts, "RETRIEVAL_DOCUMENT")
+    if config.EMBEDDING_PROVIDER == "model2vec":
+        return static_embed.embed(texts)
     return list(get_model().embed(texts))
 
 
