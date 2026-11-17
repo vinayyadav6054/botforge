@@ -52,13 +52,13 @@ export default function Landing() {
             </FadeIn>
             <FadeIn delay={0.05}>
               <h1 className="lp-h1">
-                Turn every website visitor into a <span className="lp-grad">customer</span>, even at 2&nbsp;AM.
+                Customer ne poocha, <span className="lp-grad">Kahiye</span> ne bataya. Raat ke 2&nbsp;baje bhi.
               </h1>
             </FadeIn>
             <FadeIn delay={0.12}>
               <p className="lp-lead">
-                An AI assistant that answers your customers instantly from <strong>your own brochure, fees and FAQs</strong>, on your
-                website and WhatsApp, in Hindi or English, and sends you every lead.
+                Your own AI assistant that answers from <strong>your brochure, fees and FAQs</strong>, on your website and
+                WhatsApp, in Hindi, Hinglish or English. Aur har lead seedha aapke paas.
               </p>
             </FadeIn>
             <FadeIn delay={0.18} className="lp-cta">
