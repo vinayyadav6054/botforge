@@ -1,6 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { conversationId, initials, mount, readOptions } from "../src/main";
+import { conversationId, initials, mount, plainText, readOptions } from "../src/main";
 import { hex6 } from "../src/styles";
+
+describe("plainText", () => {
+  it("removes markdown marks the model adds, keeping the words", () => {
+    expect(plainText("We have:\n*   **Nido Program:** 4 to 12 months.\n- **Toddler:** 1 year\n## Fees\nCall us.")).toBe(
+      "We have:\n• Nido Program: 4 to 12 months.\n• Toddler: 1 year\nFees\nCall us.",
+    );
+  });
+
+  it("leaves ordinary text alone, including a half-streamed bold mark", () => {
+    expect(plainText("Fees: Rs. 1,500 - non-refundable. 2*3 = 6")).toBe("Fees: Rs. 1,500 - non-refundable. 2*3 = 6");
+    expect(plainText("**Nido")).toBe("Nido");
+  });
+});
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 

@@ -468,7 +468,7 @@ export function mount(opts: Options): Widget {
       },
       onToken: (t) => {
         received += t;
-        answer.textContent = received;
+        answer.textContent = plainText(received);
         list.scrollTop = list.scrollHeight;
       },
       onError: (message) => {
@@ -708,6 +708,17 @@ export function conversationId(key: string): string {
   const id = newUuid();
   saveFlag(key, id);
   return id;
+}
+
+/** Answers are shown as text, never HTML: markdown marks the model sometimes adds (**bold**, "* " bullets, # headings)
+ *  would show as raw symbols, so they are turned into plain text. */
+export function plainText(s: string): string {
+  return s
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    .replace(/__([^_\n]+)__/g, "$1")
+    .replace(/^[ \t]*[*-][ \t]+/gm, "• ")
+    .replace(/^#{1,6}[ \t]+/gm, "")
+    .replace(/\*\*/g, "");
 }
 
 function newUuid(): string {
