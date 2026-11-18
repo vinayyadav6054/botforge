@@ -123,3 +123,32 @@ def test_new_chunks_record_their_model(db_conn, ids, m2v):
     with db_conn.cursor() as cur:
         cur.execute("SELECT DISTINCT embedding_model FROM knowledge.chunks WHERE bot_id = %s", (ids["bot"],))
         assert cur.fetchall() == [("model2vec:test",)]
+
+
+@pytest.mark.unit
+def test_a_qa_entry_is_found_by_its_question_only():
+    long_answer = "We have 6 branches: " + ", ".join(f"Branch {i}, Road {i}, Mumbai" for i in range(30))
+    content = f"Question: Which courses do you offer?\nAnswer: {long_answer}"
+    assert db.embedding_text(content, "qa") == "Which courses do you offer?"
+    assert db.embedding_text(content, "file") == content          # documents keep their whole text
+    assert db.embedding_text("Question: x", "qa") == "x"
+
+
+@pytest.mark.integration
+def test_stored_qa_is_reembedded_by_its_question(db_conn, ids, m2v, monkeypatch):
+    from app.worker import upsert_qa
+    with db_conn.cursor() as cur:
+        cur.execute("DELETE FROM knowledge.chunks")
+    db_conn.commit()
+    upsert_qa(db_conn, {"tenantId": str(ids["tenant"]), "botId": str(ids["bot"]), "qaId": str(ids["doc"]),
+                        "question": "Is parking free?", "answer": "Yes, all day, behind the building."})
+    expected = embedder.embed(["Is parking free?"])[0]
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT embedding FROM knowledge.chunks WHERE document_id = %s", (ids["doc"],))
+        assert np.allclose(cur.fetchone()[0].to_numpy(), expected, atol=1e-5)
+        cur.execute("UPDATE knowledge.chunks SET embedding_model = NULL")
+    db_conn.commit()
+    assert db.reembed_stale(db_conn, embedder.embed) == 1
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT embedding FROM knowledge.chunks WHERE document_id = %s", (ids["doc"],))
+        assert np.allclose(cur.fetchone()[0].to_numpy(), expected, atol=1e-5)

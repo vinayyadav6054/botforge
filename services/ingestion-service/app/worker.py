@@ -54,8 +54,9 @@ def upsert_qa(conn, msg: dict) -> None:
     """An owner-written answer becomes one chunk that retrieval prefers when the question matches."""
     question, answer = msg["question"].strip(), msg["answer"].strip()
     content = f"Question: {question}\nAnswer: {answer}"
+    # found by its question: embedding a long answer too drowns the question out, so even the same question missed
     db.replace_chunks(conn, uuid.UUID(msg["tenantId"]), uuid.UUID(msg["botId"]), uuid.UUID(msg["qaId"]),
-                      [content], embed([content]), source_name="Q&A", kind="qa")
+                      [content], embed([db.embedding_text(content, "qa")]), source_name="Q&A", kind="qa")
 
 
 class Handler:

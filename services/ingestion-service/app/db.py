@@ -89,16 +89,23 @@ def delete_bot_chunks(conn, tenant_id, bot_id) -> int:
     return count
 
 
+def embedding_text(content: str, kind: str) -> str:
+    """What a chunk is found by: an owner's Q&A by its question only, everything else by its text."""
+    if kind == "qa" and content.startswith("Question: "):
+        return content[len("Question: "):].split("\nAnswer:", 1)[0].strip()
+    return content
+
+
 def reembed_stale(conn, embed_fn, batch: int = 200, log=None) -> int:
     """Chunks stored by another embedding model cannot be searched with this one: re-embeds them from
     their stored text (no re-reading of files or websites). Runs at start-up; quick for a local model."""
     total = 0
     while True:
         with conn.cursor() as cur:
-            cur.execute("""SELECT id, content FROM knowledge.chunks
+            cur.execute("""SELECT id, content, kind FROM knowledge.chunks
                            WHERE embedding_model IS DISTINCT FROM %s ORDER BY id LIMIT %s""",
                         (config.EMBEDDING_ID, batch))
-            rows = cur.fetchall()
+            rows = [(i, embedding_text(content, kind)) for i, content, kind in cur.fetchall()]
         if not rows:
             # end the read transaction: one left open is closed by the database after a while
             # (Neon: idle-in-transaction timeout) and the next document would fail
