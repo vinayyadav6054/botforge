@@ -230,6 +230,9 @@ export default function Landing() {
               <p className="lp-eyebrow">Pricing</p>
               <h2 className="lp-h2">Costs less than <span className="lp-grad">one missed admission</span>.</h2>
               <p>{site.trialNote}</p>
+              {site.founding.active && (
+                <p className="lp-founding"><strong>{site.founding.title}:</strong> {site.founding.text}</p>
+              )}
             </FadeIn>
             <SpotlightGrid>
               <Stagger className="lp-plans">
@@ -238,7 +241,16 @@ export default function Landing() {
                     {p.featured && <span className="lp-plan-flag">Most popular</span>}
                     <h3>{p.name}</h3>
                     <p>{p.blurb}</p>
-                    <div className="lp-price"><span className="cur">{site.currency}</span>{p.price}<span className="per">/month</span></div>
+                    {site.founding.active ? (
+                      <>
+                        <div className="lp-price"><span className="cur">{site.currency}</span>{p.foundingPrice}<span className="per">/month</span></div>
+                        <p className="lp-price-was">
+                          <s aria-label={`Regular price ${site.currency}${p.price}`}>{site.currency}{p.price}</s> founding price, for life
+                        </p>
+                      </>
+                    ) : (
+                      <div className="lp-price"><span className="cur">{site.currency}</span>{p.price}<span className="per">/month</span></div>
+                    )}
                     <ul>{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
                     <Link href="/register" className={`btn block${p.featured ? "" : " secondary"}`}>Start free trial</Link>
                   </div>

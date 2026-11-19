@@ -34,9 +34,10 @@ FEATURES
 
 PRICING (PER MONTH, IN RUPEES)
 Every account starts with a 14-day free trial with all features. No card is needed.
-Starter: Rs 499 per month. 1 assistant, 500 answers a month, 10 documents, website chat in Hindi and Hinglish, lead alerts by email and Google Sheets, booking and UPI buttons, live takeover.
-Business: Rs 1,499 per month (most popular). 3 assistants, 3,000 answers a month, 50 documents, WhatsApp, Instagram, Messenger and Telegram, and no "Powered by Kahiye" badge.
-Pro: Rs 3,999 per month. 10 assistants, 15,000 answers a month, 200 documents, everything in Business, priority support and done-for-you setup.
+Founding customer offer: the first 10 businesses pay 40% less, for as long as they stay with Kahiye. Setup is free.
+Starter: Rs 999 per month (founding price Rs 599). 1 assistant, 500 answers a month, 10 documents, website chat in Hindi and Hinglish, lead alerts by email and Google Sheets, booking and UPI buttons, live takeover.
+Business: Rs 2,499 per month (founding price Rs 1,499; most popular). 3 assistants, 3,000 answers a month, 50 documents, WhatsApp, Instagram, Messenger and Telegram, and no "Powered by Kahiye" badge.
+Pro: Rs 5,999 per month (founding price Rs 3,599). 10 assistants, 15,000 answers a month, 200 documents, everything in Business, priority support and done-for-you setup.
 Payment is monthly by UPI (GPay, PhonePe, Paytm, BHIM or any bank app). There is no contract and no auto-debit; you can stop any time. If a plan ends, the assistant pauses and your data stays until you delete it.
 WhatsApp itself may charge the business for some conversations; that fee goes to Meta, not to Kahiye.
 

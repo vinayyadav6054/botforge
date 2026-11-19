@@ -55,7 +55,8 @@ Track each prospect in a Google Sheet with these columns. Each week, look at whe
 3. **Check-ins:** day 3 ("first questions came in, here they are"), day 7 (fix any wrong answers together), day 12
    (show the numbers: questions answered, leads, how many after office hours).
 4. **Ask:** *"In 12 days it answered 84 questions and brought 9 parents' numbers, 5 of them after 8 PM. To keep it,
-   it's ₹1,499 a month."* Founder offer for the first 10 clients: **₹999/month for 3 months** if they pay this week.
+   it's ₹2,499 a month, but as one of our first 10 businesses you pay the founding price, ₹1,499, for as long as you stay."*
+   Founding offer: **40% off for life** for the first 10 paying clients (tick *Founding* in `/admin`).
 5. **Payment:** they pay by UPI from *Plan & account* (QR code) and send the reference; you check your bank app and
    switch the plan on in `/admin`. No gateway, no fees.
 

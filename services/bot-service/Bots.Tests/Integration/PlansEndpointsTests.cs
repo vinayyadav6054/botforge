@@ -197,6 +197,60 @@ public class PlansEndpointsTests(BotsApiFactory factory)
     }
 
     [Fact]
+    public async Task Founding_customers_are_limited_and_keep_their_mark()
+    {
+        var tenant = Guid.NewGuid();
+        var owner = factory.ClientFor(tenant);
+        var before = (await Account(owner)).GetProperty("founding");
+        Assert.False(before.GetProperty("member").GetBoolean());
+        var plans = (await Account(owner)).GetProperty("plans").EnumerateArray().ToList();
+        Assert.All(plans, p => Assert.True(p.GetProperty("foundingPriceInr").GetInt32() < p.GetProperty("priceInr").GetInt32()));
+
+        // activating a plan and the founding mark in one go
+        var res = await Admin(HttpMethod.Put, $"/admin/subscriptions/{tenant}", new { plan = "business", months = 1, founding = true });
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var after = (await Account(owner)).GetProperty("founding");
+        Assert.True(after.GetProperty("member").GetBoolean());
+        Assert.Equal(before.GetProperty("spotsLeft").GetInt32() - 1, after.GetProperty("spotsLeft").GetInt32());
+
+        // renewing later keeps the mark
+        await Admin(HttpMethod.Put, $"/admin/subscriptions/{tenant}", new { plan = "business", months = 1 });
+        Assert.True((await Account(owner)).GetProperty("founding").GetProperty("member").GetBoolean());
+
+        // fill the remaining spots: the next business is refused
+        var fillers = new List<Guid>();
+        await Db(async db =>
+        {
+            var left = Plans.FoundingSpots - await db.Subscriptions.CountAsync(x => x.Founding);
+            for (var i = 0; i < left; i++)
+            {
+                var id = Guid.NewGuid();
+                fillers.Add(id);
+                db.Subscriptions.Add(new Subscription { TenantId = id, Founding = true, TrialEndsAt = DateTime.UtcNow.AddDays(14) });
+            }
+            await db.SaveChangesAsync();
+        });
+        try
+        {
+            var late = Guid.NewGuid();
+            Assert.False((await Account(factory.ClientFor(late))).GetProperty("founding").GetProperty("open").GetBoolean());
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await Admin(HttpMethod.Put, $"/admin/subscriptions/{late}", new { founding = true })).StatusCode);
+            // removing a mark frees a spot
+            Assert.Equal(HttpStatusCode.OK, (await Admin(HttpMethod.Put, $"/admin/subscriptions/{tenant}", new { founding = false })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await Admin(HttpMethod.Put, $"/admin/subscriptions/{late}", new { founding = true })).StatusCode);
+            await Admin(HttpMethod.Put, $"/admin/subscriptions/{late}", new { founding = false });
+        }
+        finally
+        {
+            await Db(async db =>
+            {
+                await db.Subscriptions.Where(x => fillers.Contains(x.TenantId)).ExecuteDeleteAsync();
+            });
+        }
+    }
+
+    [Fact]
     public async Task Trial_bots_show_the_badge()
     {
         var bot = await CreateBot(factory.ClientFor(Guid.NewGuid()));

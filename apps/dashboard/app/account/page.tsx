@@ -28,6 +28,15 @@ function Meter({ label, used, limit }: { label: string; used: number; limit: num
   );
 }
 
+/** Founding customers (and new ones while spots are left) pay the founding price; Razorpay plans only know the regular one. */
+function foundingApplies(a: Account | null) {
+  return !!a && (a.founding.member || (a.founding.open && site.founding.active));
+}
+
+function priceFor(p: Plan, a: Account | null) {
+  return foundingApplies(a) ? p.foundingPriceInr : p.priceInr;
+}
+
 function planFeatures(p: Plan) {
   return [
     `${p.bots} bot${p.bots === 1 ? "" : "s"}`,
@@ -54,13 +63,13 @@ function AccountPage() {
 
   async function upgrade(plan: Plan) {
     setError(null);
-    if (!account?.onlinePayment.includes(plan.id)) {
+    if (foundingApplies(account) || !account?.onlinePayment.includes(plan.id)) {
       if (site.upiId) {
         setPaying(plan);
         return;
       }
       if (site.whatsapp) {
-        window.open(whatsappLink(`Hi! I'd like the Kahiye ${plan.name} plan (₹${plan.priceInr}/month). My account: ${getSession()?.email ?? ""}`), "_blank", "noopener");
+        window.open(whatsappLink(`Hi! I'd like the Kahiye ${plan.name} plan (₹${priceFor(plan, account)}/month${foundingApplies(account) ? ", founding price" : ""}). My account: ${getSession()?.email ?? ""}`), "_blank", "noopener");
       } else {
         setNotice(`Online payment is not set up yet. Contact us to activate the ${plan.name} plan.`);
       }
@@ -167,13 +176,23 @@ function AccountPage() {
 
       <section className="card">
         <h2>Choose a plan</h2>
+        {account.founding.member ? (
+          <div className="alert ok" role="status">You are a founding customer: you pay 40% less for as long as you stay. Thank you!</div>
+        ) : foundingApplies(account) && (
+          <div className="alert ok" role="status">
+            Founding customer offer: 40% off for life. {account.founding.spotsLeft} of {site.founding.spots} spots left.
+          </div>
+        )}
         <div className="plan-grid">
           {account.plans.map((p) => {
             const current = plan.id === p.id;
             return (
               <div key={p.id} className={`plan-mini${current ? " current" : ""}`}>
                 <strong>{p.name}</strong>
-                <div className="price">₹{p.priceInr.toLocaleString("en-IN")}<span className="small muted"> /month</span></div>
+                <div className="price">₹{priceFor(p, account).toLocaleString("en-IN")}<span className="small muted"> /month</span></div>
+                {foundingApplies(account) && (
+                  <div className="small muted"><s>₹{p.priceInr.toLocaleString("en-IN")}</s> founding price, for life</div>
+                )}
                 <ul>{planFeatures(p).map((f) => <li key={f}>{f}</li>)}</ul>
                 <button className={`btn${current ? " secondary" : ""}`} disabled={!!busy || (current && sub.status === "active")}
                   onClick={() => upgrade(p)}>
@@ -191,7 +210,7 @@ function AccountPage() {
               : "Pay by UPI or bank transfer and we activate your plan the same day."}
         </p>
       </section>
-      {paying && <UpiPay plan={paying} account={getSession()?.email ?? ""} onClose={() => setPaying(null)} />}
+      {paying && <UpiPay plan={paying} amount={priceFor(paying, account)} account={getSession()?.email ?? ""} onClose={() => setPaying(null)} />}
 
       <SupportForm />
 

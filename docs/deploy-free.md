@@ -92,18 +92,23 @@ Add these in Render → **Environment**. Each one switches on a feature; everyth
 | `BREVO_API_KEY`, `EMAIL_FROM` | Sends real emails (confirm email, password reset, monthly report) through Brevo's HTTPS API, free for 300 a day. `EMAIL_FROM` like `Kahiye <you@gmail.com>`, with that address verified as a sender in Brevo. Render's free plan blocks SMTP ports, so use this there. Without it the emails are only written to the Render log. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Any SMTP account instead of Brevo's API (Gmail app password: `smtp.gmail.com`, 587). Only on hosts that allow SMTP (not Render free). |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Online payments (Razorpay → Account & Settings → API keys). |
-| `RAZORPAY_PLAN_STARTER`, `RAZORPAY_PLAN_BUSINESS`, `RAZORPAY_PLAN_PRO` | The `plan_...` ids. Create three monthly plans in Razorpay → Subscriptions → Plans (₹499, ₹1,499, ₹3,999). |
+| `RAZORPAY_PLAN_STARTER`, `RAZORPAY_PLAN_BUSINESS`, `RAZORPAY_PLAN_PRO` | The `plan_...` ids. Create three monthly plans in Razorpay → Subscriptions → Plans (₹999, ₹2,499, ₹5,999). Founding customers pay by UPI instead (their price is lower than the Razorpay plan). |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay → Webhooks → add `https://<render-url>/api/billing/razorpay/webhook` with the events `subscription.activated`, `subscription.charged`, `subscription.halted`, `subscription.cancelled`, `subscription.completed`, and the same secret here. |
 | `PUBLIC_URL` | Only if email links should use another address than the first `DASHBOARD_URL`. |
 
 Plans and limits (`services/bot-service/Bots.Api/Billing/Plans.cs`; prices also in `apps/dashboard/lib/site.ts`):
 
-| Plan | Price | Bots | Documents | Answers / month | Badge |
-|---|---|---|---|---|---|
-| Free trial (14 days) | – | 3 | 20 | 300 | shown |
-| Starter | ₹499 | 1 | 10 | 500 | shown |
-| Business | ₹1,499 | 3 | 50 | 3,000 | removed |
-| Pro | ₹3,999 | 10 | 200 | 15,000 | removed |
+| Plan | Price | Founding price | Bots | Documents | Answers / month | Badge |
+|---|---|---|---|---|---|---|
+| Free trial (14 days) | – | – | 3 | 20 | 300 | shown |
+| Starter | ₹999 | ₹599 | 1 | 10 | 500 | shown |
+| Business | ₹2,499 | ₹1,499 | 3 | 50 | 3,000 | removed |
+| Pro | ₹5,999 | ₹3,599 | 10 | 200 | 15,000 | removed |
+
+**Founding customers:** the first 10 businesses pay the founding price (40% off) for as long as they stay. Tick
+*Founding* in `/admin` when you activate their plan; the dashboard then shows them that price in the UPI QR. While
+spots are left, new businesses see the founding price too. When all 10 are taken, set `NEXT_PUBLIC_FOUNDING_OFFER=off`
+in Vercel so the website stops showing the offer.
 
 After the trial or a plan ends, the bots stop answering (visitors are asked to contact the business) and no new bots or
 documents can be added; all data stays available.

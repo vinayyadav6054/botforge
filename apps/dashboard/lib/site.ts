@@ -18,23 +18,36 @@ export const site = {
   siteBotKey: process.env.NEXT_PUBLIC_SITE_BOT_KEY ?? "",
   currency: "₹",
   trialNote: "14-day free trial. No card needed. Pay by UPI or card after that.",
+  /**
+   * Founding customer offer: the first 10 businesses pay 40% less, for as long as they stay. Set
+   * NEXT_PUBLIC_FOUNDING_OFFER=off on Vercel when the 10 spots are taken (the dashboard also stops offering it then).
+   */
+  founding: {
+    active: (process.env.NEXT_PUBLIC_FOUNDING_OFFER ?? "on") !== "off",
+    spots: 10,
+    title: "Founding customer offer",
+    text: "Our first 10 businesses pay 40% less, for as long as they stay with us. Free setup included.",
+  },
   plans: [
     {
       name: "Starter",
-      price: "499",
+      price: "999",
+      foundingPrice: "599",
       blurb: "For one website that gets regular questions.",
       features: ["1 assistant", "500 answers a month", "10 documents", "Website chat in Hindi & Hinglish", "Lead alerts by email & Google Sheets", "Booking & UPI buttons, live takeover"],
     },
     {
       name: "Business",
-      price: "1,499",
+      price: "2,499",
+      foundingPrice: "1,499",
       blurb: "For growing businesses with several services.",
       features: ["3 assistants", "3,000 answers a month", "50 documents", "WhatsApp, Instagram, Messenger, Telegram", "No “Powered by” badge"],
       featured: true,
     },
     {
       name: "Pro",
-      price: "3,999",
+      price: "5,999",
+      foundingPrice: "3,599",
       blurb: "For institutes, clinics and agencies with heavy traffic.",
       features: ["10 assistants", "15,000 answers a month", "200 documents", "Everything in Business", "Priority support + done-for-you setup"],
     },

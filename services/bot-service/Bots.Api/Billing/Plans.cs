@@ -4,20 +4,22 @@ namespace Bots.Api.Billing;
 
 /// <summary>What a plan allows. Keep in sync with the prices on the website (apps/dashboard/lib/site.ts).</summary>
 public record Plan(string Id, string Name, int Bots, int Documents, int AnswersPerMonth, bool RemoveBranding, int PriceInr,
-    int WebsitePages = 0, bool MessagingApps = false);
+    int WebsitePages = 0, bool MessagingApps = false, int FoundingPriceInr = 0);
 
 public static class Plans
 {
     public static readonly Plan Trial = new("trial", "Free trial", 3, 20, 300, false, 0, 30, true);
-    public static readonly Plan Starter = new("starter", "Starter", 1, 10, 500, false, 499, 25);
-    public static readonly Plan Business = new("business", "Business", 3, 50, 3000, true, 1499, 100, true);
-    public static readonly Plan Pro = new("pro", "Pro", 10, 200, 15000, true, 3999, 300, true);
+    public static readonly Plan Starter = new("starter", "Starter", 1, 10, 500, false, 999, 25, false, 599);
+    public static readonly Plan Business = new("business", "Business", 3, 50, 3000, true, 2499, 100, true, 1499);
+    public static readonly Plan Pro = new("pro", "Pro", 10, 200, 15000, true, 5999, 300, true, 3599);
     /// <summary>Trial over or subscription ended: data stays, but the bots stop answering.</summary>
     public static readonly Plan Expired = new("expired", "No active plan", 0, 0, 0, false, 0);
 
     public static readonly IReadOnlyList<Plan> Paid = [Starter, Business, Pro];
 
     public const int TrialDays = 14;
+    /// <summary>Founding customers: the first businesses the admin marks as founding pay FoundingPriceInr (40% off), for life.</summary>
+    public const int FoundingSpots = 10;
     /// <summary>Extra days after a missed renewal while the payment provider retries.</summary>
     public static readonly TimeSpan Grace = TimeSpan.FromDays(3);
 

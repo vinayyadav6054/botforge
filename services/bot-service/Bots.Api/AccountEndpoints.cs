@@ -12,7 +12,8 @@ using Microsoft.Extensions.Options;
 namespace Bots.Api;
 
 public record CheckoutRequest(string? Plan);
-public record SetPlanRequest(string? Plan, int? Months, int? TrialDays);
+/// <summary>Founding: true marks the business as a founding customer (founding price for life), false removes it.</summary>
+public record SetPlanRequest(string? Plan, int? Months, int? TrialDays, bool? Founding = null);
 
 public static class KeyCheck
 {
@@ -34,8 +35,16 @@ public static class AccountEndpoints
     {
         id = p.Id, name = p.Name, bots = p.Bots, documents = p.Documents,
         answersPerMonth = p.AnswersPerMonth, removeBranding = p.RemoveBranding, priceInr = p.PriceInr,
-        websitePages = p.WebsitePages, messagingApps = p.MessagingApps
+        websitePages = p.WebsitePages, messagingApps = p.MessagingApps, foundingPriceInr = p.FoundingPriceInr
     };
+
+    /// <summary>member: this business pays the founding price; open: founding spots are still free for new customers.</summary>
+    static async Task<object> FoundingDto(AppDbContext db, Subscription s)
+    {
+        var taken = await db.Subscriptions.CountAsync(x => x.Founding);
+        var left = Math.Max(0, Plans.FoundingSpots - taken);
+        return new { member = s.Founding, open = left > 0, spotsLeft = left };
+    }
 
     public static void MapAccountEndpoints(this WebApplication app)
     {
@@ -66,6 +75,7 @@ public static class AccountEndpoints
                     documents = await db.Documents.CountAsync()
                 },
                 plans = Plans.Paid.Select(PlanDto),
+                founding = await FoundingDto(db, s),
                 onlinePayment = Plans.Paid.Where(p => o.Enabled && o.PlanIdFor(p.Id) is not null).Select(p => p.Id)
             });
         });
@@ -186,7 +196,7 @@ public static class AccountEndpoints
             {
                 tenantId = s.TenantId, plan = s.Plan, status = s.Status, effectivePlan = Plans.Effective(s, subs.Now).Id,
                 trialEndsAt = s.TrialEndsAt, currentPeriodEnd = s.CurrentPeriodEnd, provider = s.Provider,
-                answersThisMonth = usage.GetValueOrDefault(s.TenantId), bots = bots.GetValueOrDefault(s.TenantId)
+                answersThisMonth = usage.GetValueOrDefault(s.TenantId), bots = bots.GetValueOrDefault(s.TenantId), founding = s.Founding
             }));
         });
 
@@ -194,7 +204,17 @@ public static class AccountEndpoints
         {
             var s = await subs.GetOrCreateAsync(tenantId);
             var now = subs.Now;
-            if (req.TrialDays is { } days)
+            if (req.Founding is { } founding)
+            {
+                if (founding && !s.Founding && await db.Subscriptions.CountAsync(x => x.Founding) >= Plans.FoundingSpots)
+                    return Results.BadRequest(new { error = $"All {Plans.FoundingSpots} founding spots are taken." });
+                s.Founding = founding;
+            }
+            if (req.Founding is not null && req.Plan is null && req.TrialDays is null)
+            {
+                // only the founding mark changes
+            }
+            else if (req.TrialDays is { } days)
             {
                 if (days is < 1 or > 90) return Results.BadRequest(new { error = "trialDays must be 1-90." });
                 s.Status = SubscriptionStatus.Trialing;
@@ -217,7 +237,7 @@ public static class AccountEndpoints
             }
             s.UpdatedAt = now;
             await db.SaveChangesAsync();
-            return Results.Ok(new { s.TenantId, s.Plan, s.Status, s.TrialEndsAt, s.CurrentPeriodEnd, effectivePlan = Plans.Effective(s, now).Id });
+            return Results.Ok(new { s.TenantId, s.Plan, s.Status, s.TrialEndsAt, s.CurrentPeriodEnd, s.Founding, effectivePlan = Plans.Effective(s, now).Id });
         });
 
         // ---------- internal ----------

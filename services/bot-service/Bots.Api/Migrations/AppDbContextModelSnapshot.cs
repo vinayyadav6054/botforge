@@ -685,6 +685,10 @@ namespace Bots.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("current_period_end");
 
+                    b.Property<bool>("Founding")
+                        .HasColumnType("boolean")
+                        .HasColumnName("founding");
+
                     b.Property<string>("Plan")
                         .IsRequired()
                         .HasMaxLength(20)

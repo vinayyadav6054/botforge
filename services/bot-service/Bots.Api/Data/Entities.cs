@@ -149,6 +149,8 @@ public class Subscription
     /// <summary>"razorpay" or "manual" (set by the admin after a UPI/bank payment).</summary>
     public string? Provider { get; set; }
     public string? ProviderSubscriptionId { get; set; }
+    /// <summary>One of the first Plans.FoundingSpots customers: pays the founding price for as long as they stay.</summary>
+    public bool Founding { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

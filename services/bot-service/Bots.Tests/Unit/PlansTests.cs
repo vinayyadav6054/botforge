@@ -46,7 +46,10 @@ public class PlansTests
     [Fact]
     public void Paid_plans_match_the_website_prices()
     {
-        Assert.Equal([499, 1499, 3999], Plans.Paid.Select(p => p.PriceInr));
+        Assert.Equal([999, 2499, 5999], Plans.Paid.Select(p => p.PriceInr));
+        Assert.Equal([599, 1499, 3599], Plans.Paid.Select(p => p.FoundingPriceInr));
+        // founding price is 40% off, rounded to end in 99
+        Assert.All(Plans.Paid, p => Assert.InRange(p.FoundingPriceInr, p.PriceInr * 0.6 - 5, p.PriceInr * 0.6 + 5));
         Assert.All(Plans.Paid, p => Assert.True(p.AnswersPerMonth > 0 && p.Bots > 0));
         Assert.False(Plans.Starter.RemoveBranding);
         Assert.True(Plans.Business.RemoveBranding);

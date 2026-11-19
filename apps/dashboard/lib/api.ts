@@ -334,7 +334,7 @@ export const api = {
   adminTenants: (key: string) => request<AdminTenant[]>("/admin/tenants", { headers: { "X-Admin-Key": key } }, false),
   adminSubscriptions: (key: string) =>
     request<AdminSubscription[]>("/admin/subscriptions", { headers: { "X-Admin-Key": key } }, false),
-  adminSetPlan: (key: string, tenantId: string, body: { plan?: string; months?: number; trialDays?: number }) =>
+  adminSetPlan: (key: string, tenantId: string, body: { plan?: string; months?: number; trialDays?: number; founding?: boolean }) =>
     request<object>(`/admin/subscriptions/${tenantId}`, { method: "PUT", headers: { "X-Admin-Key": key }, body: JSON.stringify(body) }, false),
 };
 
@@ -392,6 +392,8 @@ export interface Plan {
   priceInr: number;
   websitePages: number;
   messagingApps: boolean;
+  /** what founding customers pay (40% off the regular price) */
+  foundingPriceInr: number;
 }
 
 export interface Account {
@@ -405,6 +407,8 @@ export interface Account {
   };
   usage: { period: string; answers: number; bots: number; documents: number };
   plans: Plan[];
+  /** member: this business pays the founding price for life; open: founding spots are still free */
+  founding: { member: boolean; open: boolean; spotsLeft: number };
   /** plan ids that can be paid online right now (Razorpay configured) */
   onlinePayment: string[];
 }
@@ -427,6 +431,7 @@ export interface AdminSubscription {
   provider: string | null;
   answersThisMonth: number;
   bots: number;
+  founding: boolean;
 }
 
 

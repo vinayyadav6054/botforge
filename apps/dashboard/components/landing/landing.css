@@ -248,6 +248,10 @@
 .lp-price { font-family: var(--display); font-weight: 800; font-size: 50px; letter-spacing: -.03em; color: var(--lp-text); margin: 22px 0 18px; line-height: 1; }
 .lp-price .cur { font-size: 26px; vertical-align: top; margin-right: 2px; }
 .lp-price .per { font-family: var(--font); font-size: 14px; font-weight: 550; color: #7a8299; letter-spacing: 0; margin-left: 4px; }
+.lp-plan .lp-price:has(+ .lp-price-was) { margin-bottom: 6px; }
+.lp-price-was { margin: 0 0 18px; font-size: 13.5px; font-weight: 600; color: #0f7a46; }
+.lp-price-was s { color: #7a8299; font-weight: 550; margin-right: 6px; }
+.lp-founding { display: inline-block; margin-top: 14px; padding: 10px 16px; border-radius: 12px; background: #ecfdf3; border: 1px solid #b7ebcd; color: #14532d; font-size: 14.5px; }
 .lp-plan ul { list-style: none; padding: 0; margin: 0 0 26px; display: grid; gap: 11px; flex: 1; color: #39415a; font-size: 14.5px; }
 .lp-plan li::before { content: "✓"; color: #0f9d58; font-weight: 900; margin-right: 10px; }
 @media (max-width: 960px) { .lp-plans { grid-template-columns: 1fr; max-width: 460px; margin: 0 auto; } }
