@@ -38,6 +38,10 @@ GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-0
 # which model made a stored vector; stored chunks made by another model are re-embedded at start-up
 EMBEDDING_ID = f"gemini:{GEMINI_EMBEDDING_MODEL}" if EMBEDDING_PROVIDER == "gemini" else f"{EMBEDDING_PROVIDER}:{EMBEDDING_MODEL}"
 GEMINI_API_KEY = _required("GEMINI_API_KEY") if EMBEDDING_PROVIDER == "gemini" else os.getenv("GEMINI_API_KEY", "")
+# set (e.g. http://127.0.0.1:8000): the chat service on the same machine makes the vectors with its copy of the
+# model, so this process does not load one (saves ~70 MB on a small host). Both services need the same model settings.
+EMBED_SERVICE_URL = os.getenv("EMBED_SERVICE_URL", "").strip().rstrip("/") if EMBEDDING_PROVIDER != "gemini" else ""
+INTERNAL_API_KEY = _required("INTERNAL_API_KEY") if EMBED_SERVICE_URL else os.getenv("INTERNAL_API_KEY", "")
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))

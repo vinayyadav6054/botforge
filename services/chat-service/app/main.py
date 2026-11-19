@@ -15,12 +15,13 @@ from pydantic import BaseModel, Field
 
 from . import config
 import hashlib
+import hmac
 
 from .cache import TTLCache
 from .bots_client import consume_answer, conversation_updates, create_lead, record_turn, refund_answer, resolve_bot
 from .language import AUDIO_TYPES, MAX_AUDIO_BYTES, no_answer_text, to_english, transcribe
 from .llm import clean_actions, stream_answer
-from .retrieval import citations, get_model, retrieve
+from .retrieval import citations, embed_documents, get_model, retrieve
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("chat")
@@ -168,6 +169,20 @@ def sse(event: str, data: dict) -> str:
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "chat", "model": config.GEMINI_MODEL}
+
+
+class EmbedRequest(BaseModel):
+    texts: list[str] = Field(min_length=1, max_length=256)
+
+
+@app.post("/internal/embed")
+def internal_embed(body: EmbedRequest, request: Request):
+    """Document vectors for the ingestion service on the same machine, so only this process holds the
+    embedding model (~70 MB each on a 512 MB host). Not routed by the gateway; needs the internal key."""
+    if not hmac.compare_digest(request.headers.get("X-Internal-Key", ""), config.INTERNAL_API_KEY):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    vectors = embed_documents(body.texts)
+    return {"model": config.EMBEDDING_ID, "vectors": [[float(x) for x in v] for v in vectors]}
 
 
 async def _get_bot(public_key: str) -> dict:

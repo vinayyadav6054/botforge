@@ -17,9 +17,11 @@ customer site ──<script src=".../widget.js">──────>   gateway �
 | AI answers | Google Gemini | Free API key |
 
 Embeddings (the search index of each business's knowledge) come from a **small model inside the container**
-(`EMBEDDING_PROVIDER=model2vec`, `minishlab/potion-base-8M`, set in `deploy/render/Dockerfile`): about 60 MB per
-service, numpy only, no API key and **no daily limit**. Gemini's free embeddings allow only 1,000 texts a day, which
-one or two websites use up; the bigger local model (bge-small, ~330 MB) does not fit in 512 MB.
+(`EMBEDDING_PROVIDER=model2vec`, `minishlab/potion-base-8M`, set in `deploy/render/Dockerfile`): about 70 MB of
+memory, numpy only, no API key and **no daily limit**. Only the chat service loads it: the ingestion worker asks the
+chat service for vectors (`EMBED_SERVICE_URL`, set in `deploy/render/supervisord.conf`), which keeps one copy in memory
+instead of two. Gemini's free embeddings allow only 1,000 texts a day, which one or two websites use up; the bigger
+local model (bge-small, ~330 MB) does not fit in 512 MB.
 
 ## 1. Neon (database)
 
